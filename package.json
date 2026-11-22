@@ -1,0 +1,17 @@
+{
+  "name": "stitched-worlds",
+  "version": "1.0.0",
+  "description": "Stitched Worlds — O Último Brinquedo. Jogo de plataforma 2D em pixel art.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "serve": "node tools/serve.mjs",
+    "build": "node tools/build.mjs",
+    "check": "node tools/check.mjs",
+    "validate": "node tools/validate_levels.mjs",
+    "apk": "node tools/build.mjs && bash android/build_apk.sh"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}
