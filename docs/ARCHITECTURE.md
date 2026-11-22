@@ -19,7 +19,8 @@ node tools/shot.mjs --q "level=w1_1&god=1&unlock=all" --steps "right:60,right+ju
 node tools/shot.mjs --q "scene=title" --out .shots/t.png
 node tools/shot.mjs --q "cutscene=opening" --wait 4000 --out .shots/c.png
 node tools/build.mjs --check                                             # verifica se o bundle compila (use SEMPRE --check; seguro em paralelo)
-node tools/validate_levels.mjs [w1_1 ...]                                # valida mapas (quando existir)
+node tools/validate_levels.mjs [w1_1 ...]                                # valida mapas (tamanho, P/E, 3 estrelas, chars, alcance)
+node tools/check.mjs [w1_1 ...]                                          # teste de fumaça: abre fases/cenas e simula entradas
 ```
 `--steps` pausa o loop em tempo real e simula quadros a 60 Hz com entradas virtuais (`right`, `left`, `up`,
 `down`, `jump`, `attack`, `dash`, `ability`, `cycle`, `interact`, `pause`, `confirm`, `back`), ex.: `right+jump:20`.
@@ -93,7 +94,7 @@ Estados: `normal dash hurt dead frozen celebrate`. Use `player.state='frozen'` +
 facing grounded inWater oxygen mods{speed,damage,gravity,invulnerable,phase,trail,trailColor,airPlatform} unravelMeter(0..1)
 castT (mostra anim 'cast' por N s) setCooldown(id,s) cooldownOf(id) lastSafe interactTarget hidden(bool, mundo 4)`.
 Física (px/s): andar 92, correr 150 (após 0.55 s segurando), pulo 372 (altura máx ≈ 68 px ≈ **4 tiles**; toque curto ≈ 1.5 tiles),
-pulo duplo 330 (+≈ 3 tiles), gravidade 1000/1380, queda máx 340, dash 300 por 0.16 s (≈ 3 tiles; 1 no ar), coyote 0.1 s,
+pulo duplo 330 (+≈ 3 tiles; **liberado ao vencer o Coelho no fim do Mundo 1** → fases do Mundo 2 em diante podem exigir), gravidade 1000/1380, queda máx 340, dash 300 por 0.16 s (≈ 3 tiles; 1 no ar), coyote 0.1 s,
 buffer 0.13 s. **Vão horizontal seguro: 3 tiles andando, 5 correndo, 7 com dash no ar, 8+ com pulo duplo+dash.** Hitbox 12×18.
 Ataque: chicote de fio (combo 3 golpes, alcance ~26 px), ataque p/ cima (↑+ataque), p/ baixo no ar (↓+ataque, quica em inimigos),
 segurar ataque 0.5 s = **Agulhada** (projétil, 15 energia). Pular em cima de inimigos `stompable` causa dano e quica.
