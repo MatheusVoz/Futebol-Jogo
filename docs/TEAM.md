@@ -35,7 +35,7 @@ Prefixo de screenshots: `.shots/<id-do-agente>_*.png`.
 | A35 Mapa | `scenes/worldmap.js` | `worldmap` (mapa dos mundos, seleção de fase/mundo, bônus) |
 | A36 Progressão | `scenes/menus_progress.js`, `progression.js` | `inventory`, `skilltree`, `shop`, `memories` (livro), `wardrobe`; registra skills/itens |
 | A37 Toque | `ui/touch.js` | Controles de toque multitoque (overlay), layout adaptável |
-| A38 Android | `android/**`, `tools/apk.sh` | Projeto Android (WebView) + script que gera o APK assinado |
+| A38 Android | `android/**` (inclui `android/build_apk.sh`), `release/` | Projeto Android (WebView) + script que gera o APK assinado |
 | A39 Personagens | `story/characters.js` | Sprites dos NPCs no mundo + entidades `npc` e `shop` |
 | A40 Memórias | `story/memories.js` | `registerMemory` mem_1..mem_10 com cenas animadas desenhadas |
 | A41–A44 Mecânicas | `mechanics/w2_water.js` `w3_time.js` `w4_dark.js` `w5_dimension.js` | objetos/mecânicas do mundo (legendas `j l m p q s u v w x y z 1-9`) |

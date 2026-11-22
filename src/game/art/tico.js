@@ -1,6 +1,6 @@
 // =============================================================================
 // art/tico.js — Sprite TEMPORÁRIO do Tico (o agente de arte do Tico substitui
-// por spritesheets completos). Quadro 32x32, pivô nos pés (16,31), olhando
+// por spritesheets completos). Quadro 48x40, pivô nos pés (24,39), olhando
 // para a DIREITA. Mantenha TODOS os nomes de animação listados em player.js.
 // =============================================================================
 import { defineSprite } from '../../engine/sprites.js';
@@ -21,6 +21,7 @@ const ANIMS = {
 };
 
 function drawTico(pc, anim, f, n) {
+  pc.translate(8, 8);
   let bob = 0, legA = 0, lean = 0, eyeClosed = false, squash = 0, headDy = 0;
   const ph = (f / n) * Math.PI * 2;
   if (anim === 'idle') { bob = Math.sin(ph) > 0.3 ? 1 : 0; eyeClosed = f === 5; }
@@ -64,13 +65,13 @@ function drawTico(pc, anim, f, n) {
     const len = Math.round(4 + Math.sin(k * Math.PI) * 9);
     if (anim === 'attack_up') pc.line(hx, hy - 4, hx, hy - 4 - len, '#ffe27a');
     else if (anim === 'attack_down') pc.line(16, 31, 16, 31, '#ffe27a');
-    else pc.line(hx + 4, hy + 4, Math.min(31, hx + 4 + len), hy + 4 - (f % 2), '#ffe27a');
+    else pc.line(hx + 4, hy + 4, Math.min(39, hx + 4 + len), hy + 4 - (f % 2), '#ffe27a');
   }
 }
 
 defineSprite('tico', {
-  w: 32, h: 32, ox: 16, oy: 31,
+  w: 48, h: 40, ox: 24, oy: 39,
   anims: ANIMS,
   draw: drawTico,
-  meta(anim, f) { return { head: { x: 22, y: 9 }, neck: { x: 19, y: 16 }, back: { x: 12, y: 16 } }; },
+  meta(anim, f) { return { head: { x: 30, y: 17 }, neck: { x: 27, y: 24 }, back: { x: 20, y: 24 } }; },
 });

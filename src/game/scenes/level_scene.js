@@ -155,8 +155,9 @@ export class LevelScene extends Scene {
     // camera bounds
     this.camera.setBounds(0, 0, map.width, map.height);
     // visuals
-    this.tileset = R.tilesets.get(d.tileset || `w${d.world}`) || R.tilesets.get('default');
-    this.background = R.backgrounds.get(d.background || `w${d.world}`) || null;
+    const ovT = game.params.get('tileset'), ovB = game.params.get('bg');
+    this.tileset = R.tilesets.get(ovT || d.tileset || `w${d.world}`) || R.tilesets.get('default');
+    this.background = R.backgrounds.get(ovB || d.background || `w${d.world}`) || R.backgrounds.get('default') || null;
     this.bakeTiles();
     this.bakeBackground();
     this.ambient = d.ambient ? getParticlePreset(d.ambient) : null;

@@ -18,7 +18,7 @@ node tools/shot.mjs --q "level=w1_1" --out .shots/minha.png            # screens
 node tools/shot.mjs --q "level=w1_1&god=1&unlock=all" --steps "right:60,right+jump:20" --eval "__SW.level.player.x"
 node tools/shot.mjs --q "scene=title" --out .shots/t.png
 node tools/shot.mjs --q "cutscene=opening" --wait 4000 --out .shots/c.png
-node tools/build.mjs                                                     # bundle (verifica erros de import/sintaxe)
+node tools/build.mjs --check                                             # verifica se o bundle compila (use SEMPRE --check; seguro em paralelo)
 node tools/validate_levels.mjs [w1_1 ...]                                # valida mapas (quando existir)
 ```
 `--steps` pausa o loop em tempo real e simula quadros a 60 Hz com entradas virtuais (`right`, `left`, `up`,
@@ -212,7 +212,7 @@ Tudo em `save.data` (veja `src/engine/save.js`). Coletáveis persistentes usam `
 estrelas). Chame `save.commit()` após mudanças importantes (a LevelScene já salva ao completar fase/checkpoint).
 
 ## Qualidade (obrigatório)
-- Zero erros no console. `node tools/build.mjs` deve passar. Teste no navegador com `tools/shot.mjs` e OLHE os screenshots.
+- Zero erros no console. `node tools/build.mjs --check` deve passar. Teste no navegador com `tools/shot.mjs` e OLHE os screenshots.
 - Sem colisões quebradas, inimigos presos, plataformas impossíveis, textos cortados ou fora da tela.
 - Performance: nada de `getImageData` por quadro; pré-renderize em `defineSprite/defineImage/PixelCanvas`. Partículas com moderação.
 - Código organizado, comentado em português (cabeçalho explicando o módulo), sem dependências externas.
