@@ -56,6 +56,8 @@ const SOIL = [ // [profundidade][tom de feltro]
 const SEAM = ['#5c3a22', '#462a1a', '#321e14', '#21140e'];
 const THREAD = ['#d4b27a', '#a07e54', '#6e523a', '#3e2e22'];
 const G = { hi: '#b6de64', lt: '#84be48', md: '#5e9e3c', dk: '#487f33', edge: '#2c5428', sh: '#1d100b' };
+const GRASS_LAND = G;
+const GW = { hi: '#5aa88a', lt: '#3e8a72', md: '#2e6e5e', dk: '#245a4e', edge: '#1a3e38', sh: '#140c0c' }; // musgo submerso
 const FLOWER_COLS = ['#f27cb2', '#f2d462', '#a68cf2', '#72e2e0', '#f4ecd8', '#ff9a6a'];
 const BTN_COLS = ['#c8506a', '#4aa6bc', '#d8aa42', '#8a6ccc', '#5cb06a'];
 
@@ -193,6 +195,7 @@ function drawSoil(pc, x, y, n0, rng, info) {
   if (!n.u) {
     const above = map.get(tx, ty - 1);
     const aboveFree = above === T.EMPTY;
+    const G = above === T.WATER ? GW : GRASS_LAND;
     if (!n.l) { pc.erase(x, y); pc.erase(x + 1, y); pc.erase(x, y + 1); }
     if (!n.r) { pc.erase(x + 15, y); pc.erase(x + 14, y); pc.erase(x + 15, y + 1); }
     for (let lx = n.l ? 0 : -1; lx <= (n.r ? 15 : 16); lx++) {
@@ -263,9 +266,19 @@ function drawBlock(pc, x, y, n, rng, info) {
   }
 }
 
+// tiles vazados dentro de interiores (':') recebem o fundo da árvore oca por trás
+const bgLike = (t) => t === T.BG || t === T.ONEWAY || t === T.SPIKE;
+function interiorBehind(pc, x, y, rng, info) {
+  const { map, tx, ty } = info;
+  const g = (dx, dy) => map.get(tx + dx, ty + dy);
+  if (g(-1, 0) !== T.BG && g(1, 0) !== T.BG && g(0, -1) !== T.BG && g(0, 1) !== T.BG) return;
+  drawHollow(pc, x, y, null, rng, info);
+}
+
 // ------------------------------------------------------------------ tábuas vazadas (oneway)
 function drawPlank(pc, x, y, n, rng, info) {
   const { tx, ty } = info;
+  interiorBehind(pc, x, y, rng, info);
   const x0 = n.l ? 0 : 1, x1 = n.r ? 15 : 14;
   const C = { hi: '#dcae6c', b: '#aa763f', g: '#8a5a30', lo: '#6e4424', o: '#2a160e' };
   for (let lx = x0; lx <= x1; lx++) {
@@ -318,6 +331,7 @@ function drawSpike(pc, x, y, dir, rng, info) {
     else pc.px(x + lx, y + ly, c);
   };
   const { tx, ty } = info;
+  interiorBehind(pc, x, y, rng, info);
   const base = (dir === 'left' || dir === 'right') ? ty * 16 : tx * 16;
   // alfinetes
   const xs = [2 + rng.int(0, 1), 7 + rng.int(0, 1), 12 + rng.int(0, 1)];
@@ -339,8 +353,8 @@ function drawSpike(pc, x, y, dir, rng, info) {
   for (let lx = 0; lx < 16; lx++) {
     const w = base + lx;
     const yy = 13 + Math.round(Math.sin(w * 0.55) * 1.1);
-    P(lx, yy - 1, h2(w, 1, 42) < 0.5 ? '#7a4a62' : '#5a3448');
-    P(lx, yy, '#4a2a3c');
+    P(lx, yy - 1, h2(w, 1, 42) < 0.5 ? '#9a5a7a' : '#6e3e58');
+    P(lx, yy, '#542e44');
     P(lx, yy + 1, '#2e1826');
     for (let ly = yy + 2; ly < 16; ly++) P(lx, ly, '#1e1018');
     const yy2 = 14 + Math.round(Math.sin(w * 0.4 + 2) * 1.2);
@@ -351,8 +365,10 @@ function drawSpike(pc, x, y, dir, rng, info) {
 }
 
 // ------------------------------------------------------------------ interior da árvore oca (bg)
-function drawHollow(pc, x, y, n, rng, info) {
-  const { tx, ty } = info;
+function drawHollow(pc, x, y, n0, rng, info) {
+  const { tx, ty, map } = info;
+  const b = (dx, dy) => bgLike(map.get(tx + dx, ty + dy));
+  const n = { u: b(0, -1), d: b(0, 1), l: b(-1, 0), r: b(1, 0) };
   for (let ly = 0; ly < 16; ly++) {
     for (let lx = 0; lx < 16; lx++) {
       const wx = tx * 16 + lx, wy = ty * 16 + ly;
@@ -376,11 +392,11 @@ function drawHollow(pc, x, y, n, rng, info) {
     const cx = x + rng.int(5, 10), cy = y + rng.int(5, 10);
     pc.ellipse(cx, cy, 3, 4, '#3a2626'); pc.ellipse(cx, cy, 2, 3, '#140a0e'); pc.px(cx - 2, cy - 3, '#4a3230');
   }
-  // remendo de feltro costurado
-  if (rng() < 0.05 && n.u && n.l && n.r) {
-    const px0 = x + rng.int(2, 7), py0 = y + rng.int(3, 8);
-    pc.rect(px0, py0, 7, 6, '#2e2240');
-    for (let i = 0; i < 7; i += 2) { pc.px(px0 + i, py0, '#6a5a52'); pc.px(px0 + i, py0 + 5, '#6a5a52'); }
+  // rachadura vertical com musgo luminoso fraco
+  if (rng() < 0.06 && n.u && n.d) {
+    const cx = x + rng.int(3, 12);
+    for (let k = 0; k < 16; k++) pc.px(cx + (k % 7 === 3 ? 1 : 0), y + k, '#0c0609');
+    pc.px(cx + 1, y + rng.int(3, 12), '#2e6a66');
   }
   // teia no canto superior
   if (!n.u && !n.l) {

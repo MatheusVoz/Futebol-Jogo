@@ -208,10 +208,10 @@ const layers = [
   },
   // 2) árvores gigantes de brinquedo distantes
   {
-    width: 512, height: 230, speed: 0.12, speedY: 0.06, fillBelow: '#1a1834',
+    width: 512, height: 280, speed: 0.12, speedY: 0.06, fillBelow: '#1a1834',
     paint(pc, w, h) {
       const r = lrng(31);
-      const trees = [[30, 70, 34], [140, 40, 44], [250, 86, 30], [345, 30, 48], [450, 64, 36]];
+      const trees = [[30, 120, 34], [140, 90, 44], [250, 136, 30], [345, 80, 48], [450, 114, 36]];
       const cols = ['#1b1c36', '#262a4c', '#30365e', '#3e4672'];
       for (const [tx, top, R] of trees) {
         wrap(w, (o) => {
@@ -230,7 +230,7 @@ const layers = [
       ridgeFill(pc, w, h, gr, '#1a1834', '#2a2850', null);
       for (let i = 0; i < 60; i++) { const x = r.int(0, w - 1); const y = Math.round(gr(x)); pc.vline(x, y - r.int(1, 3), 3, '#1a1834'); }
     },
-    animate: glints(10, 91, 0.12, ['#b8a8ff', '#9af0ff'], 40, 170),
+    animate: glints(10, 91, 0.12, ['#b8a8ff', '#9af0ff'], 90, 220),
   },
   // 3) névoa roxa média (deriva)
   {
@@ -249,12 +249,12 @@ const layers = [
   },
   // 4) floresta média: carretéis gigantes, torres de blocos, cogumelos
   {
-    width: 576, height: 220, speed: 0.3, speedY: 0.15, fillBelow: '#121722',
+    width: 576, height: 270, speed: 0.3, speedY: 0.15, fillBelow: '#121722',
     paint(pc, w, h) {
       const r = lrng(77);
       const B = '#18202e', RIM = '#33465a', DK = '#10161f';
       // árvores médias
-      for (const [tx, top, R] of [[200, 34, 34], [470, 20, 40]]) {
+      for (const [tx, top, R] of [[200, 84, 34], [470, 70, 40]]) {
         wrap(w, (o) => {
           trunk(pc, tx + o, top + 8, h, 10, 22, ['#1a2230', '#2c3c50', '#111823', '#34485e']);
           pomCanopy(pc, tx + o, top, R, lrng(tx), ['#0f1a1e', '#16262a', '#1e3438', '#2c4a4a']);
@@ -277,8 +277,8 @@ const layers = [
         // fio solto descendo até o chão
         pc.curve(bx + bw, top + shh * 0.4, x + sw / 2 + 20, top + shh * 0.7, x + sw / 2 + 30, h - 6, thread[2]);
       });
-      spool(80, 70, 46, 130, ['#4a2440', '#5c2e4c', '#7e4466', '#9a5a7e']);
-      spool(380, 120, 30, 82, ['#24444c', '#2e565e', '#447a80', '#5a949a']);
+      spool(80, 120, 46, 130, ['#4a2440', '#5c2e4c', '#7e4466', '#9a5a7e']);
+      spool(380, 170, 30, 82, ['#24444c', '#2e565e', '#447a80', '#5a949a']);
       // torre de blocos com letras
       const blocks = [[296, h - 28, 26, '#2a2238', GLYPH_A], [300, h - 54, 26, '#1e2a36', GLYPH_B], [293, h - 80, 26, '#2e2826', GLYPH_C], [298, h - 102, 22, '#262036', GLYPH_A]];
       for (const [bx, by, s, c, gl] of blocks) wrap(w, (o) => {
@@ -303,7 +303,7 @@ const layers = [
         });
       }
     },
-    animate: glints(12, 17, 0.3, ['#5ff0e8', '#ff7ac8', '#d8ff9a'], 60, 200),
+    animate: glints(12, 17, 0.3, ['#5ff0e8', '#ff7ac8', '#d8ff9a'], 110, 250),
   },
   // 5) folhagem escura próxima com pontos de luz
   {
@@ -347,14 +347,13 @@ const front = [
     width: 512, height: 70, speed: 1.2, speedY: 0.2, drift: 9, alpha: 0.3, y: 14,
     paint(pc, w, h) {
       const r = lrng(404);
-      for (let i = 0; i < 10; i++) {
-        const cx = r.int(0, w), cy = r.int(24, h - 10), rx = r.int(50, 110), ry = r.int(8, 18);
+      for (let i = 0; i < 12; i++) {
+        const cx = r.int(0, w), cy = r.int(26, h - 14), rx = r.int(40, 100), ry = r.int(6, 14);
         wrap(w, (o) => pc.dither(Math.round(cx + o - rx), Math.round(cy - ry), rx * 2, ry * 2, null, '#a68ae2', (x, y) => {
           const dx = (x - rx) / rx, dy = (y - ry) / ry, d = dx * dx + dy * dy;
-          return d < 1 ? (1 - d) * 0.85 : 0;
+          return d < 1 ? (1 - d) * 0.7 : 0;
         }));
       }
-      pc.dither(0, h - 24, w, 24, null, '#a68ae2', (x, y) => (y / 24) * 0.8);
     },
   },
 ];

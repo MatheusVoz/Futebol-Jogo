@@ -157,13 +157,13 @@ export function drawThreadLine(ctx, x0, y0, x1, y1, t = 0, color = '#ffd23f', op
  */
 export function drawPortalSwirl(ctx, x, y, r, t = 0, colors = ['#ff4fd8', '#a855ff', '#ffffff'], opts = {}) {
   const sq = opts.squash ?? 1;
-  const arms = opts.arms ?? 3;
+  const arms = opts.arms ?? 4;
   const alpha = opts.alpha ?? 1;
   const pa = ctx.globalAlpha, op = ctx.globalCompositeOperation;
   const c0 = colors[0], c1 = colors[1] || c0, c2 = colors[2] || '#ffffff';
   // disco escuro de fundo (profundidade)
   ctx.globalAlpha = pa * alpha * 0.85;
-  ctx.fillStyle = darken(c1, 0.75);
+  ctx.fillStyle = darken(c1, 0.55);
   for (let yy = -R(r * sq); yy <= R(r * sq); yy++) {
     const w = R(r * Math.sqrt(Math.max(0, 1 - (yy / (r * sq)) ** 2)));
     ctx.fillRect(R(x) - w, R(y) + yy, w * 2 + 1, 1);

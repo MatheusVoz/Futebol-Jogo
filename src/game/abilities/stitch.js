@@ -61,6 +61,22 @@ export function attachPt(e) {
 }
 const pawOf = (p) => ({ x: p.cx + p.facing * 7, y: p.cy + 1 });
 
+/** Linha livre de tiles sólidos E de entidades sólidas (portões, blocos...). */
+function clearLine(level, x0, y0, x1, y1, ignore) {
+  if (!level.map.los(x0, y0, x1, y1)) return false;
+  const n = Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 4);
+  const bx0 = Math.min(x0, x1), bx1 = Math.max(x0, x1), by0 = Math.min(y0, y1), by1 = Math.max(y0, y1);
+  for (const s of level.solids) {
+    if (!s.solid || s.dead || s === ignore) continue;
+    if (s.x > bx1 || s.x + s.w < bx0 || s.y > by1 || s.y + s.h < by0) continue;
+    for (let i = 1; i < n; i++) {
+      const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
+      if (x > s.x && x < s.x + s.w && y > s.y && y < s.y + s.h) return false;
+    }
+  }
+  return true;
+}
+
 function nearestAnchor(level, p) {
   let best = null, bs = Infinity;
   for (const a of anchorsOf(level)) {
@@ -85,7 +101,7 @@ function bestPartner(level, a, p) {
     const dx = b.attachX - a.attachX, dy = b.attachY - a.attachY;
     const d = Math.hypot(dx, dy);
     if (d > PARTNER || d < 10) continue;
-    if (!level.map.los(a.attachX, a.attachY, b.attachX, b.attachY)) continue;
+    if (!clearLine(level, a.attachX, a.attachY, b.attachX, b.attachY, b.attachTo || a.attachTo)) continue;
     let s = d / PARTNER - 0.75 * (dx * aimX + dy * aimY) / d;
     if ((a.group ?? null) !== (b.group ?? null)) s += 1.6;
     if (findBridge(level, a, b)) s += 0.5;
@@ -106,7 +122,7 @@ function lassoTarget(level, p) {
     const d = Math.hypot(dx, dy);
     if (d > LASSO + Math.max(e.w, e.h) / 2) continue;
     if (Math.abs(dy) > (up ? LASSO : 3.5 * TILE) || (up && dy > 24)) continue;
-    if (!level.map.los(px, py - 2, e.cx, e.cy)) continue;
+    if (!clearLine(level, px, py - 2, e.cx, e.cy, e)) continue;
     const s = d - (e.stitchTarget ? 24 : 0) + (up ? dy * 0.5 : Math.abs(dy) * 0.6);
     if (s < bs) { bs = s; best = e; }
   }
@@ -145,7 +161,7 @@ class Anchor extends Entity {
     this.attachTo = props.attachTo || null;
     this.ox = props.ox ?? 0; this.oy = props.oy ?? 0;
     if (this.attachTo) { this.alwaysUpdate = true; this.follow(); }
-    this.revealT = 0; this.pulse = 0; this.fizzT = 0;
+    this.revealT = 0; this.revealIn = 0; this.pulse = 0; this.fizzT = 0;
     this.seed = ((x * 7 + y * 13) % 97) / 97;
     this.light = this.hidden ? null : { r: 26, color: GOLD, i: 0.5, flicker: 0.1 };
     this.tags.add('anchor');
@@ -158,6 +174,7 @@ class Anchor extends Entity {
     this.tickTimers(dt);
     if (this.attachTo) { if (this.attachTo.dead) { this.remove(); return; } this.follow(); }
     if (this.revealT > 0) this.revealT -= dt;
+    if (this.revealIn > 0) { this.revealIn -= dt; if (this.revealIn <= 0) this.reveal(); }
     if (this.pulse > 0) this.pulse -= dt;
     if (this.fizzT > 0) this.fizzT -= dt;
     if (!this.hidden && Math.random() < dt * (this.links.size ? 3 : 0.5)) {
@@ -185,6 +202,11 @@ class Anchor extends Entity {
     emit(this.level, 'sparkle', this.attachX, this.attachY, 12);
     emit(this.level, 'stitch_spark', this.attachX, this.attachY, 8);
     audio.sfx('secret_soft', { cooldown: 0.1 });
+    // o ilhó parceiro escondido (mesmo group, ≤ 10 tiles) acende logo em seguida
+    if (this.group !== null) for (const b of anchorsOf(this.level)) {
+      const d = Math.hypot(b.attachX - this.attachX, b.attachY - this.attachY);
+      if (b.hidden && !b.revealIn && b.group === this.group && d <= PARTNER) b.revealIn = 0.25 + d / 500;
+    }
     return true;
   }
   /** Ilhó sem parceiro: faísca de aviso. */
@@ -467,7 +489,7 @@ class ThreadLasso extends Entity {
       else if (tg) { if (moveTo(tg.cx, tg.cy, 640)) this.hit(); }
       else {
         const done = moveTo(paw.x + this.dir * LASSO, paw.y + this.dy, 640);
-        if (done || this.level.map.solidAt(tip.x, tip.y)) {
+        if (done || this.level.map.solidAt(tip.x, tip.y) || this.level.platformAt(tip.x, tip.y)?.solid) {
           this.phase = 'back';
           emit(this.level, 'thread', tip.x, tip.y, 3);
         }
@@ -655,7 +677,7 @@ registerLevel({
     put(45, 9, '@'); put(51, 9, '@');         // grupo c → sinal 'sg1'
     put(58, 11, 'a');                         // inimigo para laçar
     fill(60, 8, 62, 8, '=');                  // escorregador íngreme (grupo d)
-    put(61, 7, '@'); put(65, 11, '@');
+    put(61, 7, '@'); put(64, 11, '@');
     put(70, 11, 'E');
   }),
   legend: { a: 'ab_test_dummy' },
@@ -663,7 +685,7 @@ registerLevel({
     '8,11': { group: 'a' }, '17,11': { group: 'a' },
     '22,11': { group: 'b' }, '28,6': { group: 'b' },
     '45,9': { group: 'c', signal: 'sg1' }, '51,9': { group: 'c' },
-    '61,7': { group: 'd' }, '65,11': { group: 'd' },
+    '61,7': { group: 'd' }, '64,11': { group: 'd' },
   },
   onStart(level) {
     const Gate = R.entities.get('gate');

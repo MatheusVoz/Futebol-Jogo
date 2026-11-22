@@ -156,7 +156,10 @@ class SeamCell extends Entity {
   computeMask() {
     this.mask = (this.neighbor(-1, 0) ? 1 : 0) | (this.neighbor(1, 0) ? 2 : 0) | (this.neighbor(0, -1) ? 4 : 0) | (this.neighbor(0, 1) ? 8 : 0);
   }
-  init() { this.computeMask(); }
+  init() {
+    this.computeMask();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) this.neighbor(dx, dy)?.computeMask();
+  }
   /** Percorre o bloco conectado (BFS), chamando fn(célula, distância). */
   flood(fn, limit = 96) {
     const seen = new Set([this]);
@@ -425,18 +428,24 @@ class UnstitchFx extends Entity {
   update(dt) { this.t += dt; if (this.t > 0.6) this.remove(); }
   draw(ctx) {
     const T = 0.5, k = Math.min(1, this.t / T), e = 1 - Math.pow(1 - k, 3);
-    const R = this.radius * e, arms = 6, a0 = this.t * 5 * this.facing;
+    const R = this.radius * e, arms = 5, a0 = this.t * 5 * this.facing;
     if (k < 1) {
+      const pa = ctx.globalAlpha, op = ctx.globalCompositeOperation;
+      ctx.globalCompositeOperation = 'lighter';
+      const n = Math.max(12, Math.ceil(R / 1.6));
       for (let i = 0; i < arms; i++) {
-        for (let s = 0; s <= 16; s++) {
-          const f = s / 16, r = 3 + f * R;
-          const an = a0 + (i * Math.PI * 2) / arms + f * 2.6 * this.facing;
+        for (let s = 0; s <= n; s++) {
+          const f = s / n, r = 2 + f * R;
+          const an = a0 + (i * Math.PI * 2) / arms + f * 2.8 * this.facing;
           const px = Rn(this.ox + Math.cos(an) * r), py = Rn(this.oy + Math.sin(an) * r * 0.85);
-          ctx.globalAlpha = (1 - k) * (1 - f * 0.5);
-          ctx.fillStyle = s === 16 ? '#ffffff' : s % 3 === 0 ? '#ffd23f' : LILAC;
-          ctx.fillRect(px, py, s === 16 ? 2 : 1, s === 16 ? 2 : 1);
+          const head = s >= n - 1;
+          ctx.globalAlpha = (1 - k * k) * (head ? 1 : 0.35 + 0.65 * f);
+          ctx.fillStyle = head ? '#ffffff' : (s + Math.floor(this.t * 30)) % 5 === 0 ? '#ffd23f' : LILAC;
+          ctx.fillRect(px, py, head ? 2 : 1, head ? 2 : 1);
         }
       }
+      ctx.globalCompositeOperation = op;
+      ctx.globalAlpha = pa;
       // anel pontilhado mostrando o alcance
       ctx.globalAlpha = (1 - k) * 0.45; ctx.fillStyle = '#e9d6ff';
       for (let i = 0; i < 40; i++) { const an = (i / 40) * Math.PI * 2 + a0 * 0.2; ctx.fillRect(Rn(this.ox + Math.cos(an) * R), Rn(this.oy + Math.sin(an) * R * 0.85), 1, 1); }

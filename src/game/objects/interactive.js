@@ -246,6 +246,21 @@ function fallingPlank(wpx) {
   plankCache.set(k, c);
   return c;
 }
+const orbCache = new Map();
+/** Bolha de vidro/tecido translúcida que envolve o ícone do altar. */
+function orbArt(color) {
+  if (orbCache.has(color)) return orbCache.get(color);
+  const c = paint(19, 19, (pc) => {
+    pc.circle(9, 9, 8.6, color + '55');
+    pc.circle(9, 9, 6.5, '#ffffff22');
+    pc.ellipseOutline(9, 9, 8, 8, color);
+    pc.px(5, 4, '#ffffff'); pc.px(4, 5, '#ffffff'); pc.px(6, 3, '#ffffffaa');
+    pc.px(13, 14, color); pc.px(14, 12, '#ffffff88');
+    pc.outline(OUT);
+  });
+  orbCache.set(color, c);
+  return c;
+}
 const gateCache = new Map();
 function gateArt(hpx) {
   if (gateCache.has(hpx)) return gateCache.get(hpx);
@@ -704,6 +719,7 @@ registerEntity('ability_shrine', class extends Entity {
     }
     ctx.globalAlpha = 1;
     const icon = this.def?.icon || `icon_ab_${this.props.ability}`;
+    ctx.drawImage(orbArt(col.length === 4 ? '#' + col[1] + col[1] + col[2] + col[2] + col[3] + col[3] : col.slice(0, 7)), cx - 9, oy - 9);
     if (hasImage(icon)) drawImage(ctx, icon, cx - 6, oy - 6);
     else {
       ctx.fillStyle = OUT; ctx.fillRect(cx - 4, oy - 4, 9, 9);
@@ -740,12 +756,17 @@ registerEntity('moving_platform', class extends Entity {
     this.carry(nx - this.x, ny - this.y);
     this.x = nx; this.y = ny;
   }
+  /** Carrega quem está em cima (jogador, Retalho Fantasma). Tolerância de 3 px para não "atravessar" ao subir. */
   carry(dx, dy) {
     const map = this.level.map;
     for (const r of [this.level.player, this.level.decoy]) {
-      if (!r || r.dead || r.groundEntity !== this) continue;
+      if (!r || r.dead || r.vy < 0) continue;
+      const on = r.groundEntity === this ||
+        (r.x + r.w > this.x && r.x < this.x + this.w && Math.abs(r.y + r.h - this.y) <= 3);
+      if (!on) continue;
       if (dx && !map.rectSolid(r.x + dx, r.y, r.w, r.h)) r.x += dx;
-      if (dy && !map.rectSolid(r.x, r.y + dy, r.w, r.h)) r.y += dy;
+      const ny = this.y + dy - r.h;
+      if (!map.rectSolid(r.x, ny, r.w, r.h)) { r.y = ny; if (r.vy > 0) r.vy = 0; }
     }
   }
   draw(ctx) {
@@ -763,7 +784,7 @@ registerEntity('falling_platform', class extends Entity {
     this.w = (p.width || 1) * TILE; this.h = 8;
     this.x0 = x; this.y0 = y; this.x = x; this.y = y;
     this.state = 'idle'; this.timer = 0; this.alpha = 1;
-    this.oneway = true; this.z = 8;
+    this.oneway = true; this.z = 8; this.alwaysUpdate = true;
   }
   update(dt) {
     this.tickTimers(dt);
