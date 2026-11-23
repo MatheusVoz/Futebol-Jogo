@@ -297,10 +297,10 @@ class RewindRecorder extends Entity {
         // pequeno relógio: este objeto pode voltar no tempo
         const a = -this.t * 6;
         ctx.globalAlpha = 0.8;
-        ctx.fillStyle = '#1b2a3a'; ctx.fillRect(tx - 3, ty - 3, 7, 7);
-        ctx.fillStyle = BLUE; ctx.fillRect(tx - 2, ty - 3, 5, 1); ctx.fillRect(tx - 2, ty + 3, 5, 1);
-        ctx.fillRect(tx - 3, ty - 2, 1, 5); ctx.fillRect(tx + 3, ty - 2, 1, 5);
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(tx, ty, 1, 1);
+        ctx.fillStyle = '#1b2a3a'; ctx.fillRect(tx - 2, ty - 4, 5, 9); ctx.fillRect(tx - 4, ty - 2, 9, 5); ctx.fillRect(tx - 3, ty - 3, 7, 7);
+        ctx.fillStyle = BLUE; ctx.fillRect(tx - 2, ty - 3, 5, 7); ctx.fillRect(tx - 3, ty - 2, 7, 5);
+        ctx.fillStyle = '#e8fbff'; ctx.fillRect(tx - 2, ty - 2, 2, 1);
+        ctx.fillStyle = '#1b2a3a'; ctx.fillRect(tx, ty - 2, 1, 3);
         ctx.fillRect(Rn(tx + Math.cos(a) * 2), Rn(ty + Math.sin(a) * 2), 1, 1);
         ctx.globalAlpha = 1;
       }
