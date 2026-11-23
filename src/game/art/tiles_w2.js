@@ -322,20 +322,21 @@ function drawHull(pc, x, y, n0, rng, info) {
     for (let lx = 0; lx < 16; lx++) {
       const wx = tx * 16 + lx, wy = ty * 16 + ly;
       const L = lev[ly * 16 + lx];
-      const prow = wy >> 2, pry = wy & 3;
-      const sx = (wx + ((h2(prow, 51) * 40) | 0)) % 20;
-      const stripe = wy >> 3;
+      const prow = Math.floor(wy / 5), pry = wy - prow * 5;
+      const sx = (wx + ((h2(prow, 51) * 64) | 0)) % 44;
+      const stripe = prow >> 1;
       const sp = h2(stripe, 52);
-      const P = sp < 0.22 ? null : PAINTS[(stripe & 1) ? 0 : (sp > 0.86 ? 2 : sp > 0.76 ? 3 : 1)];
-      const chip = h2(wx >> 1, wy, 54) < 0.12 + L * 0.06 || h2(wx >> 2, wy >> 1, 56) < 0.07;
+      const P = sp < 0.2 ? null : PAINTS[stripe % 3 === 0 ? 0 : (sp > 0.86 ? 2 : sp > 0.76 ? 3 : 1)];
+      const patch = h2(wx >> 3, prow, 54) < 0.15 + L * 0.05;
+      const chip = patch ? h2(wx, wy, 59) < 0.9 : h2(wx, wy, 56) < 0.025;
       const base = P && !chip ? P : null;
       let c;
-      if (sx === 0 || pry === 3) c = WOOD.gap;
-      else if (base) c = pry === 0 ? base.lt : (sx === 19 ? base.dk : base.md);
-      else c = pry === 0 ? WOOD.lt : (h2(wx >> 2, wy, 55) < 0.14 ? WOOD.dk : WOOD.md);
-      if (sx === 2 && pry === 1) c = '#e8e0cc';
-      else if (sx === 2 && pry === 2) c = '#4a3a2c';
-      if (L === 0 && pry !== 3 && h2(wx >> 1, wy >> 1, 57) < 0.09) c = MOSS[(h2(wx, wy, 58) * 3) | 0];
+      if (pry === 4) c = '#4e3222';
+      else if (sx === 0) c = WOOD.gap;
+      else if (base) c = pry === 0 ? base.lt : (sx === 43 ? base.dk : base.md);
+      else c = pry === 0 ? WOOD.lt : (h2(wx >> 3, wy, 55) < 0.18 ? WOOD.dk : WOOD.md);
+      if ((sx === 2 || sx === 41) && pry === 2) c = '#e8e0cc';
+      if (L === 0 && pry !== 4 && h2(wx >> 1, wy >> 1, 57) < 0.08) c = MOSS[(h2(wx, wy, 58) * 3) | 0];
       pc.px(x + lx, y + ly, dk(c, L));
     }
   }
@@ -523,25 +524,30 @@ function drawSpike(pc, x, y, dir, rng, info) {
 }
 
 // ------------------------------------------------------------------ água
-const WCOL = [ // do raso (claro) ao fundo (escuro): r,g,b,a
-  [96, 216, 228, 0.34], [64, 182, 216, 0.42], [42, 144, 198, 0.5], [30, 108, 170, 0.58],
-  [22, 80, 142, 0.66], [16, 58, 114, 0.72], [11, 40, 88, 0.78], [8, 28, 66, 0.82],
-];
+const WPAL = { // do raso (claro) ao fundo (escuro): r,g,b,a — por horário
+  day: [[96, 216, 228, 0.34], [64, 182, 216, 0.42], [42, 144, 198, 0.5], [30, 108, 170, 0.58], [22, 80, 142, 0.66], [16, 58, 114, 0.72], [11, 40, 88, 0.78], [8, 28, 66, 0.82]],
+  dusk: [[150, 176, 214, 0.36], [110, 146, 200, 0.44], [76, 112, 180, 0.52], [54, 84, 154, 0.6], [38, 62, 128, 0.66], [26, 46, 104, 0.72], [18, 34, 82, 0.78], [12, 24, 62, 0.82]],
+  night: [[50, 130, 168, 0.4], [34, 104, 150, 0.48], [24, 80, 130, 0.56], [16, 60, 108, 0.64], [12, 44, 90, 0.7], [9, 34, 74, 0.76], [7, 26, 58, 0.8], [5, 18, 44, 0.85]],
+};
 const hex2 = (v) => Math.round(v).toString(16).padStart(2, '0');
-const WSTR = WCOL.map(([r, g, b, a]) => '#' + hex2(r) + hex2(g) + hex2(b) + hex2(a * 255));
-const CAUS_A = [0.95, 0.7, 0.45, 0.25];
-let WS = null;
-function waterCol(z, x, yy) {
-  const f = clamp(z / 14, 0, WCOL.length - 1);
-  const k = Math.min(WCOL.length - 2, Math.floor(f));
-  return WSTR[f - k > th(x, yy) ? k + 1 : k];
+const WSTR = {};
+for (const k in WPAL) WSTR[k] = WPAL[k].map(([r, g, b, a]) => '#' + hex2(r) + hex2(g) + hex2(b) + hex2(a * 255));
+const CAUS_A = [0.6, 0.42, 0.26, 0.14];
+const WS = {};
+let CAUS = null;
+let waterTod = 'day'; // horário da fase atual (lido em decorate(), que recebe os dados da fase)
+function waterCol(z, x, yy, tod) {
+  const L = WSTR[tod];
+  const f = clamp(z / 14, 0, L.length - 1);
+  const k = Math.min(L.length - 2, Math.floor(f));
+  return L[f - k > th(x, yy) ? k + 1 : k];
 }
-function buildWater() {
+function buildWater(tod) {
   const S = {};
   S.body = [];
   for (let d = 0; d < 8; d++) {
     const p = new PixelCanvas(16, 16);
-    for (let yy = 0; yy < 16; yy++) for (let xx = 0; xx < 16; xx++) p.px(xx, yy, waterCol(d * 16 + yy, xx, yy));
+    for (let yy = 0; yy < 16; yy++) for (let xx = 0; xx < 16; xx++) p.px(xx, yy, waterCol(d * 16 + yy, xx, yy, tod));
     p.flush(); S.body.push(p.canvas);
   }
   // faixa de superfície (64 px, repete na horizontal), 16 quadros: linha de onda + espuma + corpo raso
@@ -553,7 +559,7 @@ function buildWater() {
       const wv = Math.sin((TAU * 2 * xx) / 64 + ph) * 1.1 + Math.sin((TAU * 3 * xx) / 64 - 2 * ph) * 0.7;
       const cy = 3 + Math.round(wv);
       for (let yy = cy; yy < 19; yy++) {
-        let c = waterCol(Math.max(0, yy - 3), xx, yy + 1);
+        let c = waterCol(Math.max(0, yy - 3), xx, yy + 1, tod);
         if (yy === cy) c = '#e8fffcdc';
         else if (yy === cy + 1) c = '#a8f4f4b0';
         else if (yy === cy + 2) c = '#7ae0ec88';
@@ -566,7 +572,9 @@ function buildWater() {
     p.flush(); S.surf.push(p.canvas);
   }
   // cáusticas: bordas de células de Voronoi que se movem em laços (64×64 repetível, +16 de folga)
-  S.NC = 8; S.caus = [];
+  S.NC = 8;
+  if (CAUS) { S.caus = CAUS; S.bub = bubbles(); return S; }
+  S.caus = CAUS = [];
   const r = lrng(777);
   const pts = [];
   for (let i = 0; i < 9; i++) pts.push({ x: r() * 64, y: r() * 64, rx: 2 + r() * 4, ry: 2 + r() * 4, ph: r() * TAU, k: r() < 0.5 ? 1 : -1 });
@@ -584,7 +592,7 @@ function buildWater() {
           if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) d2 = d;
         }
         const e = Math.sqrt(d2) - Math.sqrt(d1);
-        const c = e < 1.1 ? '#d8fff8a8' : e < 2.4 ? '#9ef4f03c' : null;
+        const c = e < 1.0 ? '#d8fff890' : e < 2.2 ? '#9ef4f02c' : null;
         if (!c) continue;
         p.px(xx, yy, c);
         if (xx < 16) p.px(xx + 64, yy, c);
@@ -607,8 +615,9 @@ function bubbles() {
 }
 
 function drawWater(ctx, map, x0, y0, x1, y1, t) {
-  if (!WS) WS = buildWater();
-  const S = WS;
+  const tod = WSTR[waterTod] ? waterTod : 'day';
+  const S = WS[tod] || (WS[tod] = buildWater(tod));
+  const cm = tod === 'night' ? 0.55 : tod === 'dusk' ? 0.8 : 1;
   const fs = Math.floor(t * 9) % S.NS, fc = Math.floor(t * 6) % S.NC;
   const cox = Math.floor(t * 5), coy = Math.floor(t * 2.5);
   const W = T.WATER;
@@ -626,7 +635,7 @@ function drawWater(ctx, map, x0, y0, x1, y1, t) {
       if (d === 0 && !surface) { ctx.globalAlpha = 0.45; ctx.fillStyle = '#062038'; ctx.fillRect(px, py, 16, 2); }
       // cáusticas (somem com a profundidade)
       if (d < 4) {
-        ctx.globalAlpha = CAUS_A[d];
+        ctx.globalAlpha = CAUS_A[d] * cm;
         const sx = (((px + cox) % 64) + 64) % 64, sy = (((py + coy) % 64) + 64) % 64;
         if (surface) ctx.drawImage(S.caus[fc], sx, sy + 4, 16, 12, px, py + 4, 16, 12);
         else ctx.drawImage(S.caus[fc], sx, sy, 16, 16, px, py, 16, 16);
@@ -652,11 +661,11 @@ function drawWater(ctx, map, x0, y0, x1, y1, t) {
         const by = Math.round(py + 13 - k * span);
         const bx = px + 3 + (((hs * 1000) | 0) % 10) + Math.round(Math.sin(t * 3 + hs * 50) * 1.2);
         ctx.globalAlpha = k > 0.85 ? (1 - k) / 0.15 : 0.85;
-        ctx.drawImage(S.bub[((hs * 100) | 0) % 3], bx, by);
+        ctx.drawImage(S.bub[((hs * 100) | 0) % 3].canvas, bx, by);
         ctx.globalAlpha = 1;
       }
       // plâncton luminoso no fundo
-      if (d >= 2 && hs > 0.86) {
+      if (d >= (tod === 'night' ? 0 : 2) && hs > (tod === 'night' ? 0.72 : 0.86)) {
         const a = 0.5 + 0.5 * Math.sin(t * 2.2 + hs * 40);
         ctx.globalAlpha = a * 0.9; ctx.fillStyle = hs > 0.95 ? '#ff9ad8' : '#7ff8ec';
         ctx.fillRect(Math.round(px + 8 + Math.sin(t * 0.5 + hs * 9) * 6), Math.round(py + 8 + Math.sin(t * 0.37 + hs * 13) * 5), 1, 1);
@@ -1124,6 +1133,7 @@ function paintHang(pc, x, y, seed) {
 // ------------------------------------------------------------------ decorate
 function decorate(map, rng, data) {
   if (!SPR) SPR = buildSprites();
+  waterTod = data?.timeOfDay || 'day';
   const out = [];
   const rows = data?.map || [];
   const chAt = (tx, ty) => (rows[ty] && rows[ty][tx]) || '.';
@@ -1306,8 +1316,8 @@ function showcaseMap() {
   R(82, 26, 6, 7, '#'); R(88, 6, 2, 27, '#');              // plataforma final + parede
   R(62, 8, 3, 6, '~');                                     // coluna de água suspensa
   g[32][5] = 'P'; g[25][85] = 'E'; g[32][22] = 'K';
-  g[32][8] = 'o'; g[23][15] = 'o'; g[16][66] = 'o';
-  g[8][34] = '*'; g[19][55] = '*'; g[21][66] = '*';
+  g[32][8] = 'o'; g[23][15] = 'o'; g[15][66] = 'o';
+  g[5][35] = '*'; g[19][55] = '*'; g[21][66] = '*';
   return g.map((r) => r.join(''));
 }
 registerLevel({

@@ -277,7 +277,7 @@ function drawPuppet(pc, q) {
   const hx = 14 + q.hx, hy = 8 + b + q.hy;
   pc.rect(13, hy + 4, 3, 3, P.wood[3]);
   puff(pc, hx, hy, 5.6, 5.6, P.wood);
-  puff(pc, hx, hy, 5.6, 5.6, P.hair, { mask: (x, y) => y < hy - 1.5 - (x - hx) * 0.45 });
+  puff(pc, hx, hy, 5.6, 5.6, P.hair, { mask: (x, y) => y < hy - 2.5 - (x - hx) * 0.6 });
   pc.rect(Math.round(hx) - 1, Math.round(hy - 7), 2, 2, P.wood[4]);
   const ex = Math.round(hx), ey = Math.round(hy - 1);
   if (q.xe) { xEye(pc, ex + 1, ey + 1, '#0e0a14'); xEye(pc, ex + 4, ey + 1, '#0e0a14'); }
@@ -356,10 +356,13 @@ class WoodPuppet extends PlushEnemy {
     }
     this.physics(dt);
   }
-  draw(ctx) {
+  update(dt) {
+    super.update(dt);
     // cruzeta flutuante segue com atraso
     const tx = this.cx + Math.sin(this.t * 1.7) * 2, ty = this.y - 20 + Math.sin(this.t * 2.3) * 1.5 - (this.state === 'air' ? 6 : 0);
-    this.barX += (tx - this.barX) * 0.12; this.barY += (ty - this.barY) * 0.18;
+    this.barX += (tx - this.barX) * Math.min(1, dt * 9); this.barY += (ty - this.barY) * Math.min(1, dt * 12);
+  }
+  draw(ctx) {
     const a = this.bodyAnim(), f = animFrame(this.sprite, a, a === 'hurt' ? this.t : this.animT);
     const m = frameMeta(this.sprite, a, f);
     const bx = Math.round(this.barX), by = Math.round(this.barY);

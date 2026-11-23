@@ -152,7 +152,7 @@ function windKey(pc, x, y, phase, K) {
   if (sc > 0.5) { pc.px(x - 1, y + 1 - d, K[0]); pc.px(x - 1, y + 1 + d, K[0]); }
 }
 defineSprite('npc_pip', {
-  w: 28, h: 26, ox: 14, oy: 25,
+  w: 30, h: 26, ox: 15, oy: 25,
   anims: { idle: { frames: 8, fps: 8 }, talk: { frames: 3, fps: 8 }, scared: { frames: 2, fps: 16 }, flee: { frames: 4, fps: 14 } },
   draw(pc, anim, f) {
     const C = PI;
@@ -161,7 +161,7 @@ defineSprite('npc_pip', {
     else if (anim === 'talk') { mouth = f !== 1; b = f === 1 ? 1 : 0; }
     else if (anim === 'scared') { scared = true; jx = f ? 1 : -1; k = 2; }
     else { scared = true; run = true; b = f & 1 ? -1 : 0; k = f; }
-    pc.translate(jx, 0);
+    pc.translate(jx + 2, 0);
     // cauda enrolada
     if (run) { pc.line(6, 19 + b, 0, 17 + b, C.fur[1]); pc.line(6, 20 + b, 1, 18 + b, C.ear); }
     else { pc.line(6, 21 + b, 2, 20 + b, C.fur[1]); pc.line(2, 20 + b, 1, 16 + b, C.fur[1]); pc.px(2, 15 + b, C.earD); pc.px(3, 15 + b, C.earD); }
