@@ -99,6 +99,9 @@ function drawSoil(pc, x, y, n0, rng, info) {
   const kl = n.l ? 1 + countSolid(map, tx - 1, ty, -1, 0, MAX - 1) : 0;
   const kr = n.r ? 1 + countSolid(map, tx + 1, ty, 1, 0, MAX - 1) : 0;
   const levAt = new Int8Array(256);
+  const colOff = new Int8Array(16); // ondulação das camadas: só depende da coluna
+  for (let lx = 0; lx < 16; lx++) { const wx = tx * 16 + lx; colOff[lx] = Math.round(2.2 * Math.sin(wx * 0.19) + 1.4 * Math.sin(wx * 0.071 + 2.1)); }
+  const diag = (n.u && n.l && !n.ul) || (n.u && n.r && !n.ur) || (n.d && n.l && !n.dl) || (n.d && n.r && !n.dr);
   for (let ly = 0; ly < 16; ly++) {
     for (let lx = 0; lx < 16; lx++) {
       const wx = tx * 16 + lx, wy = ty * 16 + ly;
@@ -107,16 +110,18 @@ function drawSoil(pc, x, y, n0, rng, info) {
       if (kd < MAX) d = Math.min(d, kd * 16 + 15 - ly + 4); // luz de baixo conta menos
       if (kl < MAX) d = Math.min(d, kl * 16 + lx);
       if (kr < MAX) d = Math.min(d, kr * 16 + 15 - lx + 2);
-      if (n.u && n.l && !n.ul) d = Math.min(d, Math.hypot(lx + 0.5, ly + 0.5));
-      if (n.u && n.r && !n.ur) d = Math.min(d, Math.hypot(15.5 - lx, ly + 0.5));
-      if (n.d && n.l && !n.dl) d = Math.min(d, Math.hypot(lx + 0.5, 15.5 - ly) + 4);
-      if (n.d && n.r && !n.dr) d = Math.min(d, Math.hypot(15.5 - lx, 15.5 - ly) + 4);
+      if (diag) {
+        if (n.u && n.l && !n.ul) d = Math.min(d, Math.hypot(lx + 0.5, ly + 0.5));
+        if (n.u && n.r && !n.ur) d = Math.min(d, Math.hypot(15.5 - lx, ly + 0.5));
+        if (n.d && n.l && !n.dl) d = Math.min(d, Math.hypot(lx + 0.5, 15.5 - ly) + 4);
+        if (n.d && n.r && !n.dr) d = Math.min(d, Math.hypot(15.5 - lx, 15.5 - ly) + 4);
+      }
       const f = Math.max(0, Math.min(3, (d - 3) / 11));
       let lev = Math.floor(f);
       if (lev < 3 && f - lev > th(wx, wy)) lev++;
       levAt[ly * 16 + lx] = lev;
       // camadas de feltro onduladas (contínuas entre tiles)
-      const v = wy + Math.round(2.2 * Math.sin(wx * 0.19) + 1.4 * Math.sin(wx * 0.071 + 2.1));
+      const v = wy + colOff[lx];
       const band = Math.floor(v / 7), r = v - band * 7;
       let c = SOIL[lev][(h2(band, 3) * 3) | 0];
       if (r === 0 && h2(wx >> 2, band, 12) > 0.22) c = SEAM[lev];

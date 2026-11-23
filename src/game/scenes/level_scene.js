@@ -36,6 +36,7 @@ import { Hud } from '../ui/hud.js';
 import { DialogueBox } from '../ui/dialogue.js';
 import { runCutscene } from '../cutscenes/director.js';
 import { getStats } from '../stats.js';
+import { DEFAULT_TOD } from '../art/sky.js';
 
 const CHUNK = 16; // tiles per chunk side
 
@@ -45,6 +46,7 @@ export class LevelScene extends Scene {
     this.levelId = params.levelId || params.id;
     this.data = R.levels.get(this.levelId);
     if (!this.data) throw new Error('Fase não registrada: ' + this.levelId);
+    if (game.params.get('tod')) this.data = { ...this.data, timeOfDay: game.params.get('tod') }; // teste: ?tod=day|dusk|night
     this.run = params.run || {
       timer: 0, deaths: 0, checkpoint: null, collected: new Set(), secrets: new Set(),
       buttons: 0, starsFound: [false, false, false], startedAt: Date.now(),
@@ -242,25 +244,25 @@ export class LevelScene extends Scene {
   bakeBackground() {
     const bg = this.background;
     this.bgLayers = [];
+    this.fgLayers = [];
     if (!bg) return;
-    if (!bg._baked) {
-      bg._baked = (bg.layers || []).map((L) => {
+    // layers are baked once per time of day ('day'|'dusk'|'night'); paint(pc, w, h, tod, levelData)
+    const worldKey = this.data.background || `w${this.data.world}`;
+    const tod = this.data.timeOfDay || bg.defaultTimeOfDay || DEFAULT_TOD[worldKey] || 'day';
+    this.timeOfDay = tod;
+    bg._bakedByTod ||= {};
+    if (!bg._bakedByTod[tod]) {
+      const bake = (L) => {
         const w = L.width || 512, h = L.height || 240;
         const pc = new PixelCanvas(w, h);
-        try { L.paint(pc, w, h); } catch (e) { console.error('[background] paint', e); }
+        try { L.paint(pc, w, h, tod, this.data); } catch (e) { console.error('[background] paint', e); }
         pc.flush();
         return { ...L, canvas: pc.canvas, w, h };
-      });
-      bg._frontBaked = (bg.front || []).map((L) => {
-        const w = L.width || 512, h = L.height || 240;
-        const pc = new PixelCanvas(w, h);
-        try { L.paint(pc, w, h); } catch (e) { console.error('[background] paint', e); }
-        pc.flush();
-        return { ...L, canvas: pc.canvas, w, h };
-      });
+      };
+      bg._bakedByTod[tod] = { back: (bg.layers || []).map(bake), front: (bg.front || []).map(bake) };
     }
-    this.bgLayers = bg._baked;
-    this.fgLayers = bg._frontBaked;
+    this.bgLayers = bg._bakedByTod[tod].back;
+    this.fgLayers = bg._bakedByTod[tod].front;
   }
 
   // --------------------------------------------------------------- entity API

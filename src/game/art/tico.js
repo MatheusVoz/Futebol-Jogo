@@ -66,7 +66,7 @@ const BASE = {
   lf: [0, 0], lb: [0, 0],// pés dianteiro/traseiro: [dx, altura erguida]
   fy: 0,                 // deslocamento vertical da base dos pés (no ar)
   tail: 0, tailLen: 0,   // ângulo extra (+ = mais erguida) e comprimento extra da cauda
-  arm: 0.55, arm2: null, // ângulo do braço (0 = frente, +π/2 = baixo, -π/2 = cima); arm2 = braço de trás
+  arm: 0.55, arm2: null, armLen: 3.8, // ângulo do braço (0 = frente, +π/2 = baixo, -π/2 = cima); arm2 = braço de trás
   eye: 'open', mouth: 'smile', look: [0, 0], blush: true,
   spikes: 0, wig: 0,     // espinhos eriçados / balanço dos espinhos
   glow: 0, stuff: 0, tear: 0,
@@ -88,7 +88,7 @@ function geo(p) {
   const N2 = { x: H0.x - 2.4, y: H0.y + 3.6 };
   const N1 = { x: (N0.x + N2.x) / 2 - 1.4 - p.neck, y: (N0.y + N2.y) / 2 + 0.6 };
   const S = { x: B.x + 4.2, y: B.y - 1.2 };            // ombro
-  const paw = { x: S.x + Math.cos(p.arm) * 3.8, y: S.y + Math.sin(p.arm) * 3.8 };
+  const paw = { x: S.x + Math.cos(p.arm) * p.armLen, y: S.y + Math.sin(p.arm) * p.armLen };
   return { B, brx, bry, H: H0, hrx, hry, N0, N1, N2, S, paw };
 }
 const bz = (a, b, c, t) => {
@@ -186,8 +186,8 @@ function drawLeg(V, hx, hy, foot, col, colD, p) {
   V.ellipse(fx + 0.9, fy, 2.6, 1.6, col);
   V.hline(Math.round(fx), Math.round(fy + 0.6), 2, colD); // solinha costurada
 }
-function drawArm(V, sx, sy, ang, col, colD) {
-  const ex = sx + Math.cos(ang) * 3.8, ey = sy + Math.sin(ang) * 3.8;
+function drawArm(V, sx, sy, ang, col, colD, len = 3.8) {
+  const ex = sx + Math.cos(ang) * len, ey = sy + Math.sin(ang) * len;
   V.thickLine(sx + 0.4, sy + 0.5, ex + 0.4, ey + 0.5, 1.4, colD);
   V.thickLine(sx, sy, ex, ey, 1.2, col);
   V.px(Math.round(ex), Math.round(ey), colD);
@@ -247,7 +247,7 @@ function drawTicoPose(pc, p) {
   // cauda + perna de trás + braço de trás
   const tail = drawTail(V, g, p);
   drawLeg(V, B.x - 3.4, B.y + bry * 0.5, p.lb, C.shade, C.dark, p);
-  if (p.arm2 != null) drawArm(V, g.S.x - 1.6, g.S.y - 0.4, p.arm2, C.shade, C.dark);
+  if (p.arm2 != null) drawArm(V, g.S.x - 1.6, g.S.y - 0.4, p.arm2, C.shade, C.dark, p.armLen);
 
   // espinhos das costas (atrás do corpo)
   [[-116, 3.9, 2], [-144, 3.5, 1.9], [-170, 3, 1.6]].forEach(([a, len, half], i) => {
@@ -329,7 +329,7 @@ function drawTicoPose(pc, p) {
   { const [mx, my] = hp(5, 3.4); const [ax, ay] = V.anchor(mx, my, 1); drawMouth(pc, ax, ay, p.mouth); }
 
   // braço da frente (patinha)
-  drawArm(V, g.S.x, g.S.y, p.arm, C.body, C.shade);
+  drawArm(V, g.S.x, g.S.y, p.arm, C.body, C.shade, p.armLen);
   return g;
 }
 // ------------------------------------------------------------------ efeitos
@@ -599,7 +599,7 @@ function poseFor(anim, f, n) {
     case 'cast': {
       const up = f === 0 ? -0.8 : -1.55 + 0.12 * Math.sin(ph * 2);
       const gl = f === 0 ? 0.2 : 0.55 + 0.45 * Math.sin(ph * 1.5);
-      return K({ sq: f === 0 ? 0.3 : -0.2, hy: f === 0 ? 0 : -1, tilt: -0.15, arm: up, arm2: up - 0.25, eye: f === 0 ? 'det' : 'closed',
+      return K({ sq: f === 0 ? 0.3 : -0.2, hy: f === 0 ? 0 : -1, tilt: -0.15, arm: up, arm2: up - 0.25, armLen: 4.8, eye: f === 0 ? 'det' : 'closed',
         mouth: f === 0 ? 'flat' : 'open', glow: gl, spikes: 0.5 + gl * 0.5, wig: Math.sin(ph * 2), tail: 0.3,
         fx: f === 0 ? null : [{ k: 'aura', ph: f * 0.7 }] });
     }
@@ -617,7 +617,7 @@ function poseFor(anim, f, n) {
         { sq: -0.2, hx: 1, tilt: 0.15, arm: -2.0, arm2: -1.7, eye: 'happy', mouth: 'open', tail: 0.5, wig: -1 },
         { sq: 0.2, hx: -0.5, tilt: -0.12, arm: -1.5, arm2: -1.9, eye: 'happy', mouth: 'grin', tail: 0.3, wig: 1 },
         { sq: 0, arm: -1.8, arm2: -1.6, eye: 'happy', mouth: 'grin', tail: 0.4, wig: -1 }][f];
-      return K(Object.assign(P, { fx: f >= 1 ? sparks : null }));
+      return K(Object.assign(P, { armLen: P.arm < -1 ? 4.8 : 3.8, fx: f >= 1 ? sparks : null }));
     }
     case 'sleep': {
       const b = Math.sin(ph);
@@ -651,7 +651,7 @@ function poseFor(anim, f, n) {
     }
     case 'wave': {
       const s = Math.sin(ph);
-      return K({ hx: 0.5, tilt: 0.1 * s, arm: -1.75 + 0.5 * s, eye: f % 3 === 2 ? 'happy' : 'open', mouth: f % 2 ? 'grin' : 'smile',
+      return K({ hx: 0.5, tilt: 0.1 * s, arm: -1.6 + 0.55 * s, armLen: 5.2, eye: f % 3 === 2 ? 'happy' : 'open', mouth: f % 2 ? 'grin' : 'smile',
         tail: 0.2 * Math.sin(2 * ph), sq: 0.15 * Math.cos(2 * ph) });
     }
     case 'sad': {

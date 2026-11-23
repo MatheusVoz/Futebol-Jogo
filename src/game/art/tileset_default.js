@@ -3,6 +3,7 @@
 // Mundos registram seus próprios ('w1'...'w5') em art/tiles_wN.js / art/bg_wN.js.
 // =============================================================================
 import { registerTileset, registerBackground } from '../registry.js';
+import { drawSky, skyPreset } from './sky.js';
 
 registerTileset('default', {
   skyColor: '#2a2050',
@@ -18,6 +19,6 @@ registerTileset('default', {
   bg(pc, x, y) { pc.rect(x, y, 16, 16, '#30284a'); },
 });
 registerBackground('default', {
-  sky(ctx, w, h) { ctx.fillStyle = '#2a2050'; ctx.fillRect(0, 0, w, h); },
+  sky(ctx, w, h, t, cam, level) { drawSky(ctx, w, h, t, cam, skyPreset(level?.data?.skyWorld || 'w1', level)); },
   layers: [],
 });

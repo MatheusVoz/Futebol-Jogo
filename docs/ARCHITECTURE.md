@@ -207,6 +207,13 @@ SFX: `registerSfx('jump', { wave:'square', freq:320, freqEnd:640, dur:0.12, vol:
   icon_energy icon_button icon_star icon_star_empty icon_patch icon_thread icon_memory icon_secret icon_ab_stitch icon_ab_unstitch
   icon_ab_rewind icon_ab_decoy icon_ab_unravel icon_lock icon_check`.
 
+## Céu dinâmico (`src/game/art/sky.js`, dono: líder)
+Todo fundo deve usar o céu vivo compartilhado: `sky(ctx,w,h,t,cam,level){ drawSky(ctx,w,h,t,cam,skyPreset('wN', level)); }`.
+Horário por fase: `timeOfDay: 'day'|'dusk'|'night'` nos dados da fase (padrão por mundo em `DEFAULT_TOD`). O céu já tem sol com raios,
+lua com crateras/halo, estrelas cintilantes, estrelas cadentes, meteoros, nuvens em camadas com vento, aurora, bolhas (W2), relâmpagos (W4).
+As camadas de parallax são pintadas **por horário**: `paint(pc, w, h, tod, levelData)` — pinte versões de dia/entardecer/noite.
+Teste com `?tod=day|dusk|night`.
+
 ## Persistência
 Tudo em `save.data` (veja `src/engine/save.js`). Coletáveis persistentes usam `props.pid` (gerado automaticamente por célula) →
 `save.markCollected(pid)` e checagem `save.isCollected(pid)` no constructor (mostrar "fantasma" translúcido se já coletado, para
