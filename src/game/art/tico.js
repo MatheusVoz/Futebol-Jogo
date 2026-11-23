@@ -1,23 +1,30 @@
 // =============================================================================
-// art/tico.js — Spritesheet DEFINITIVO do TICO, o dinossauro de pelúcia.
+// art/tico.js — Spritesheet DEFINITIVO do TICO, o dinossauro de pelúcia (v2).
 //
-// Quadro 48x40, pivô nos pés (24,39), olhando para a DIREITA. Corpo+cabeça
-// ~27 px de altura, centrados no pivô (hitbox do jogador 12x18).
+// Quadro 64x52, pivô nos pés (32,51), olhando para a DIREITA. Corpo+cabeça
+// ~36 px de altura, centrados no pivô (hitbox do jogador continua 12x18).
 //
 // Como funciona:
+//   • As POSES são descritas em "unidades de pose" (espaço 48x40 antigo, pivô
+//     (24,39)) e mapeadas para o quadro 64x52 com escala SC no momento de
+//     desenhar — assim todas as poses-chave continuam valendo.
 //   • drawTicoPose(pc, pose) desenha o boneco a partir de uma POSE paramétrica
 //     (deslocamento/achatamento do corpo, cabeça + inclinação, curva do
 //     pescoço, fases das pernas, ângulo da cauda, braço, olho, boca, espinhos
 //     eriçados, costuras brilhando, enchimento saindo...).
-//   • poseFor(anim, f, n) devolve a pose-chave de cada quadro de cada animação.
+//   • Volumes de pelúcia (cabeça, corpo, focinho, barriga, cauda, pescoço,
+//     patas) são sombreados pixel a pixel: 5 tons por material, luz de
+//     cima-esquerda, luz de contorno no topo, dithering ordenado + "fiapos"
+//     de tecido presos ao volume (a textura acompanha o movimento), oclusão
+//     onde a cabeça encontra o pescoço e onde o corpo encontra as pernas.
+//   • Detalhes: costuras tracejadas (pescoço, costas, barriga, focinho),
+//     espinhos de feltro com sombreado próprio, manchas bordadas, olho grande
+//     e brilhante (2 brilhos + pálpebra), narina, boquinha costurada,
+//     almofadinhas claras nas patas.
 //   • Poses com rotação/espelho (deitado, morte, giro) passam todas as
-//     primitivas por uma "vista" transformada (view), desenhando nativamente
-//     (sem reamostrar pixels) para manter o traço nítido.
-//   • Efeitos (chicote de fio dourado, rastros, brilhos, "z", gota de suor)
-//     são desenhados por cima, alguns antes do contorno (legíveis em qualquer
-//     fundo) e os translúcidos depois.
+//     primitivas por uma "vista" transformada (view), desenhando nativamente.
 //   • meta(anim, f) → {head (topo-centro da cabeça), neck, back, tilt} em
-//     coordenadas locais do quadro, calculado da MESMA pose (cosméticos).
+//     coordenadas locais do quadro 64x52, calculado da MESMA pose.
 //
 // Animações (nomes exigidos por player.js + extras de cutscene):
 //   idle walk run skid jump fall land attack1 attack2 attack3 attack_up
@@ -28,17 +35,25 @@ import { defineSprite } from '../../engine/sprites.js';
 
 const C = {
   body: '#3fc7c0', shade: '#2a9d97', dark: '#1f7f7c', light: '#7fe6df', hi: '#b6f6f0',
-  spine: '#ffd23f', spineD: '#e0a020', spineL: '#fff0a0',
-  eye: '#120a18', glint: '#ffffff', eyeR: '#6a6a9a',
-  spotY: '#ffd23f', spotO: '#ff8a3c', spotB: '#4a7fe0', out: '#1b2a3a',
-  mouth: '#1b4a4a', tongue: '#ff7a96', seam: '#227f7b', blush: '#ff8fb0',
-  belly: '#6adcd5', muzS: '#3bb5ae', muz: '#8fe9e2', muzL: '#c4f8f2',
-  gold: '#ffd23f', goldL: '#fff6a8', goldD: '#e0a020',
+  spine: '#ffd23f', spineD: '#e0a020', spineDD: '#b47a14', spineL: '#fff0a0',
+  eye: '#120a18', glint: '#ffffff', glint2: '#c9d2ff', eyeR: '#3a2c5e',
+  spotY: '#ffd23f', spotYE: '#d49a1a', spotYL: '#fff0a0',
+  spotO: '#ff8a3c', spotOE: '#c95a22', spotOL: '#ffc08a',
+  spotB: '#4a7fe0', spotBE: '#2c52a8', spotBL: '#9ab8ff',
+  out: '#1b2a3a', mouth: '#1b4a4a', tongue: '#ff7a96', seam: '#1c7470', seamL: '#2a9d97', blush: '#ff8fb0',
+  pad: '#c4f8f2', gold: '#ffd23f', goldL: '#fff6a8', goldD: '#e0a020',
   stuff: '#f6f2ff', stuffS: '#cfc8e6', tear: '#9fe0ff', zz: '#dff4ff',
 };
+// 5 tons por material (escuro → brilho)
+const TB = ['#1f7f7c', '#2a9d97', '#3fc7c0', '#7fe6df', '#b6f6f0'];   // tecido turquesa
+const TK = ['#16605d', '#1f7f7c', '#2a9d97', '#3fc7c0', '#62d6cf'];   // membros de trás (na sombra)
+const TL = ['#36aaa4', '#5ad3cc', '#82e7e0', '#aaf1eb', '#d4faf6'];   // tecido claro (barriga/focinho)
 
-const W = 48, H = 40;
-const RC = { x: 24, y: 31.5 }; // centro das rotações do boneco inteiro
+const W = 64, H = 52;
+const SC = 1.3;                 // escala unidades de pose → pixels do quadro
+const OP = { x: 24, y: 39 };    // pivô no espaço de pose
+const PV = { x: 32, y: 51 };    // pivô no quadro
+const RC = { x: 24, y: 31.5 };  // centro das rotações do boneco inteiro (espaço de pose)
 
 const ANIMS = {
   idle: { frames: 8, fps: 6 }, walk: { frames: 8, fps: 12 }, run: { frames: 8, fps: 16 },
@@ -55,7 +70,6 @@ const ANIMS = {
   lying: { frames: 2, fps: 1 }, wake: { frames: 8, fps: 8, loop: false }, wave: { frames: 6, fps: 10 },
   sad: { frames: 4, fps: 4 }, surprise: { frames: 4, fps: 12, loop: false }, think: { frames: 4, fps: 4 },
 };
-
 // ----------------------------------------------------------------- pose base
 const BASE = {
   bx: 0, by: 0,          // deslocamento do corpo
@@ -95,140 +109,215 @@ const bz = (a, b, c, t) => {
   const u = 1 - t;
   return { x: u * u * a.x + 2 * u * t * b.x + t * t * c.x, y: u * u * a.y + 2 * u * t * b.y + t * t * c.y };
 };
-/** Transformação do boneco (rotação em torno de RC, translação, espelho). */
+// ------------------------------------------------------------- primitivas
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+function hash(x, y) {
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+const hex2 = (a) => Math.max(0, Math.min(255, Math.round(a))).toString(16).padStart(2, '0');
+
+/**
+ * Volume de pelúcia sombreado pixel a pixel. sample(px,py) → [u,v] (normal
+ * projetada no disco unitário) ou null. (ax,ay) = âncora da textura (presa ao
+ * volume, para o tecido não "escorrer" quando ele se move).
+ */
+function plush(pc, x0, y0, x1, y1, sample, tones, base, ax, ay, rim) {
+  for (let y = Math.floor(y0); y <= Math.ceil(y1); y++) {
+    for (let x = Math.floor(x0); x <= Math.ceil(x1); x++) {
+      const s = sample(x + 0.5, y + 0.5);
+      if (!s) continue;
+      const u = s[0], v = s[1], d2 = u * u + v * v;
+      if (d2 > 1) continue;
+      const lam = -0.55 * u - 0.7 * v + 0.45 * Math.sqrt(1 - d2);
+      let lv = base + lam * 1.8;
+      if (lam > 0.93) lv += 0.55;                                // brilho macio
+      if (rim && v < -0.45 && d2 > 0.62) lv = Math.max(lv, 3.15); // luz de contorno no topo
+      const lx = x - ax, ly = y - ay;
+      lv += (BAYER[(ly & 3) * 4 + (lx & 3)] / 16 - 0.47) * 0.5;  // dithering ordenado
+      const h = hash(lx, ly);
+      if (h < 0.045) lv += 0.6; else if (h > 0.965) lv -= 0.6;   // fiapos do tecido
+      pc.px(x, y, tones[lv < 0 ? 0 : lv >= 4 ? 4 : lv | 0]);
+    }
+  }
+}
+function plushBall(pc, cx, cy, rx, ry, tones, base = 1.9, rim = true) {
+  plush(pc, cx - rx - 1, cy - ry - 1, cx + rx + 1, cy + ry + 1,
+    (x, y) => [(x - cx) / rx, (y - cy) / ry], tones, base, Math.round(cx), Math.round(cy), rim);
+}
+function plushTube(pc, S, tones, base = 1.9, rim = true) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const s of S) { x0 = Math.min(x0, s.x - s.r); y0 = Math.min(y0, s.y - s.r); x1 = Math.max(x1, s.x + s.r); y1 = Math.max(y1, s.y + s.r); }
+  plush(pc, x0 - 1, y0 - 1, x1 + 1, y1 + 1, (x, y) => {
+    let best = -1, bu = 0, bv = 0;
+    for (const s of S) {
+      const dx = x - s.x, dy = y - s.y, k = 1 - Math.hypot(dx, dy) / s.r;
+      if (k > best) { best = k; bu = dx / s.r; bv = dy / s.r; }
+    }
+    return best >= 0 ? [bu, bv] : null;
+  }, tones, base, Math.round(S[0].x), Math.round(S[0].y), rim);
+}
+/** Costura tracejada ao longo de uma polilinha (coords do quadro). */
+function seamPath(pc, pts, col, on = 2, per = 3) {
+  let k = 0, last = null;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1], b = pts[i], n = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y)));
+    for (let j = 0; j < n; j++) {
+      const x = Math.floor(a.x + (b.x - a.x) * (j / n)), y = Math.floor(a.y + (b.y - a.y) * (j / n));
+      if (last && last[0] === x && last[1] === y) continue;
+      last = [x, y];
+      if ((k++ % per) < on) pc.px(x, y, col);
+    }
+  }
+}
+
+// ------------------------------------------------------------ transformação
+/** Espaço de pose → quadro (rotação em torno de RC, translação, escala, espelho). */
 function xf(x, y, p) {
   if (p.rot) {
     const c = Math.cos(p.rot), s = Math.sin(p.rot), dx = x - RC.x, dy = y - RC.y;
     x = RC.x + dx * c - dy * s; y = RC.y + dx * s + dy * c;
   }
-  x += p.rox; y += p.roy;
+  x = PV.x + (x + p.rox - OP.x) * SC;
+  y = PV.y + (y + p.roy - OP.y) * SC;
   if (p.flip) x = W - x;
   return { x, y };
 }
-
-// ------------------------------------------------------------- primitivas
-function ball(pc, cx, cy, rx, ry, c0, c1, c2) {
-  pc.ellipse(cx, cy, rx, ry, c0);
-  pc.ellipse(cx - 0.7, cy - 0.8, rx - 0.9, ry - 1, c1);
-  if (c2) pc.ellipse(cx - rx * 0.4, cy - ry * 0.5, Math.max(1, rx * 0.28), Math.max(0.8, ry * 0.2), c2);
-}
-/** Espinho de pelúcia: base (bx,by), direção (nx,ny). */
-function spine(pc, bx, by, nx, ny, len, half, glow) {
-  const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
-  const tx = bx + nx * len, ty = by + ny * len, px = -ny, py = nx;
-  const a = [bx + px * half, by + py * half], b = [bx - px * half, by - py * half];
-  pc.poly([a, [tx, ty], b], glow ? C.spine : C.spineD);
-  const lit = (px * -0.7 + py * -0.7) > 0 ? a : b;
-  pc.poly([lit, [tx, ty], [bx, by]], glow ? C.goldL : C.spine);
-}
-/** Costura tracejada ao longo de um arco de elipse (graus). */
-function dashArc(pc, cx, cy, rx, ry, a0, a1, col, step = 2) {
-  const n = Math.max(2, Math.round((Math.abs(a1 - a0) / 360) * TAU * Math.max(rx, ry)));
-  let k = 0;
-  for (let i = 0; i <= n; i++) {
-    const a = ((a0 + (a1 - a0) * (i / n)) * Math.PI) / 180;
-    if ((k++ % step) === 0) pc.px(Math.round(cx + Math.cos(a) * rx - 0.5), Math.round(cy + Math.sin(a) * ry - 0.5), col);
-  }
-}
-const hex2 = (a) => Math.max(0, Math.min(255, Math.round(a))).toString(16).padStart(2, '0');
+/** Só a escala (efeitos posicionados no espaço de pose). */
+const M = (x, y) => ({ x: PV.x + (x - OP.x) * SC, y: PV.y + (y - OP.y) * SC });
 
 /**
- * "Vista" transformada: todas as primitivas passam pela rotação/espelho do
- * boneco (xf), desenhadas NATIVAMENTE (sem reamostrar pixels). Elipses giradas
- * viram elipses alinhadas com raios equivalentes (o Tico é todo redondinho);
- * a luz do sombreamento continua vindo de cima-esquerda na tela.
+ * "Vista" transformada: todas as primitivas passam por xf e são desenhadas
+ * NATIVAMENTE no quadro final (sem reamostrar pixels). Elipses giradas viram
+ * elipses alinhadas com raios equivalentes (o Tico é todo redondinho); a luz
+ * do sombreamento continua vindo de cima-esquerda na tela.
  */
 function view(pc, p) {
   const c = Math.cos(p.rot), s = Math.sin(p.rot);
   const T = (x, y) => xf(x, y, p);
-  const R = (rx, ry) => (p.rot ? [Math.hypot(rx * c, ry * s), Math.hypot(rx * s, ry * c)] : [rx, ry]);
+  const R = (rx, ry) => (p.rot ? [Math.hypot(rx * c, ry * s) * SC, Math.hypot(rx * s, ry * c) * SC] : [rx * SC, ry * SC]);
   const V = {
     pt: T,
-    px(x, y, col) { const q = T(Math.floor(x) + 0.5, Math.floor(y) + 0.5); pc.px(Math.floor(q.x), Math.floor(q.y), col); },
-    hline(x, y, w, col) { for (let i = 0; i < w; i++) V.px(x + i, y, col); },
+    px(x, y, col) { const q = T(x, y); pc.px(Math.floor(q.x), Math.floor(q.y), col); },
+    circle(cx, cy, r, col) { const q = T(cx, cy); pc.circle(q.x, q.y, r * SC, col); },
     ellipse(cx, cy, rx, ry, col) { const q = T(cx, cy), [a, b] = R(rx, ry); pc.ellipse(q.x, q.y, a, b, col); },
-    circle(cx, cy, r, col) { const q = T(cx, cy); pc.circle(q.x, q.y, r, col); },
-    circleS(cx, cy, r, col, ox, oy) { const q = T(cx, cy); pc.circle(q.x + ox, q.y + oy, r, col); },
-    thickLine(x0, y0, x1, y1, r, col) { const a = T(x0, y0), b = T(x1, y1); pc.thickLine(a.x, a.y, b.x, b.y, r, col); },
+    line(x0, y0, x1, y1, col) { const a = T(x0, y0), b = T(x1, y1); pc.line(Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), col); },
     poly(pts, col) { pc.poly(pts.map(([x, y]) => { const q = T(x, y); return [q.x, q.y]; }), col); },
-    ball(cx, cy, rx, ry, c0, c1, c2) { const q = T(cx, cy), [a, b] = R(rx, ry); ball(pc, q.x, q.y, a, b, c0, c1, c2); },
-    /** canto sup.-esq. (na tela) de um padrão de w px de largura ancorado em (x,y) */
-    anchor(x, y, w = 3) {
-      const q = T(Math.round(x) + 0.5, Math.round(y) + 0.5);
-      return [Math.floor(q.x) - (p.flip ? w - 1 : 0), Math.floor(q.y)];
+    ball(cx, cy, rx, ry, tones, base, rim) { const q = T(cx, cy), [a, b] = R(rx, ry); plushBall(pc, q.x, q.y, a, b, tones, base, rim); },
+    tube(S, tones, base, rim) { plushTube(pc, S.map((o) => { const q = T(o.x, o.y); return { x: q.x, y: q.y, r: o.r * SC }; }), tones, base, rim); },
+    seam(pts, col, on, per) { seamPath(pc, pts.map((o) => T(o.x, o.y)), col, on, per); },
+    arc(cx, cy, rx, ry, a0, a1, rot = 0) { // pontos de um arco (graus) no espaço de pose
+      const out = [], n = Math.max(3, Math.ceil(Math.abs(a1 - a0) / 8));
+      const cr = Math.cos(rot), sr = Math.sin(rot);
+      for (let i = 0; i <= n; i++) {
+        const a = ((a0 + (a1 - a0) * (i / n)) * Math.PI) / 180, ex = Math.cos(a) * rx, ey = Math.sin(a) * ry;
+        out.push({ x: cx + ex * cr - ey * sr, y: cy + ex * sr + ey * cr });
+      }
+      return out;
     },
+    /** canto sup.-esq. (na tela) de um padrão de w px ancorado em (x,y) */
+    anchor(x, y, w = 3) { const q = T(x, y); return [Math.round(q.x) - (p.flip ? w - 1 : 0), Math.round(q.y)]; },
   };
   return V;
 }
 
 // ------------------------------------------------------------ partes do corpo
-function drawTail(V, g, p) {
+/** Espinho de feltro macio: base (bx,by), direção (nx,ny) — espaço de pose. */
+function felt(V, bx, by, nx, ny, len, half, glow) {
+  const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+  const tx = bx + nx * len, ty = by + ny * len, px = -ny, py = nx;
+  const a = [bx + px * half, by + py * half], b = [bx - px * half, by - py * half];
+  const litA = (px * -0.7 + py * -0.7) > 0, lit = litA ? a : b, dk = litA ? b : a;
+  const cD = glow ? C.spineD : C.spineDD, cM = glow ? C.spine : C.spineD, cL = glow ? C.goldL : C.spine, cH = glow ? '#ffffff' : C.spineL;
+  V.poly([a, [tx, ty], b], cM);
+  V.poly([dk, [tx, ty], [bx + nx * len * 0.3, by + ny * len * 0.3]], cD);           // face na sombra
+  V.poly([lit, [tx - nx * 0.4, ty - ny * 0.4], [bx + nx * 0.5, by + ny * 0.5]], cL); // face iluminada
+  V.line(lit[0] * 0.75 + bx * 0.25 + nx * 0.6, lit[1] * 0.75 + by * 0.25 + ny * 0.6, bx + nx * len * 0.62 + px * 0.1, by + ny * len * 0.62 + py * 0.1, cH);
+}
+/** Mancha bordada: borda de ponto-cheio mais escura + brilho de linha. */
+function spot(V, pc, x, y, r, col, edge, lite) {
+  V.circle(x, y, r, edge);
+  V.circle(x - 0.12, y - 0.12, r - 0.55, col);
+  const q = V.pt(x - r * 0.38, y - r * 0.42);
+  pc.px(Math.floor(q.x), Math.floor(q.y), lite);
+}
+function tailCurve(g, p) {
   const { B } = g;
   const a = 0.78 + p.tail, L = 9.5 + p.tailLen;
-  const P0 = { x: B.x - g.brx + 2.6, y: B.y + 1 };
+  const P0 = { x: B.x - g.brx + 2.8, y: B.y + 1 };
   const P2 = { x: P0.x - Math.cos(a) * L, y: P0.y - Math.sin(a) * L };
   const P1 = { x: P0.x - Math.cos(a - 0.9) * L * 0.62, y: P0.y - Math.sin(a - 0.9) * L * 0.62 + 1.2 };
-  const N = 14;
-  for (const [ox, oy, dr, col] of [[0.5, 0.7, 0, C.shade], [-0.2, -0.3, -0.8, C.body]]) {
-    for (let i = 0; i <= N; i++) {
-      const t = i / N, q = bz(P0, P1, P2, t);
-      const r = 3.1 - 1.2 * t + (t > 0.85 ? 0.35 : 0) + dr;
-      V.circleS(q.x, q.y, Math.max(0.6, r), col, ox, oy);
-    }
-  }
-  const s = bz(P0, P1, P2, 0.78);
-  V.circle(s.x, s.y, 1.2, C.spotB);
   return { P0, P1, P2 };
 }
-function drawLeg(V, hx, hy, foot, col, colD, p) {
-  const fx = hx + foot[0], fy = 37.5 + p.fy - foot[1];
-  V.thickLine(hx, hy, fx, fy - 1, 1.7, col);
-  V.ellipse(fx + 0.9, fy, 2.6, 1.6, col);
-  V.hline(Math.round(fx), Math.round(fy + 0.6), 2, colD); // solinha costurada
+function drawLeg(V, pc, hx, hy, foot, tones, p) {
+  const fx = hx + foot[0], fy = 37.6 + p.fy - foot[1];
+  V.tube([{ x: hx, y: hy, r: 2.2 }, { x: (hx + fx) / 2, y: (hy + fy - 1) / 2, r: 2.0 }, { x: fx, y: fy - 1, r: 1.9 }], tones, 1.8, false);
+  V.ball(fx + 0.9, fy, 2.8, 1.75, tones, 2.0, true);
+  // almofadinhas claras na sola + dedinho costurado
+  const a = V.pt(fx - 0.6, fy + 1.05), b = V.pt(fx + 2.6, fy + 1.05);
+  pc.line(Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), tones === TK ? TK[4] : C.pad);
+  V.px(fx + 2.4, fy - 0.6, tones[0]);
 }
-function drawArm(V, sx, sy, ang, col, colD, len = 3.8) {
+function drawArm(V, pc, sx, sy, ang, tones, len) {
   const ex = sx + Math.cos(ang) * len, ey = sy + Math.sin(ang) * len;
-  V.thickLine(sx + 0.4, sy + 0.5, ex + 0.4, ey + 0.5, 1.4, colD);
-  V.thickLine(sx, sy, ex, ey, 1.2, col);
-  V.px(Math.round(ex), Math.round(ey), colD);
+  V.tube([{ x: sx, y: sy, r: 1.7 }, { x: (sx + ex) / 2, y: (sy + ey) / 2, r: 1.55 }, { x: ex, y: ey, r: 1.6 }], tones, 1.9, true);
+  const q = V.pt(ex + Math.cos(ang) * 0.9, ey + Math.sin(ang) * 0.9);
+  pc.px(Math.floor(q.x), Math.floor(q.y), tones === TK ? TK[4] : C.pad); // almofadinha
 }
 
+// ---------------------------------------------------------------- rosto
+/** Olho (4x6) com 2 brilhos e pálpebra; (x,y) = canto sup.-esq. */
 function drawEye(pc, x, y, st) {
-  const E = C.eye;
+  const E = C.eye, D = C.dark;
+  const open = () => {
+    pc.rect(x, y + 1, 4, 4, E); pc.hline(x + 1, y, 2, E); pc.hline(x + 1, y + 5, 2, E);
+    pc.px(x + 3, y + 4, C.eyeR); pc.px(x + 2, y + 5, C.eyeR);              // reflexo roxo embaixo
+    pc.rect(x, y + 1, 2, 2, C.glint); pc.px(x + 2, y + 4, C.glint2);       // 2 brilhos
+  };
   switch (st) {
-    case 'closed': // ‿ fechado e sereno
-      pc.px(x, y + 2, E); pc.px(x + 1, y + 3, E); pc.px(x + 2, y + 3, E); pc.px(x + 3, y + 2, E); break;
-    case 'happy': // ^
-      pc.px(x, y + 2, E); pc.px(x + 1, y + 1, E); pc.px(x + 2, y + 1, E); pc.px(x + 3, y + 2, E); break;
-    case 'squeeze': // >
-      pc.px(x, y, E); pc.px(x + 1, y + 1, E); pc.px(x + 2, y + 2, E); pc.px(x + 1, y + 3, E); pc.px(x, y + 4, E); break;
+    case 'closed':
+      pc.px(x - 1, y + 3, E); pc.px(x, y + 4, E); pc.hline(x + 1, y + 5, 2, E); pc.px(x + 3, y + 4, E); pc.px(x + 4, y + 3, E);
+      pc.px(x - 1, y + 2, D); break;
+    case 'happy':
+      pc.px(x - 1, y + 4, E); pc.px(x, y + 3, E); pc.hline(x + 1, y + 2, 2, E); pc.px(x + 3, y + 3, E); pc.px(x + 4, y + 4, E);
+      pc.px(x, y + 4, E); pc.px(x + 3, y + 4, E); break;
+    case 'squeeze':
+      pc.px(x, y + 1, E); pc.px(x + 1, y + 2, E); pc.px(x + 2, y + 3, E); pc.px(x + 3, y + 3, E); pc.px(x + 1, y + 4, E); pc.px(x, y + 5, E);
+      pc.px(x - 1, y, D); break;
     case 'x': // olho de botão costurado em X
-      pc.px(x, y, E); pc.px(x + 2, y, E); pc.px(x + 1, y + 1, E); pc.px(x, y + 2, E); pc.px(x + 2, y + 2, E); break;
+      for (let i = 0; i < 5; i++) { pc.px(x - 1 + i, y + 1 + i, E); pc.px(x + 3 - i, y + 1 + i, E); }
+      break;
     case 'half':
-      pc.rect(x, y + 2, 3, 2, E); pc.hline(x - 1, y + 1, 5, C.dark); pc.px(x, y + 2, C.glint); break;
+      pc.rect(x, y + 3, 4, 2, E); pc.hline(x + 1, y + 5, 2, E); pc.px(x, y + 3, C.glint); pc.px(x + 1, y + 3, C.glint);
+      pc.hline(x - 1, y + 2, 6, D); break;
     case 'wide':
-      pc.rect(x, y - 1, 4, 5, '#ffffff'); pc.px(x, y - 1, C.light); pc.px(x + 3, y - 1, C.light);
-      pc.px(x, y + 3, C.light); pc.px(x + 3, y + 3, C.light);
-      pc.rect(x + 1, y, 2, 3, E); pc.px(x + 1, y, C.glint); break;
-    default: {
-      pc.rect(x, y, 3, 4, E); pc.px(x, y, C.glint); pc.px(x + 1, y, C.glint); pc.px(x, y + 1, C.glint);
-      pc.px(x + 2, y + 3, C.eyeR);
-      if (st === 'sad') { pc.px(x + 2, y, C.body); pc.px(x - 1, y - 1, C.mouth); pc.px(x, y - 2, C.mouth); pc.px(x + 1, y - 2, C.mouth); }
-      if (st === 'det') { pc.hline(x, y, 3, C.body); pc.px(x - 1, y - 1, C.mouth); pc.px(x, y - 1, C.mouth); pc.px(x + 1, y - 1, C.mouth); pc.px(x + 2, y, C.mouth); pc.px(x, y + 1, C.glint); }
-    }
+      pc.rect(x - 1, y, 6, 6, '#ffffff'); pc.hline(x, y - 1, 4, '#ffffff'); pc.hline(x, y + 6, 4, '#ffffff');
+      pc.px(x - 1, y, '#d8eef0'); pc.px(x + 4, y + 5, '#d8eef0'); pc.px(x + 4, y, '#d8eef0'); pc.px(x - 1, y + 5, '#d8eef0');
+      pc.rect(x + 1, y + 1, 2, 4, E); pc.px(x + 3, y + 2, E); pc.px(x + 3, y + 3, E);
+      pc.px(x + 1, y + 1, C.glint); pc.hline(x, y - 2, 4, D); break;
+    case 'sad':
+      open(); pc.px(x, y + 1, C.body); pc.px(x + 1, y, C.body); pc.px(x, y + 2, D); pc.px(x + 1, y + 1, D); pc.px(x + 2, y, D);
+      pc.px(x - 1, y - 1, C.mouth); pc.px(x, y - 2, C.mouth); pc.px(x + 1, y - 2, C.mouth); pc.px(x + 2, y - 3, C.mouth); break;
+    case 'det':
+      open(); pc.px(x + 3, y + 1, C.body); pc.px(x + 2, y, C.body); pc.px(x + 3, y + 2, D); pc.px(x + 2, y + 1, D); pc.px(x + 1, y, D);
+      pc.px(x - 1, y - 2, C.mouth); pc.px(x, y - 2, C.mouth); pc.px(x + 1, y - 1, C.mouth); pc.px(x + 2, y - 1, C.mouth); pc.px(x + 3, y, C.mouth); break;
+    default:
+      open(); pc.hline(x + 1, y - 1, 2, D); pc.px(x, y, D); pc.px(x - 1, y, D); // pálpebra + cílio
   }
 }
+/** Boquinha costurada; (x,y) = centro-topo. */
 function drawMouth(pc, x, y, st) {
-  const M = C.mouth;
+  const Mo = C.mouth;
   switch (st) {
-    case 'line': pc.hline(x - 1, y + 1, 3, M); break;
-    case 'flat': pc.hline(x, y + 1, 2, M); pc.px(x - 1, y, M); break;
-    case 'sad': pc.px(x - 1, y + 1, M); pc.px(x, y, M); pc.px(x + 1, y + 1, M); break;
-    case 'o': pc.rect(x, y, 2, 2, M); break;
-    case 'open': pc.rect(x - 1, y, 3, 2, M); pc.px(x, y + 1, C.tongue); break;
-    case 'grin': pc.hline(x - 2, y, 4, M); pc.px(x - 1, y + 1, M); pc.px(x, y + 1, C.tongue); pc.px(x + 1, y + 1, M); break;
-    case 'wavy': pc.px(x - 2, y + 1, M); pc.px(x - 1, y, M); pc.px(x, y + 1, M); pc.px(x + 1, y, M); break;
-    default: pc.px(x - 1, y, M); pc.px(x, y + 1, M); pc.px(x + 1, y, M); // sorrisinho costurado
+    case 'line': pc.hline(x - 1, y + 1, 3, Mo); break;
+    case 'flat': pc.hline(x - 1, y + 1, 3, Mo); pc.px(x - 2, y, Mo); break;
+    case 'sad': pc.px(x - 2, y + 2, Mo); pc.px(x - 1, y + 1, Mo); pc.px(x, y + 1, Mo); pc.px(x + 1, y + 2, Mo); break;
+    case 'o': pc.px(x, y, Mo); pc.hline(x - 1, y + 1, 3, Mo); pc.px(x, y + 2, Mo); pc.px(x, y + 1, C.tongue); break;
+    case 'open': pc.hline(x - 2, y, 4, Mo); pc.px(x - 2, y + 1, Mo); pc.hline(x - 1, y + 1, 2, C.tongue); pc.px(x + 1, y + 1, Mo); pc.hline(x - 1, y + 2, 2, Mo); break;
+    case 'grin': pc.hline(x - 3, y, 6, Mo); pc.px(x - 2, y + 1, Mo); pc.hline(x - 1, y + 1, 2, C.tongue); pc.px(x + 1, y + 1, Mo); pc.hline(x - 1, y + 2, 2, Mo); break;
+    case 'wavy': for (let i = 0; i < 6; i++) pc.px(x - 3 + i, y + (i % 2 ? 0 : 1), Mo); break;
+    default: pc.px(x - 2, y, Mo); pc.px(x - 1, y + 1, Mo); pc.px(x, y + 1, Mo); pc.px(x + 1, y + 1, Mo); pc.px(x + 2, y, Mo); // sorrisinho
   }
 }
 
@@ -242,113 +331,130 @@ function drawTicoPose(pc, p) {
   const hn = (dx, dy) => [dx * ct - dy * st, dx * st + dy * ct];
   const glow = p.glow > 0.05;
   const seamC = glow ? (p.glow > 0.6 ? C.goldL : C.gold) : C.seam;
+  const seamL = glow ? seamC : C.seamL;
   const sp = 1 + 0.3 * p.spikes;
 
-  // cauda + perna de trás + braço de trás
-  const tail = drawTail(V, g, p);
-  drawLeg(V, B.x - 3.4, B.y + bry * 0.5, p.lb, C.shade, C.dark, p);
-  if (p.arm2 != null) drawArm(V, g.S.x - 1.6, g.S.y - 0.4, p.arm2, C.shade, C.dark, p.armLen);
-
-  // espinhos das costas (atrás do corpo)
-  [[-116, 3.9, 2], [-144, 3.5, 1.9], [-170, 3, 1.6]].forEach(([a, len, half], i) => {
-    const r = ((a + (i % 2 ? 12 : -12) * p.wig) * Math.PI) / 180;
-    spine(V, B.x + Math.cos(r) * (brx - 0.9), B.y + Math.sin(r) * (bry - 0.9), Math.cos(r), Math.sin(r), len * sp, half, glow);
-  });
-  { // espinho da cauda
+  // ---- cauda grossa e arredondada
+  const tail = tailCurve(g, p);
+  const TS = [];
+  for (let i = 0; i <= 9; i++) {
+    const t = i / 9, q = bz(tail.P0, tail.P1, tail.P2, t);
+    TS.push({ x: q.x, y: q.y, r: 3.7 - 1.7 * t + (t > 0.85 ? 0.45 : 0) });
+  }
+  { // espinho da cauda (atrás)
     const q = bz(tail.P0, tail.P1, tail.P2, 0.45), q2 = bz(tail.P0, tail.P1, tail.P2, 0.5);
-    spine(V, q.x, q.y - 1.2, q2.y - q.y, q.x - q2.x, 2.2 * sp, 1.2, glow);
+    felt(V, q.x, q.y - 1.6, q2.y - q.y, q.x - q2.x, 2.4 * sp, 1.3, glow);
   }
-  { // espinho do pescoço
-    const q = bz(g.N0, g.N1, g.N2, 0.55);
-    spine(V, q.x - 1.4, q.y, -1, -0.45 + p.wig * 0.2, 2.8 * sp, 1.5, glow);
-  }
+  V.tube(TS, TB, 1.85, true);
+  { const s = bz(tail.P0, tail.P1, tail.P2, 0.72); spot(V, pc, s.x, s.y + 0.2, 1.25, C.spotB, C.spotBE, C.spotBL); }
 
-  // corpo + barriga clara costurada + manchas
-  V.ball(B.x, B.y, brx, bry, C.shade, C.body, C.light);
-  V.ellipse(B.x + 3, B.y + 1.7, 3.5, 3.1, C.belly);
-  dashArc(V, B.x + 3, B.y + 1.7, 4, 3.6, 190, 280, seamC);
-  V.circle(B.x - 2.4, B.y - 0.6, 1.8, C.spotY);
-  V.circle(B.x - 5.3, B.y + 2.4, 1.1, C.spotO);
-  V.circle(B.x + 0.4, B.y - 3.5, 1.15, C.spotB);
+  // ---- pernas (atrás do corpo: o corpo faz a oclusão do quadril) + braço de trás
+  drawLeg(V, pc, B.x - 3.4, B.y + bry * 0.45, p.lb, TK, p);
+  drawLeg(V, pc, B.x + 2.6, B.y + bry * 0.45, p.lf, TB, p);
+  if (p.arm2 != null) drawArm(V, pc, g.S.x - 1.6, g.S.y - 0.4, p.arm2, TK, p.armLen);
+
+  // ---- espinhos das costas e do pescoço (atrás)
+  [[-112, 3.9, 2], [-140, 3.6, 1.9], [-166, 3.1, 1.7]].forEach(([a, len, half], i) => {
+    const r = ((a + (i % 2 ? 12 : -12) * p.wig) * Math.PI) / 180;
+    felt(V, B.x + Math.cos(r) * (brx - 1), B.y + Math.sin(r) * (bry - 1), Math.cos(r), Math.sin(r), len * sp, half, glow);
+  });
+  { const q = bz(g.N0, g.N1, g.N2, 0.55); felt(V, q.x - 1.6, q.y, -1, -0.45 + p.wig * 0.2, 3 * sp, 1.6, glow); }
+
+  // ---- corpo + oclusão nas pernas
+  V.ball(B.x, B.y, brx, bry, TB, 1.9, true);
+  // painel claro da barriga (redondo, costurado)
+  V.ball(B.x + 3.1, B.y + 1.6, 3.7, 3.3, TL, 2.0, false);
+  V.seam(V.arc(B.x + 3.1, B.y + 1.6, 4.1, 3.75, 150, 318), seamC);
+  // costura das costas (abaixo dos espinhos)
+  V.seam(V.arc(B.x, B.y, brx - 1.5, bry - 1.3, -98, -178), seamC);
+  // manchas bordadas
+  spot(V, pc, B.x - 2.6, B.y - 0.4, 1.9, C.spotY, C.spotYE, C.spotYL);
+  spot(V, pc, B.x - 5.4, B.y + 2.5, 1.2, C.spotO, C.spotOE, C.spotOL);
+  spot(V, pc, B.x + 0.2, B.y - 3.4, 1.15, C.spotB, C.spotBE, C.spotBL);
   // enchimento saindo pela costura (morte) — tufos sobem na TELA
   if (p.stuff > 0) {
-    V.hline(Math.round(B.x + 2.2), Math.round(B.y + 0.2), 3, C.dark);
     const o = V.pt(B.x + 3.2, B.y - 0.8);
-    const puffs = [[0, -1.2, 2.1], [2.4, -2.6, 1.8], [-2.2, -2.6, 1.7], [0.6, -4.6, 1.7], [3.2, -0.4, 1.4]];
+    pc.hline(Math.round(o.x - 2), Math.round(o.y + 1), 5, C.dark);
+    const puffs = [[0, -1.5, 2.6], [3, -3.2, 2.2], [-2.8, -3.2, 2.1], [0.6, -5.8, 2.1], [4, -0.5, 1.7]];
     for (let i = 0; i < Math.min(puffs.length, 1 + p.stuff); i++) {
       const [dx, dy, r] = puffs[i];
-      pc.circle(o.x + dx + 0.4, o.y + dy + 0.4, r, C.stuffS);
-      pc.circle(o.x + dx, o.y + dy, r - 0.3, C.stuff);
+      pc.circle(o.x + dx + 0.5, o.y + dy + 0.5, r, C.stuffS);
+      pc.circle(o.x + dx, o.y + dy, r - 0.4, C.stuff);
+      pc.px(Math.floor(o.x + dx - r * 0.4), Math.floor(o.y + dy - r * 0.4), '#ffffff');
     }
   }
 
-  // perna da frente
-  drawLeg(V, B.x + 2.6, B.y + bry * 0.55, p.lf, C.body, C.shade, p);
-
-  // pescoço (sombra + tom base)
-  for (const [ox, oy, dr, col] of [[0.5, 0.3, 0, C.shade], [-0.3, -0.2, -0.7, C.body]]) {
-    for (let i = 0; i <= 10; i++) {
-      const t = i / 10, q = bz(g.N0, g.N1, g.N2, t);
-      V.circleS(q.x, q.y, 2.7 - 0.5 * t + dr, col, ox, oy);
+  // ---- pescoço (tubo de pelúcia) + costura na nuca
+  const NS = [];
+  for (let i = 0; i <= 8; i++) { const t = i / 8, q = bz(g.N0, g.N1, g.N2, t); NS.push({ x: q.x, y: q.y, r: 2.9 - 0.55 * t }); }
+  V.tube(NS, TB, 1.95, true);
+  {
+    const pts = [];
+    for (let i = 2; i <= 8; i++) {
+      const t = i / 10, q = bz(g.N0, g.N1, g.N2, t), q2 = bz(g.N0, g.N1, g.N2, t + 0.02);
+      let tx = q2.x - q.x, ty = q2.y - q.y; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l;
+      const r = 2.9 - 0.55 * t - 1.05;
+      pts.push({ x: q.x + ty * r, y: q.y - tx * r });
     }
+    V.seam(pts, seamC);
   }
-  { // gola costurada na base do pescoço
-    const q = bz(g.N0, g.N1, g.N2, 0.12), q2 = bz(g.N0, g.N1, g.N2, 0.2);
-    const tx = q2.x - q.x, ty = q2.y - q.y, l = Math.hypot(tx, ty) || 1;
-    for (let k = -2; k <= 2; k += 2) V.px(Math.round(q.x - (ty / l) * k), Math.round(q.y + (tx / l) * k), seamC);
-  }
+  // oclusão sob a cabeça
+  { const q = bz(g.N0, g.N1, g.N2, 0.88); V.ellipse(q.x + 0.4, q.y + 0.2, 2.6, 2.2, C.dark); }
 
-  // espinhos da cabeça (atrás)
-  [[-96, 4.2, 2.1], [-130, 4.8, 2.3], [-164, 4, 2]].forEach(([a, len, half], i) => {
+  // ---- espinhos da cabeça (atrás)
+  [[-96, 4.2, 2.1], [-130, 4.8, 2.3], [-164, 4.1, 2.05]].forEach(([a, len, half], i) => {
     const r = ((a + (i % 2 ? -10 : 10) * p.wig) * Math.PI) / 180;
-    const [bx, by] = hp(Math.cos(r) * (hrx - 1), Math.sin(r) * (hry - 1));
+    const [bx, by] = hp(Math.cos(r) * (hrx - 1.1), Math.sin(r) * (hry - 1.1));
     const [nx, ny] = hn(Math.cos(r), Math.sin(r));
-    spine(V, bx, by, nx, ny, len * sp, half, glow);
+    felt(V, bx, by, nx, ny, len * sp, half, glow);
   });
 
-  // cabeça + manchas
-  V.ball(Hc.x, Hc.y, hrx, hry, C.shade, C.body, C.light);
-  { const [ax, ay] = hp(-3.4, -1.2); V.circle(ax, ay, 1.4, C.spotY); }
-  { const [ax, ay] = hp(-0.8, -4.2); V.circle(ax, ay, 1.15, C.spotB); }
-  // focinho (peça clara costurada com fio dourado)
+  // ---- cabeça
+  V.ball(Hc.x, Hc.y, hrx, hry, TB, 1.95, true);
+  { const [ax, ay] = hp(-3.5, -1.3); spot(V, pc, ax, ay, 1.5, C.spotY, C.spotYE, C.spotYL); }
+  { const [ax, ay] = hp(-0.9, -4.3); spot(V, pc, ax, ay, 1.05, C.spotB, C.spotBE, C.spotBL); }
+  { const [ax, ay] = hp(-4.6, 2.4); spot(V, pc, ax, ay, 0.95, C.spotO, C.spotOE, C.spotOL); }
+  // focinho (peça clara, costurada com fio dourado) + narina
   {
-    const [mx, my] = hp(4.4, 2.2);
-    V.ball(mx, my, 3.7, 2.7, C.muzS, C.muz, C.muzL);
-    for (const a of [140, 172]) {
-      const [dx, dy] = hn(Math.cos((a * Math.PI) / 180) * 4.3, Math.sin((a * Math.PI) / 180) * 3.3);
-      V.px(Math.round(mx + dx - 0.5), Math.round(my + dy - 0.5), glow ? C.goldL : C.gold);
-    }
+    const [mx, my] = hp(4.5, 2.2);
+    V.ball(mx, my, 3.8, 2.8, TL, 2.0, true);
+    V.seam(V.arc(mx, my, 4.3, 3.3, 118, 255, p.tilt), glow ? C.goldL : C.gold, 1, 2);
+    const [nx, ny] = hp(7.0, 0.9);
+    const [ax, ay] = V.anchor(nx, ny, 2);
+    pc.hline(ax - (p.flip ? 0 : 1), ay, 2, C.mouth); pc.px(ax - (p.flip ? -1 : 0), ay + 1, TL[0]);
   }
   // rosto (padrões de olho/boca ficam "em pé" na tela, ancorados na cabeça)
-  if (p.blush && p.eye !== 'x' && p.eye !== 'sad') { const [bx, by] = hp(0.6, 2.4); V.hline(Math.round(bx), Math.round(by), 2, C.blush); }
-  const [ex0, ey0] = hp(0.9 + p.look[0], -2.8 + p.look[1]);
-  const [ex, ey] = V.anchor(ex0, ey0, 3);
+  if (p.blush && p.eye !== 'x' && p.eye !== 'sad') {
+    const [bx, by] = hp(0.4, 2.7); const [ax, ay] = V.anchor(bx, by, 3);
+    pc.hline(ax, ay, 3, C.blush); pc.px(ax, ay + 1, C.blush + '99'); pc.px(ax + 2, ay + 1, C.blush + '99');
+  }
+  const [ex0, ey0] = hp(0.7 + p.look[0], -3.1 + p.look[1]);
+  const [ex, ey] = V.anchor(ex0, ey0, 4);
   drawEye(pc, ex, ey, p.eye);
-  if (p.tear) { pc.px(ex + 1, ey + 4 + p.tear, C.tear); pc.px(ex + 1, ey + 5 + p.tear, C.tear); }
-  { const [nx, ny] = hp(7.2, 0.7); V.px(Math.round(nx), Math.round(ny), C.mouth); }
-  { const [mx, my] = hp(5, 3.4); const [ax, ay] = V.anchor(mx, my, 1); drawMouth(pc, ax, ay, p.mouth); }
+  if (p.tear) { pc.px(ex + 3, ey + 6 + p.tear, C.tear); pc.px(ex + 3, ey + 7 + p.tear, C.tear); pc.px(ex + 2, ey + 7 + p.tear, '#ffffff'); }
+  { const [mx, my] = hp(5.1, 3.5); const [ax, ay] = V.anchor(mx, my, 1); drawMouth(pc, ax, ay, p.mouth); }
 
-  // braço da frente (patinha)
-  drawArm(V, g.S.x, g.S.y, p.arm, C.body, C.shade, p.armLen);
+  // ---- braço da frente (patinha)
+  drawArm(V, pc, g.S.x, g.S.y, p.arm, TB, p.armLen);
   return g;
 }
+
 // ------------------------------------------------------------------ efeitos
 function drawWhip(pc, x0, y0, w) {
-  const [x1, y1] = w.to;
-  const c = w.c ? { x: w.c[0], y: w.c[1] } : { x: (x0 + x1) / 2, y: (y0 + y1) / 2 };
-  const A = { x: x0, y: y0 }, Bp = { x: x1, y: y1 };
-  const len = Math.hypot(x1 - x0, y1 - y0) + Math.hypot(c.x - (x0 + x1) / 2, c.y - (y0 + y1) / 2);
+  const B2 = M(w.to[0], w.to[1]);
+  const c = w.c ? M(w.c[0], w.c[1]) : { x: (x0 + B2.x) / 2, y: (y0 + B2.y) / 2 };
+  const A = { x: x0, y: y0 };
+  const len = Math.hypot(B2.x - x0, B2.y - y0) + Math.hypot(c.x - (x0 + B2.x) / 2, c.y - (y0 + B2.y) / 2);
   const N = Math.max(4, Math.ceil(len * 1.4));
   let l = A;
   for (let i = 1; i <= N; i++) {
-    const t = i / N, q = bz(A, c, Bp, t), q2 = bz(A, c, Bp, Math.min(1, t + 0.01));
+    const t = i / N, q = bz(A, c, B2, t), q2 = bz(A, c, B2, Math.min(1, t + 0.01));
     let tx = q2.x - q.x, ty = q2.y - q.y; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
-    const off = (w.amp || 0) * Math.sin(t * Math.PI) * Math.sin(t * Math.PI * (w.k || 3) + (w.ph || 0));
+    const off = (w.amp || 0) * SC * Math.sin(t * Math.PI) * Math.sin(t * Math.PI * (w.k || 3) + (w.ph || 0));
     const pt = { x: q.x - ty * off, y: q.y + tx * off };
-    pc.line(l.x, l.y, pt.x, pt.y, t > 0.82 ? C.goldL : (i % 4 === 0 ? C.goldL : C.gold));
+    pc.line(Math.floor(l.x), Math.floor(l.y), Math.floor(pt.x), Math.floor(pt.y), t > 0.82 ? C.goldL : (i % 4 === 0 ? C.goldL : C.gold));
     l = pt;
   }
-  return l;
 }
 function star(pc, x, y, s) {
   x = Math.round(x); y = Math.round(y);
@@ -367,43 +473,44 @@ function smear(pc, cx, cy, r, a0, a1, th = 2) {
 }
 function drawFxPre(pc, p) {
   for (const e of p.fx || []) {
-    if (e.k === 'z') { const { x, y } = e; pc.hline(x, y, 3, C.zz); pc.px(x + 1, y + 1, C.zz); pc.hline(x, y + 2, 3, C.zz); }
-    else if (e.k === 'drop') { pc.px(e.x + 1, e.y, C.tear); pc.rect(e.x, e.y + 1, 2, 2, C.tear); pc.px(e.x, e.y + 1, '#ffffff'); }
-    else if (e.k === 'dots') { for (let i = 0; i < e.n; i++) pc.px(e.x + i * 3, e.y - i, '#ffffff'); }
+    if (!('x' in e)) continue;
+    const q = M(e.x, e.y), x = Math.round(q.x), y = Math.round(q.y);
+    if (e.k === 'z') { pc.hline(x, y, 4, C.zz); pc.px(x + 2, y + 1, C.zz); pc.px(x + 1, y + 2, C.zz); pc.hline(x, y + 3, 4, C.zz); }
+    else if (e.k === 'drop') { pc.px(x + 1, y, C.tear); pc.rect(x, y + 1, 3, 2, C.tear); pc.px(x + 1, y + 3, C.tear); pc.px(x, y + 1, '#ffffff'); }
+    else if (e.k === 'dots') { for (let i = 0; i < e.n; i++) pc.rect(x + i * 4, y - i * 2, 2, 2, '#ffffff'); }
   }
 }
 function drawFxPost(pc, p, g) {
   for (const e of p.fx || []) {
+    const q = 'x' in e ? M(e.x, e.y) : null;
     switch (e.k) {
-      case 'smear': smear(pc, e.x, e.y, e.r, e.a0, e.a1, e.th || 2); break;
-      case 'spark': star(pc, e.x, e.y, e.s || 1); break;
+      case 'smear': case 'ring': smear(pc, q.x, q.y, e.r * SC, e.a0, e.a1, (e.th || 2) + (e.th === 3 ? 1 : 0)); break;
+      case 'spark': star(pc, q.x, q.y, (e.s || 1) + (e.s >= 2 ? 1 : 0)); break;
       case 'orb': {
-        pc.circle(e.x, e.y, e.r + 1.5, C.goldL + '55');
-        pc.circle(e.x, e.y, e.r, C.gold); pc.circle(e.x - 0.4, e.y - 0.4, e.r - 0.8, C.goldL);
-        pc.px(Math.round(e.x - 0.5), Math.round(e.y - 0.5), '#ffffff');
+        const r = e.r * SC;
+        pc.circle(q.x, q.y, r + 2, C.goldL + '55');
+        pc.circle(q.x, q.y, r, C.gold); pc.circle(q.x - 0.5, q.y - 0.5, r - 1, C.goldL);
+        pc.px(Math.round(q.x - 1), Math.round(q.y - 1), '#ffffff');
         break;
       }
       case 'speed':
-        for (const [dy, len, a] of [[-4, 7, 'aa'], [0, 9, 'cc'], [3, 5, '88'], [-10, 6, '77']])
-          pc.hline(Math.round(g.B.x - g.brx - 3 - len), Math.round(g.B.y + dy), len, '#ffffff' + a);
+        for (const [dy, len, a] of [[-4, 7, 'aa'], [0, 9, 'cc'], [3, 5, '88'], [-10, 6, '77']]) {
+          const s = M(g.B.x - g.brx - 3 - len, g.B.y + dy);
+          pc.hline(Math.round(s.x), Math.round(s.y), Math.round(len * SC), '#ffffff' + a);
+        }
         break;
       case 'aura': {
-        const n = 7;
+        const n = 7, c = M(24, 26);
         for (let i = 0; i < n; i++) {
-          const a = (i / n) * TAU + e.ph;
-          const x = 24 + Math.cos(a) * 15, y = 26 + Math.sin(a) * 12;
+          const a = (i / n) * TAU + e.ph, x = c.x + Math.cos(a) * 15 * SC, y = c.y + Math.sin(a) * 12 * SC;
           if (i % 2) pc.px(Math.round(x), Math.round(y), C.goldL + 'cc'); else star(pc, x, y, 1);
         }
         break;
       }
-      case 'ring': // anel do giro (attack3)
-        smear(pc, e.x, e.y, e.r, e.a0, e.a1, 2);
-        break;
       default:
     }
   }
 }
-
 // ----------------------------------------------------------- poses-chave
 const pawOf = (o) => geo(K(o)).paw;
 /** Posa deitado (de costas, como um brinquedo largado). */
@@ -693,6 +800,7 @@ function drawTico(pc, anim, f) {
   pc.outline(C.out);
   drawFxPost(pc, p, g);
 }
+
 function anchors(p) {
   const g = geo(p);
   const ct = Math.cos(p.tilt), st = Math.sin(p.tilt);
@@ -706,7 +814,7 @@ function anchors(p) {
 }
 
 defineSprite('tico', {
-  w: W, h: H, ox: 24, oy: 39,
+  w: W, h: H, ox: PV.x, oy: PV.y,
   anims: ANIMS,
   draw: drawTico,
   meta(anim, f) { return anchors(poseCached(anim, f)); },

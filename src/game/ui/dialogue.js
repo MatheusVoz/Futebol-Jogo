@@ -204,7 +204,13 @@ export class DialogueBox {
     const who = line.who || '';
     line.kind = who === 'narrador' ? 'narrator' : who === 'placa' ? 'plaque' : 'balloon';
     if (line.kind === 'balloon' && !line.side) {
-      if (!this.sides.has(who)) this.sides.set(who, this.sides.size % 2 === 0 ? 'left' : 'right');
+      if (!this.sides.has(who)) {
+        // Tico fica à esquerda; quem conversa com ele, à direita; demais alternam
+        const withTico = this.lines.some((l) => l.who === 'tico');
+        let side = this.sides.size % 2 === 0 ? 'left' : 'right';
+        if (withTico) side = who === 'tico' ? 'left' : 'right';
+        this.sides.set(who, side);
+      }
       line.side = this.sides.get(who);
     }
     this.chars = 0;

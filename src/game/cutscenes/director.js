@@ -277,6 +277,7 @@ function createCS({ id, def, params, level, scene }) {
   // ---- câmera
   const camLevel = level ? level.camera : null;
   cs.pan = function (x, y, dur = 1, ease) {
+    cs._focus = { x, y };
     if (camLevel) {
       if (cs.skipping || !dur) { camLevel.manual = true; camLevel.pan = null; camLevel.centerOn(x, y); return none(); }
       camLevel.panTo(x, y, dur, easeOf(ease));
@@ -296,7 +297,7 @@ function createCS({ id, def, params, level, scene }) {
       return waitTween(tween(dur, (k) => {
         const cx = camLevel.cx, cy = camLevel.cy;
         camLevel.zoom = camLevel.targetZoom = fz + (z - fz) * k;
-        if (camLevel.manual && !camLevel.pan) camLevel.centerOn(cx, cy);
+        if (camLevel.manual && !camLevel.pan) camLevel.centerOn(cs._focus ? cs._focus.x : cx, cs._focus ? cs._focus.y : cy);
       }, ease));
     }
     const c = cs.cam, fz = c.zoom;
