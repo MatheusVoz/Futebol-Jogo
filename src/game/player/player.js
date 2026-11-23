@@ -23,7 +23,7 @@ import { drawCosmetics } from '../art/cosmetics.js';
 
 // ---- Tunables (px, s)
 export const P = {
-  W: 12, H: 18,
+  W: 12, H: 22,
   WALK: 92, RUN: 150, RUN_DELAY: 0.55,
   ACC_GROUND: 950, DEC_GROUND: 1400, TURN: 2000, ACC_AIR: 720, DEC_AIR: 380,
   JUMP_V: 372, DJUMP_V: 330, GRAV_UP: 1000, GRAV_CUT: 2600, GRAV_FALL: 1380, APEX_MUL: 0.55, MAX_FALL: 340,

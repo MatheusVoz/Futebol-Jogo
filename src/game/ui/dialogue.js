@@ -192,7 +192,8 @@ export class DialogueBox {
 
   _finish(anim = true) {
     const r = this.resolve;
-    if (anim && this.L) this.closing = { t: 0, L: this.L, line: this.line };
+    const last = this.lines && this.lines[Math.min(this.i, this.lines.length - 1)];
+    if (anim && this.L && last) this.closing = { t: 0, L: this.L, line: last };
     this.lines = null; this.resolve = null;
     r && r(this.result);
   }
@@ -255,9 +256,9 @@ export class DialogueBox {
       L.portrait = hasPortrait;
       const avail = hasPortrait ? maxTotal - PS - 6 : maxTotal;
       const firstW = font.measure(font.plain(text));
-      const tw0 = Math.min(avail - 18, Math.max(110, firstW));
+      const tw0 = Math.min(avail - 24, Math.max(104, firstW));
       L.text = layoutText(text, tw0, 'left');
-      L.bw = Math.max(L.name ? font.measure(L.name) + 30 : 0, Math.max(128, L.text.width + 18));
+      L.bw = Math.max(L.name ? font.measure(L.name) + 30 : 0, Math.max(128, L.text.width + 24));
       L.bh = Math.max(2, L.text.lines.length) * LH + 13;
       L.color = '#2a1840'; L.shadow = null;
       const G = (hasPortrait ? PS + 6 : 0) + L.bw;
@@ -300,7 +301,7 @@ export class DialogueBox {
     if (L.kind === 'balloon' && line.at) {
       const a = this._anchor(line.at);
       if (a) {
-        const bw = Math.min(L.text.width + 18 < 128 ? 128 : L.text.width + 18, W - 12);
+        const bw = Math.min(Math.max(128, L.text.width + 24), W - 12);
         let bx = Math.round(clamp(a.x - bw / 2, 6, W - 6 - bw));
         let by = Math.round(a.y - 10 - L.bh), up = false;
         if (by < 14) { by = Math.round(a.y + 26); up = true; }
@@ -315,7 +316,7 @@ export class DialogueBox {
       const right = L.kind === 'balloon' && L.side !== 'right';
       L.cx = clamp(right ? bx + bw - L.cw - 4 : bx + 4, 4, W - L.cw - 4);
       if (L.kind === 'narrator') L.cx = Math.round((W - L.cw) / 2);
-      L.cy = by - L.ch - (L.name && !right ? 10 : 5);
+      L.cy = by - L.ch - (L.name ? 9 : 5);
       if (L.cy < 2) L.cy = by + L.bh + 6;
     }
   }
@@ -474,7 +475,7 @@ export class DialogueBox {
       let dx = 0, dy = 0;
       if (line.shake) {
         const h = hashString(`${k}:${Math.floor(t * 18)}`);
-        dx = (h % 3) - 1; dy = ((h >> 3) % 3) - 1;
+        dy = (h % 3) - 1; dx = (h >> 2) % 6 === 0 ? ((h >> 5) % 2) * 2 - 1 : 0;
       }
       if (!closing && k >= n - 2 && n < total) dy -= 1;   // letra nova "pula" de leve
       let color = L.color, shadow = L.shadow;

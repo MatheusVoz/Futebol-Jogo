@@ -35,7 +35,7 @@
 // costuras e materiais de brinquedo (feltro, papel, lã, madeira, latão).
 // =============================================================================
 import { PixelCanvas, createCanvas, silhouette } from '../../engine/pixel.js';
-import { defineSprite, drawSprite, frameMeta, defineImage, getImage } from '../../engine/sprites.js';
+import { defineSprite, drawSprite, frameMeta, defineImage, getImage, getSprite } from '../../engine/sprites.js';
 import { clamp, mixColor, hash2 } from '../../engine/util.js';
 import { save } from '../../engine/save.js';
 import { game } from '../../engine/game.js';
@@ -44,7 +44,8 @@ import { R, registerCosmetic } from '../registry.js';
 export const COSMETIC_SLOTS = ['hat', 'neck', 'back', 'thread'];
 
 const OUT = '#1b2a3a';                 // contorno (mesmo do Tico)
-const TICO_OX = 24, TICO_OY = 39;      // pivô do quadro do Tico
+// pivô do quadro do Tico (lido do sprite registrado para acompanhar mudanças de tamanho)
+const ticoPivot = () => { const s = getSprite('tico'); return s ? [s.ox, s.oy] : [32, 51]; };
 const DEFAULT_META = { head: { x: 30, y: 17 }, neck: { x: 27, y: 24 }, back: { x: 20, y: 24 }, tilt: 0 };
 // Ajuste fino por slot (px, no quadro virado p/ a direita) aplicado às âncoras.
 const SLOT_OFF = { hat: { x: -1, y: -1 }, neck: { x: 0, y: 0 }, back: { x: 0, y: 0 } };
@@ -855,6 +856,7 @@ export function drawCosmetics(ctx, player, anim, frame, x, y, flip) {
     const an = o.meta[key];
     const off = SLOT_OFF[key === 'head' ? 'hat' : key] || SLOT_OFF[slot];
     const ax = an.x + off.x, ay = an.y + off.y;
+    const [TICO_OX, TICO_OY] = ticoPivot();
     const a = { wx: x + (ax - TICO_OX) * (o.flip ? -1 : 1), wy: y + (ay - TICO_OY) };
     try { it.render(o, a); } catch (e) { console.error('[cosmetics]', id, e); ITEMS[id] = { slot: '-', render() {} }; }
   }

@@ -131,13 +131,13 @@ function plush(pc, x0, y0, x1, y1, sample, tones, base, ax, ay, rim) {
       const u = s[0], v = s[1], d2 = u * u + v * v;
       if (d2 > 1) continue;
       const lam = -0.55 * u - 0.7 * v + 0.45 * Math.sqrt(1 - d2);
-      let lv = base + lam * 1.8;
+      let lv = base + lam * 1.8 - Math.max(0, v - 0.3) * 0.8;     // + oclusão embaixo
       if (lam > 0.93) lv += 0.55;                                // brilho macio
       if (rim && v < -0.45 && d2 > 0.62) lv = Math.max(lv, 3.15); // luz de contorno no topo
       const lx = x - ax, ly = y - ay;
       lv += (BAYER[(ly & 3) * 4 + (lx & 3)] / 16 - 0.47) * 0.5;  // dithering ordenado
       const h = hash(lx, ly);
-      if (h < 0.045) lv += 0.6; else if (h > 0.965) lv -= 0.6;   // fiapos do tecido
+      if (h < 0.03) lv += 0.6; else if (h > 0.975) lv -= 0.6;   // fiapos do tecido
       pc.px(x, y, tones[lv < 0 ? 0 : lv >= 4 ? 4 : lv | 0]);
     }
   }
@@ -252,8 +252,8 @@ function tailCurve(g, p) {
 }
 function drawLeg(V, pc, hx, hy, foot, tones, p) {
   const fx = hx + foot[0], fy = 37.6 + p.fy - foot[1];
-  V.tube([{ x: hx, y: hy, r: 2.2 }, { x: (hx + fx) / 2, y: (hy + fy - 1) / 2, r: 2.0 }, { x: fx, y: fy - 1, r: 1.9 }], tones, 1.8, false);
-  V.ball(fx + 0.9, fy, 2.8, 1.75, tones, 2.0, true);
+  V.tube([{ x: hx, y: hy, r: 2.2 }, { x: (hx + fx) / 2, y: (hy + fy - 1) / 2, r: 2.0 }, { x: fx, y: fy - 1, r: 1.9 }], tones, 1.45, false);
+  V.ball(fx + 0.9, fy, 2.8, 1.75, tones, 1.7, true);
   // almofadinhas claras na sola + dedinho costurado
   const a = V.pt(fx - 0.6, fy + 1.05), b = V.pt(fx + 2.6, fy + 1.05);
   pc.line(Math.floor(a.x), Math.floor(a.y), Math.floor(b.x), Math.floor(b.y), tones === TK ? TK[4] : C.pad);
@@ -261,7 +261,7 @@ function drawLeg(V, pc, hx, hy, foot, tones, p) {
 }
 function drawArm(V, pc, sx, sy, ang, tones, len) {
   const ex = sx + Math.cos(ang) * len, ey = sy + Math.sin(ang) * len;
-  V.tube([{ x: sx, y: sy, r: 1.7 }, { x: (sx + ex) / 2, y: (sy + ey) / 2, r: 1.55 }, { x: ex, y: ey, r: 1.6 }], tones, 1.9, true);
+  V.tube([{ x: sx, y: sy, r: 1.7 }, { x: (sx + ex) / 2, y: (sy + ey) / 2, r: 1.55 }, { x: ex, y: ey, r: 1.6 }], tones, 1.65, true);
   const q = V.pt(ex + Math.cos(ang) * 0.9, ey + Math.sin(ang) * 0.9);
   pc.px(Math.floor(q.x), Math.floor(q.y), tones === TK ? TK[4] : C.pad); // almofadinha
 }
@@ -345,7 +345,7 @@ function drawTicoPose(pc, p) {
     const q = bz(tail.P0, tail.P1, tail.P2, 0.45), q2 = bz(tail.P0, tail.P1, tail.P2, 0.5);
     felt(V, q.x, q.y - 1.6, q2.y - q.y, q.x - q2.x, 2.4 * sp, 1.3, glow);
   }
-  V.tube(TS, TB, 1.85, true);
+  V.tube(TS, TB, 1.55, true);
   { const s = bz(tail.P0, tail.P1, tail.P2, 0.72); spot(V, pc, s.x, s.y + 0.2, 1.25, C.spotB, C.spotBE, C.spotBL); }
 
   // ---- pernas (atrás do corpo: o corpo faz a oclusão do quadril) + braço de trás
@@ -361,9 +361,9 @@ function drawTicoPose(pc, p) {
   { const q = bz(g.N0, g.N1, g.N2, 0.55); felt(V, q.x - 1.6, q.y, -1, -0.45 + p.wig * 0.2, 3 * sp, 1.6, glow); }
 
   // ---- corpo + oclusão nas pernas
-  V.ball(B.x, B.y, brx, bry, TB, 1.9, true);
+  V.ball(B.x, B.y, brx, bry, TB, 1.6, true);
   // painel claro da barriga (redondo, costurado)
-  V.ball(B.x + 3.1, B.y + 1.6, 3.7, 3.3, TL, 2.0, false);
+  V.ball(B.x + 3.1, B.y + 1.6, 3.7, 3.3, TL, 1.8, false);
   V.seam(V.arc(B.x + 3.1, B.y + 1.6, 4.1, 3.75, 150, 318), seamC);
   // costura das costas (abaixo dos espinhos)
   V.seam(V.arc(B.x, B.y, brx - 1.5, bry - 1.3, -98, -178), seamC);
@@ -387,7 +387,7 @@ function drawTicoPose(pc, p) {
   // ---- pescoço (tubo de pelúcia) + costura na nuca
   const NS = [];
   for (let i = 0; i <= 8; i++) { const t = i / 8, q = bz(g.N0, g.N1, g.N2, t); NS.push({ x: q.x, y: q.y, r: 2.9 - 0.55 * t }); }
-  V.tube(NS, TB, 1.95, true);
+  V.tube(NS, TB, 1.65, true);
   {
     const pts = [];
     for (let i = 2; i <= 8; i++) {
@@ -410,15 +410,15 @@ function drawTicoPose(pc, p) {
   });
 
   // ---- cabeça
-  V.ball(Hc.x, Hc.y, hrx, hry, TB, 1.95, true);
+  V.ball(Hc.x, Hc.y, hrx, hry, TB, 1.65, true);
   { const [ax, ay] = hp(-3.5, -1.3); spot(V, pc, ax, ay, 1.5, C.spotY, C.spotYE, C.spotYL); }
   { const [ax, ay] = hp(-0.9, -4.3); spot(V, pc, ax, ay, 1.05, C.spotB, C.spotBE, C.spotBL); }
   { const [ax, ay] = hp(-4.6, 2.4); spot(V, pc, ax, ay, 0.95, C.spotO, C.spotOE, C.spotOL); }
   // focinho (peça clara, costurada com fio dourado) + narina
   {
     const [mx, my] = hp(4.5, 2.2);
-    V.ball(mx, my, 3.8, 2.8, TL, 2.0, true);
-    V.seam(V.arc(mx, my, 4.3, 3.3, 118, 255, p.tilt), glow ? C.goldL : C.gold, 1, 2);
+    V.ball(mx, my, 3.8, 2.8, TL, 1.85, true);
+    V.seam(V.arc(mx, my, 4.25, 3.25, 135, 235, p.tilt), glow ? C.goldL : C.goldD, 2, 3);
     const [nx, ny] = hp(7.0, 0.9);
     const [ax, ay] = V.anchor(nx, ny, 2);
     pc.hline(ax - (p.flip ? 0 : 1), ay, 2, C.mouth); pc.px(ax - (p.flip ? -1 : 0), ay + 1, TL[0]);
