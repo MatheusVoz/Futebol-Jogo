@@ -518,17 +518,17 @@ icon('icon_secret', [
 ], { G: '#5fe0a0', L: '#b8ffd8', W: '#ffffff', D: '#2a9a68' });
 
 icon('icon_ab_stitch', [
-  '.HG.......',
-  'HkkG......',
-  'GkkG......',
-  '.GGTt.....',
-  '...tTt....',
-  '....tTt...',
-  '.....tTHG.',
-  '......HkkG',
-  '......GkkG',
-  '.......GG.',
-], { H: '#fff0a0', G: '#ffd23f', k: '#5a3008', T: '#ffffff', t: '#ffb0c4' });
+  '.......LS.',
+  '......L.S.',
+  '......SSG.',
+  '.....SS.G.',
+  '....SS...G',
+  '...SS....G',
+  '..SS....G.',
+  '.SS...GG..',
+  'SS..GG....',
+  'D.GG......',
+], { L: '#ffffff', S: '#c8d0e0', D: '#8a94b0', G: '#ffd23f' });
 
 icon('icon_ab_unstitch', [
   'S.......S',
