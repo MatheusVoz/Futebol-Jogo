@@ -490,6 +490,20 @@ function buildSprites() {
       pc.px(xx, 13 - k, k > hgt - 3 ? G.hi : k > hgt / 2 ? G.lt : G.md);
     }
   }, '#1a2a16'));
+  // lâminas individuais da frente (5 variações × 3 quadros de balanço)
+  S.blades = [];
+  for (let v = 0; v < 5; v++) {
+    const r = lrng(900 + v * 31);
+    const bl = [];
+    const nb = r.int(2, 4);
+    for (let i = 0; i < nb; i++) bl.push([r.int(1, 14), r.int(3, 7), r() < 0.4]);
+    S.blades.push([-1, 0, 1].map((lean) => mk(18, 9, (pc) => {
+      for (const [bx, hgt, dark] of bl) for (let k = 0; k < hgt; k++) {
+        const q = k / hgt, xx = 1 + bx + Math.round(lean * q * q * 2.4);
+        pc.px(xx, 8 - k, k >= hgt - 1 ? (dark ? G.lt : G.hi) : q > 0.5 ? (dark ? G.md : G.lt) : (dark ? G.dk : G.md));
+      }
+    }, null)));
+  }
   // brinquedos perdidos
   S.toys = [
     mk(12, 11, (pc) => { // bola listrada
@@ -529,15 +543,6 @@ function buildSprites() {
 }
 
 // ------------------------------------------------------------------ pintores de decor estático
-function paintTuft(pc, x, yb, seed) {
-  const r = lrng(seed);
-  const nb = r.int(3, 6);
-  for (let i = 0; i < nb; i++) {
-    const bx = x + r.int(0, 9), hgt = r.int(3, 7), lean = r.int(-1, 1);
-    for (let k = 0; k < hgt; k++) pc.px(bx + Math.round(lean * k / hgt), yb - 1 - k, k >= hgt - 1 ? G.hi : k > hgt / 2 ? G.lt : G.md);
-    pc.px(bx, yb - 1, G.dk);
-  }
-}
 function paintFlower(pc, x, yb, seed) {
   const r = lrng(seed);
   const hgt = r.int(4, 9), col = FLOWER_COLS[r.int(0, FLOWER_COLS.length - 1)];
@@ -579,7 +584,56 @@ function paintRoots(pc, x, yt, seed) {
   }
 }
 
+/** Gramado denso: fileira escura alta atrás + fileira clara curta na frente + extras. */
+const LEAF_COLS = ['#d8823a', '#c45a2a', '#e0b040', '#a84a3a', '#b8a040'];
+function paintMeadow(pc, x, yb, seed, short) {
+  const r = lrng(seed);
+  const maxH = short ? 4 : 9;
+  for (let i = 0; i < 16; i++) {
+    if (r() < 0.42) continue;
+    const hgt = Math.min(maxH, r() < 0.22 ? r.int(6, 9) : r.int(3, 6)), lean = r.int(-1, 1);
+    for (let k = 0; k < hgt; k++) { const q = k / hgt; pc.px(x + i + Math.round(lean * q * q * 2), yb - 1 - k, k >= hgt - 1 ? G.md : q > 0.5 ? G.dk : G.edge); }
+  }
+  for (let i = 0; i < 16; i++) {
+    if (r() < 0.38) continue;
+    const hgt = Math.min(maxH, r.int(2, 5)), lean = r.int(-1, 1), yel = r() < 0.12;
+    for (let k = 0; k < hgt; k++) { const q = k / hgt; pc.px(x + i + Math.round(lean * q * q * 2), yb - 1 - k, k >= hgt - 1 ? (yel ? '#dce474' : G.hi) : q > 0.4 ? (yel ? '#aac452' : G.lt) : G.md); }
+  }
+  const ex = x + r.int(2, 13), e = r();
+  if (e < 0.16) { // trevo
+    const L = '#4aa84e', H = '#8ad872', D = '#24602e';
+    pc.vline(ex, yb - 2, 2, D);
+    pc.rect(ex - 2, yb - 4, 2, 2, L); pc.rect(ex + 1, yb - 4, 2, 2, L); pc.rect(ex - 1, yb - 6, 2, 2, L);
+    pc.px(ex - 2, yb - 4, H); pc.px(ex + 1, yb - 4, H); pc.px(ex - 1, yb - 6, H); pc.px(ex, yb - 4, D);
+  } else if (e < 0.32) paintFlower(pc, ex, yb, seed ^ 0x77);
+  else if (e < 0.42) { // pedrinha
+    pc.ellipse(ex, yb - 1, 2.2, 1.4, '#7a7484'); pc.px(ex - 1, yb - 2, '#bab4c2'); pc.hline(ex - 2, yb - 1, 1, '#4a4452'); pc.px(ex + 2, yb - 1, '#4a4452');
+  } else if (e < 0.54) { // folha caída
+    const c = LEAF_COLS[r.int(0, LEAF_COLS.length - 1)], d = mix(c, '#000000', 0.35);
+    pc.hline(ex - 1, yb - 1, 4, c); pc.px(ex, yb - 2, c); pc.px(ex + 1, yb - 2, mix(c, '#ffffff', 0.3)); pc.px(ex + 3, yb - 2, d); pc.px(ex + 1, yb - 1, d);
+  } else if (e < 0.6 && !short) paintSmallMush(pc, ex, yb + 1, seed ^ 0x33);
+  if (r() < 0.3) { const fx = x + r.int(1, 14), c = FLOWER_COLS[r.int(0, FLOWER_COLS.length - 1)]; pc.px(fx, yb - 3, c); pc.px(fx, yb - 2, G.dk); }
+}
+/** Grama pendurada nas bordas com saliência (dir -1 = lado esquerdo, +1 = direito). */
+function paintHang(pc, x, yt, seed, dir) {
+  const r = lrng(seed);
+  const n = r.int(2, 4);
+  for (let i = 0; i < n; i++) {
+    const hx = x + dir * r.int(0, 1), len = r.int(3, 10), y0 = yt + r.int(4, 6);
+    for (let k = 0; k < len; k++) pc.px(hx + (k > len * 0.6 ? dir : 0), y0 + k, k >= len - 1 ? G.lt : k < 2 ? G.edge : (k & 1 ? G.md : G.dk));
+    if (r() < 0.25) pc.px(hx + dir, y0 + len, FLOWER_COLS[r.int(0, FLOWER_COLS.length - 1)]);
+  }
+}
+
 // ------------------------------------------------------------------ decor animado
+function bladesAnim(items, y) {
+  return (ctx, t) => {
+    for (const [x, v] of items) {
+      const s = Math.sin(t * 1.9 - x * 0.03) + 0.5 * Math.sin(t * 0.7 + x * 0.011);
+      ctx.drawImage(SPR.blades[v][s < -0.55 ? 0 : s > 0.55 ? 2 : 1].canvas, x, y);
+    }
+  };
+}
 function mushAnim(spr, halo, x, y, ph) {
   return (ctx, t) => {
     const p = 0.5 + 0.5 * Math.sin(t * 1.6 + ph);
@@ -641,8 +695,14 @@ function decorate(map, rng, data) {
   const isAir = (tx, ty) => { const t = map.get(tx, ty); return (t === T.EMPTY || t === T.BG) && chAt(tx, ty) === '.'; };
   const surf = (tx, ty) => map.get(tx, ty) === T.SOLID && isAir(tx, ty - 1);
   let lastAnim = -99, lastToy = -99, lastFront = -99;
+  let run = null; // trecho de lâminas da frente (um decor animado por até 10 tiles)
+  const flush = () => {
+    if (run && run.items.length) { const q = run; out.push({ x: q.x0 - 4, y: q.y - 2, w: q.x1 - q.x0 + 26, h: 12, layer: 'front', anim: bladesAnim(q.items, q.y) }); }
+    run = null;
+  };
   for (let ty = 1; ty < map.rows; ty++) {
     lastAnim = -99; lastToy = -99; lastFront = -99;
+    flush();
     for (let tx = 0; tx < map.cols; tx++) {
       const t = map.get(tx, ty);
       const wx = tx * 16, wy = ty * 16;
@@ -675,9 +735,17 @@ function decorate(map, rng, data) {
         } else if (r < 0.3) {
           out.push({ x: wx, y: wy - 10, w: 16, h: 12, layer, paint: (pc) => paintSmallMush(pc, wx + 4 + (seed % 8), wy + 1, seed) });
         }
-        if (rng() < 0.45) out.push({ x: wx, y: wy - 8, w: 16, h: 9, layer, paint: (pc) => paintTuft(pc, wx + (seed % 5), wy + 1, seed ^ 0x55) });
-        if (rng() < 0.3) { const fx = wx + 2 + (seed % 12); out.push({ x: wx, y: wy - 12, w: 16, h: 12, layer, paint: (pc) => paintFlower(pc, fx, wy + 1, seed ^ 0x77) }); }
-      }
+        // gramado denso em todo topo gramado + grama pendurada nas bordas
+        out.push({ x: wx - 2, y: wy - 12, w: 20, h: 13, layer, paint: (pc) => paintMeadow(pc, wx, wy, seed ^ 0x55, inside) });
+        if (!inside && map.get(tx - 1, ty) === T.EMPTY) out.push({ x: wx - 4, y: wy, w: 6, h: 18, layer: 'back', paint: (pc) => paintHang(pc, wx - 1, wy, seed ^ 0x1234, -1) });
+        if (!inside && map.get(tx + 1, ty) === T.EMPTY) out.push({ x: wx + 14, y: wy, w: 6, h: 18, layer: 'back', paint: (pc) => paintHang(pc, wx + 16, wy, seed ^ 0x4321, 1) });
+        // lâminas soltas na frente, balançando ao vento
+        if (!inside) {
+          if (!run || tx - run.tx0 >= 10 || run.ty !== ty) { flush(); run = { items: [], y: wy - 8, x0: wx, x1: wx, tx0: tx, ty }; }
+          if (rng() < 0.6) run.items.push([wx - 1 + rng.int(-2, 2), rng.int(0, SPR.blades.length - 1)]);
+          run.x1 = wx;
+        } else flush();
+      } else if (run && run.ty === ty) flush();
       // raízes penduradas sob tetos
       if ((t === T.SOLID) && isAir(tx, ty + 1) && ty + 1 < map.rows && rng() < 0.4) {
         const inside = map.get(tx, ty + 1) === T.BG;
@@ -685,6 +753,7 @@ function decorate(map, rng, data) {
       }
     }
   }
+  flush();
   return out;
 }
 

@@ -1,8 +1,10 @@
 // =============================================================================
-// art/bg_w1.js — Fundo do Mundo 1: FLORESTA DOS BRINQUEDOS PERDIDOS ao crepúsculo.
+// art/bg_w1.js — Fundo do Mundo 1: FLORESTA DOS BRINQUEDOS PERDIDOS.
 //
-// sky(): degradê pontilhado (cache por tamanho, desliza um pouco com a câmera),
-//        estrelas piscando, lua de feltro costurada com botão, estrela cadente.
+// sky(): céu compartilhado (art/sky.js) conforme o horário da fase.
+// As camadas são pintadas POR HORÁRIO (paint(pc,w,h,tod)): 'day' (verdes vivos,
+// névoa azulada), 'dusk' (luz de borda laranja/rosa), 'night' (silhuetas azuis
+// escuras com cogumelos brilhando). Paletas em PAL.
 // layers (de trás p/ frente): colinas + castelo de blocos abandonado; árvores
 //        gigantes de pompom; faixa de névoa roxa (deriva); floresta média com
 //        carretéis gigantes, torres de blocos e cogumelos brilhando; folhagem
@@ -12,7 +14,7 @@
 // e elementos desenhados com "wrap").
 // =============================================================================
 import { registerBackground } from '../registry.js';
-import { PixelCanvas } from '../../engine/pixel.js';
+import { drawSky, skyPreset } from './sky.js';
 
 const TAU = Math.PI * 2;
 function lrng(seed) {
@@ -57,83 +59,83 @@ function trunk(pc, x, yTop, yBot, wTop, wBot, cols) {
   }
 }
 
-// ------------------------------------------------------------------ céu
-const SKY = ['#110a26', '#1a103a', '#26164c', '#38205c', '#562a68', '#7c366c', '#a6486c', '#c86468'];
-const SKY_EXTRA = 90;
-let skyCache = { key: '', canvas: null };
-let moonPc = null;
-const STARS = (() => { const r = lrng(1234); const a = []; for (let i = 0; i < 90; i++) a.push({ u: r(), v: r() * r(), ph: r() * TAU, sp: 0.6 + r() * 2, big: r() < 0.12 }); return a; })();
-
-function buildMoon() {
-  const pc = new PixelCanvas(64, 64);
-  const c = 32;
-  pc.circle(c, c, 30, '#e8c8ff0a'); pc.circle(c, c, 25, '#f0d8ff10'); pc.circle(c, c, 21, '#f8e8ff18');
-  pc.circle(c, c, 16, '#efe3c2');
-  pc.circle(c + 4, c + 4, 14, '#d8c8a0');
-  pc.circle(c - 2, c - 2, 13, '#f6eccc');
-  pc.circle(c - 5, c - 6, 5, '#fff8e4');
-  // textura de feltro
-  const r = lrng(77);
-  for (let i = 0; i < 60; i++) {
-    const a = r() * TAU, d = Math.sqrt(r()) * 14;
-    pc.px(Math.round(c + Math.cos(a) * d), Math.round(c + Math.sin(a) * d), r() < 0.5 ? '#d2c098' : '#fff4d8');
-  }
-  // costura
-  for (let i = -12; i <= 12; i += 3) { const y = c + Math.round(i * 0.5 + Math.sin(i * 0.2) * 3); pc.px(c + i, y, '#a8946e'); pc.px(c + i + 1, y, '#a8946e'); }
-  // botão-cratera
-  pc.circle(c + 6, c + 5, 3.6, '#c4b088'); pc.circle(c + 6, c + 5, 2.6, '#e0d0a8');
-  pc.px(c + 5, c + 4, '#8a7656'); pc.px(c + 7, c + 4, '#8a7656'); pc.px(c + 5, c + 6, '#8a7656'); pc.px(c + 7, c + 6, '#8a7656');
-  pc.circle(c - 7, c + 4, 1.8, '#d8c8a0'); pc.circle(c + 1, c - 9, 1.4, '#ddd0aa');
-  pc.flush();
-  return pc;
+// ------------------------------------------------------------------ paletas por horário
+const PAL = {
+  day: {
+    fill1: '#7fa9b4', h1: '#a2c8d2', h1r: '#d2ecee', h1r2: '#b8dade',
+    cs: '#8cb2c4', csL: '#c4e0e8', csD: '#7498ac', roof: '#c88282', roofL: '#eab0a8', flag: '#e05a5a', win: '#5e7e94', win2: '#5e7e94',
+    h2: '#86b4a6', h2r: '#b4dcc4', h2r2: '#9ccab6', tt: '#6c9c8a', tc: '#78ac94', th: '#a8d2b4', hz: '#b4d8dc',
+    fc: ['#4c7c6e', '#5c9682', '#74b092', '#9ccca6'], ft: ['#6e7e72', '#93a696', '#58685c', '#a2b4a2'], fb: '#6c8276', fbr: '#92aa9a', fth: '#6e7e72', fbt: '#d88080', fg: '#5c8e6e', fgr: '#86ba8e',
+    mist: '#e8f4f4', mistA: 0.38,
+    mt: ['#5e4636', '#86684c', '#402f24', '#9a7c5c'], mc: ['#22502c', '#2c6a36', '#3e8a42', '#6cb45a'],
+    s1: ['#a8444c', '#c45c5c', '#e27e74', '#f4a894'], s2: ['#2e7c86', '#3a949c', '#5cb6b8', '#86d4cc'],
+    fl: ['#6a4a3a', '#a87e5c', '#7c5c46', '#b88e66', '#d6ae80'], hole: '#2a1c18',
+    mb: ['#c45e4c', '#4c76ba', '#d8ac4a', '#5aa45a'], mbGl: 0.55,
+    mg: '#2c5634', mgr: '#5a9452', glow: false, cap: '#e05a54',
+    nDK: '#1c3c24', nMID: '#2a5432', nHI: '#46763e', dots: ['#f2d462', '#f27cb2', '#ffffff', '#a68cf2'],
+    glints: ['#fff8c8', '#ffffff'], glintN: 0.4, fmist: '#eef6ff', fA: 0.18,
+  },
+  dusk: {
+    fill1: '#4a2e50', h1: '#6c4064', h1r: '#f2a684', h1r2: '#c47676',
+    cs: '#50325a', csL: '#eca07e', csD: '#3c2446', roof: '#5c3462', roofL: '#f2a684', flag: '#e2625a', win: '#ffd474', win2: '#eca452',
+    h2: '#4c2e52', h2r: '#dc8872', h2r2: '#a45c6c', tt: '#3c2644', tc: '#4c3054', th: '#cc7e70', hz: '#8e5474',
+    fc: ['#2e2040', '#44304e', '#5c3e5a', '#9a5e62'], ft: ['#3c2c46', '#bc7466', '#2a1e34', '#5c445a'], fb: '#36283e', fbr: '#a4645c', fth: '#4c3652', fbt: '#e49472', fg: '#2e2038', fgr: '#ac6462',
+    mist: '#f2aaa4', mistA: 0.42,
+    mt: ['#2c2232', '#9e5e52', '#1c1420', '#b47462'], mc: ['#1c1a26', '#282434', '#362e40', '#7a4a4c'],
+    s1: ['#5c2c40', '#70364a', '#c4645c', '#ec8e72'], s2: ['#26424c', '#30525a', '#a46e60', '#dc9472'],
+    fl: ['#261e2a', '#c47e64', '#302634', '#503c48', '#dc9470'], hole: '#140e16',
+    mb: ['#3c263a', '#2c2c40', '#402e30', '#362c42'], mbGl: 0.3,
+    mg: '#1a1622', mgr: '#7e4c52', glow: true, cap: '#ff7ac8',
+    nDK: '#140c16', nMID: '#26161f', nHI: '#6e3a3a', dots: ['#5ff0e8', '#ff7ac8'],
+    glints: ['#ffd890', '#ffb8a0', '#fff0c0'], glintN: 0.8, fmist: '#f2b4bc', fA: 0.26,
+  },
+  night: {
+    fill1: '#161a34', h1: '#1e2448', h1r: '#3a4472', h1r2: '#2c3662',
+    cs: '#181c3c', csL: '#30386a', csD: '#121530', roof: '#202652', roofL: '#30386a', flag: '#4c2c4c', win: '#f2bc64', win2: '#c88a44',
+    h2: '#161a38', h2r: '#2e3664', h2r2: '#232a52', tt: '#121630', tc: '#1a1e40', th: '#30386a', hz: '#2c3462',
+    fc: ['#141a32', '#1c2444', '#253058', '#36426c'], ft: ['#1a1e3a', '#2a3256', '#12162c', '#343c64'], fb: '#181c36', fbr: '#283052', fth: '#283050', fbt: '#363c66', fg: '#141830', fgr: '#242a4e',
+    mist: '#5c68b2', mistA: 0.45,
+    mt: ['#141c2c', '#26364a', '#0e141f', '#2e425a'], mc: ['#0c161a', '#122226', '#1a3034', '#28464a'],
+    s1: ['#3c1e3a', '#4c2646', '#6c3a60', '#88507c'], s2: ['#1e3a44', '#264c56', '#3a6e78', '#4e8890'],
+    fl: ['#1c1824', '#3e3448', '#221c2a', '#3c3248', '#4e4258'], hole: '#0c0a12',
+    mb: ['#221c32', '#18222e', '#262222', '#1e1a2e'], mbGl: 0.22,
+    mg: '#0e131c', mgr: '#1e2a38', glow: true, cap: '#5ff0e8',
+    nDK: '#080610', nMID: '#120e1e', nHI: '#1e1a32', dots: ['#5ff0e8', '#ff7ac8'],
+    glints: ['#d8ff9a', '#9af0ff', '#ffb8e8'], glintN: 1, fmist: '#8c7cda', fA: 0.3,
+  },
+};
+let curTod = 'night';   // horário da última pintura (getters de fillBelow/alpha leem isto no bake)
+let activeTod = 'day';  // horário da fase em jogo (atualizado por sky())
+const todOf = (tod) => (PAL[tod] ? tod : 'day');
+const _mx = new Map();
+function mix(a, b, t) {
+  const k = a + b + t;
+  let v = _mx.get(k);
+  if (v) return v;
+  const pa = parseInt(a.slice(1, 7), 16), pb = parseInt(b.slice(1, 7), 16);
+  const ch = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  v = '#' + ((1 << 24) | (ch(16) << 16) | (ch(8) << 8) | ch(0)).toString(16).slice(1);
+  _mx.set(k, v);
+  return v;
 }
 
 function sky(ctx, w, h, t, cam, level) {
-  const key = w + 'x' + h;
-  if (skyCache.key !== key) {
-    const pc = new PixelCanvas(w, h + SKY_EXTRA);
-    pc.vgradient(0, 0, w, h + SKY_EXTRA, SKY);
-    pc.flush();
-    skyCache = { key, canvas: pc.canvas };
-  }
-  const maxY = Math.max(1, (level?.map?.height || h) - (cam?.viewH || h));
-  const f = Math.max(0, Math.min(1, (cam?.y || 0) / maxY));
-  const oy = Math.round(-SKY_EXTRA * f);
-  ctx.drawImage(skyCache.canvas, 0, oy);
-  // estrelas
-  const cx = (cam?.x || 0) * 0.01;
-  ctx.fillStyle = '#fff4e8';
-  for (const s of STARS) {
-    const a = 0.55 + 0.45 * Math.sin(t * s.sp + s.ph);
-    const x = Math.round(((s.u * w - cx) % w + w) % w), y = Math.round(s.v * h * 0.7 + oy * 0.3 + 4);
-    ctx.globalAlpha = a * (1 - s.v * 0.6);
-    ctx.fillRect(x, y, 1, 1);
-    if (s.big && a > 0.75) { ctx.globalAlpha = (a - 0.75) * 2.5; ctx.fillRect(x - 1, y, 3, 1); ctx.fillRect(x, y - 1, 1, 3); }
-  }
-  ctx.globalAlpha = 1;
-  // lua
-  if (!moonPc) moonPc = buildMoon();
-  ctx.drawImage(moonPc.canvas, Math.round(w * 0.24 - 32), Math.round(h * 0.17 - 32 + 18 + oy * 0.25));
-  // estrela cadente ocasional
-  const ph = t % 13;
-  if (ph < 0.8) {
-    const p = ph / 0.8, k = Math.floor(t / 13);
-    const sx = w * (0.45 + ((k * 0.37) % 0.4)), sy = h * 0.08;
-    const x = sx - p * 70, y = sy + p * 28;
-    ctx.fillStyle = '#fff6e0';
-    for (let i = 0; i < 8; i++) { ctx.globalAlpha = (1 - i / 8) * (1 - p) * 0.9; ctx.fillRect(Math.round(x + i * 2.5), Math.round(y - i), 1, 1); }
-    ctx.globalAlpha = 1;
-  }
+  const p = skyPreset('w1', level);
+  activeTod = todOf(p.tod);
+  drawSky(ctx, w, h, t, cam, p);
 }
 
 // ------------------------------------------------------------------ animação: pontos de luz
-function glints(n, seed, speed, colors, yMin, yMax, big = false) {
+function glints(n, seed, speed, yMin, yMax, big = false) {
   const r = lrng(seed);
   const pts = [];
-  for (let i = 0; i < n; i++) pts.push({ u: r(), v: r(), ph: r() * TAU, sp: 0.5 + r(), c: colors[i % colors.length] });
+  for (let i = 0; i < n; i++) pts.push({ u: r(), v: r(), ph: r() * TAU, sp: 0.5 + r(), i });
   return (ctx, cam, t, w, h, y) => {
     const span = w + 40;
+    const P = PAL[activeTod], cols = P.glints, lim = Math.ceil(n * P.glintN);
     for (const p of pts) {
+      if (p.i >= lim) continue;
+      p.c = cols[p.i % cols.length];
       const a = 0.5 + 0.5 * Math.sin(t * 2 * p.sp + p.ph);
       if (a < 0.2) continue;
       let x = (p.u * span - cam.x * speed + Math.sin(t * 0.5 * p.sp + p.ph) * 12) % span;
@@ -158,13 +160,14 @@ const GLYPH_C = ['.####', '#....', '#....', '#....', '.####'];
 const layers = [
   // 1) colinas distantes + castelo de brinquedo abandonado
   {
-    width: 640, height: 200, speed: 0.04, speedY: 0.03, fillBelow: '#1c1636',
-    paint(pc, w, h) {
+    width: 640, height: 200, speed: 0.04, speedY: 0.03, get fillBelow() { return PAL[curTod].fill1; },
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
       const r1 = (x) => h - 96 + 15 * Math.sin((TAU * 2 * x) / w + 0.5) + 7 * Math.sin((TAU * 5 * x) / w + 1.3) + 2 * Math.sin((TAU * 13 * x) / w);
-      ridgeFill(pc, w, h, r1, '#2c2150', '#4a3a76', '#3a2e62');
+      ridgeFill(pc, w, h, r1, P.h1, P.h1r, P.h1r2);
       // castelo de blocos
       const cx = 420, base = Math.round(r1(cx)) + 6;
-      const C = '#221a40', L = '#3a2e66', D = '#18122e';
+      const C = P.cs, L = P.csL, D = P.csD;
       const tower = (x, tw, th, roof, broken) => {
         pc.rect(x, base - th, tw, th, C); pc.vline(x, base - th, th, L);
         for (let yy = base - th + 9; yy < base; yy += 9) pc.hline(x + 1, yy, tw - 1, D);
@@ -172,10 +175,10 @@ const layers = [
           pc.tri(x, base - th, x + tw, base - th, x + tw, base - th - 7, C);
           pc.px(x + tw - 2, base - th - 9, C); pc.px(x + tw + 2, base - th + 3, C);
         } else if (roof) {
-          pc.tri(x - 3, base - th, x + tw + 3, base - th, x + tw / 2, base - th - roof, '#2a1e4a');
-          pc.line(x - 3, base - th, x + tw / 2, base - th - roof, L);
+          pc.tri(x - 3, base - th, x + tw + 3, base - th, x + tw / 2, base - th - roof, P.roof);
+          pc.line(x - 3, base - th, x + tw / 2, base - th - roof, P.roofL);
           pc.vline(Math.round(x + tw / 2), base - th - roof - 7, 7, D);
-          pc.rect(Math.round(x + tw / 2) + 1, base - th - roof - 7, 5, 3, '#5a2a4a');
+          pc.rect(Math.round(x + tw / 2) + 1, base - th - roof - 7, 5, 3, P.flag);
         } else for (let i = 0; i < tw; i += 4) pc.rect(x + i, base - th - 3, 2, 3, C);
       };
       wrap(w, (o) => {
@@ -189,75 +192,78 @@ const layers = [
         tower(cx - 14, 12, 52, 16, false);
         tower(cx + 8, 10, 44, 0, false);
         // janelas: uma ainda acesa
-        pc.rect(cx - 40, base - 46, 3, 4, '#f2bc64'); pc.px(cx - 40, base - 46, '#fff0b8');
-        pc.rect(cx - 10, base - 40, 2, 3, '#3a2a4a'); pc.rect(cx + 34, base - 58, 3, 4, '#3a2a4a');
-        pc.rect(cx + 12, base - 30, 2, 3, '#c88a44');
+        pc.rect(cx - 40, base - 46, 3, 4, P.win); if (P.win !== P.win2) pc.px(cx - 40, base - 46, '#fff0b8');
+        pc.rect(cx - 10, base - 40, 2, 3, D); pc.rect(cx + 34, base - 58, 3, 4, D);
+        pc.rect(cx + 12, base - 30, 2, 3, P.win2);
         pc.resetTranslate();
       });
       const r2 = (x) => h - 52 + 10 * Math.sin((TAU * 3 * x) / w + 2) + 5 * Math.sin((TAU * 7 * x) / w + 0.2);
-      ridgeFill(pc, w, h, r2, '#201a3e', '#3c3066', '#2c2450');
+      ridgeFill(pc, w, h, r2, P.h2, P.h2r, P.h2r2);
       // arvorezinhas de pompom na crista
       const rr = lrng(5);
       for (let x = 8; x < w; x += 18 + rr.int(0, 22)) {
         const y = Math.round(r2(x)), s = 3 + rr.int(0, 4);
-        wrap(w, (o) => { pc.vline(x + o, y - s, s + 1, '#1a1434'); pc.circle(x + o, y - s - 1, s, '#241c46'); pc.px(x + o - 1, y - s - 3, '#3a3068'); });
+        wrap(w, (o) => { pc.vline(x + o, y - s, s + 1, P.tt); pc.circle(x + o, y - s - 1, s, P.tc); pc.px(x + o - 1, y - s - 3, P.th); pc.px(x + o - 2, y - s - 2, P.th); });
       }
       // névoa no pé das colinas
-      pc.ditherFn(0, h - 30, w, 30, (i, j) => ['#201a3e', '#382c60', (j / 30) * 0.7]);
+      pc.ditherFn(0, h - 30, w, 30, (i, j) => [P.h2, P.hz, (j / 30) * 0.7]);
     },
   },
   // 2) árvores gigantes de brinquedo distantes
   {
-    width: 512, height: 280, speed: 0.12, speedY: 0.06, fillBelow: '#1a1834',
-    paint(pc, w, h) {
+    width: 512, height: 280, speed: 0.12, speedY: 0.06, get fillBelow() { return PAL[curTod].fg; },
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
       const r = lrng(31);
       const trees = [[30, 120, 34], [140, 90, 44], [250, 136, 30], [345, 80, 48], [450, 114, 36]];
-      const cols = ['#1b1c36', '#262a4c', '#30365e', '#3e4672'];
+      const cols = P.fc;
       for (const [tx, top, R] of trees) {
         wrap(w, (o) => {
           const rr = lrng(tx * 7 + 3);
-          trunk(pc, tx + o, top + 10, h, 12 + (R >> 3), 26 + (R >> 2), ['#22213e', '#323058', '#18172e', '#3a3864']);
+          trunk(pc, tx + o, top + 10, h, 12 + (R >> 3), 26 + (R >> 2), P.ft);
           // raízes de bloquinhos
-          pc.rect(tx + o - 22, h - 10, 10, 10, '#1e1d38'); pc.hline(tx + o - 22, h - 10, 10, '#2e2c52');
-          pc.rect(tx + o + 13, h - 8, 8, 8, '#1e1d38'); pc.hline(tx + o + 13, h - 8, 8, '#2e2c52');
+          pc.rect(tx + o - 22, h - 10, 10, 10, P.fb); pc.hline(tx + o - 22, h - 10, 10, P.fbr);
+          pc.rect(tx + o + 13, h - 8, 8, 8, P.fb); pc.hline(tx + o + 13, h - 8, 8, P.fbr);
           pomCanopy(pc, tx + o, top, R, rr, cols);
           // fio pendurado com botão
-          if (R > 40) { const hx = tx + o + 18; pc.vline(hx, top + 14, 40, '#2e2c50'); pc.circle(hx, top + 56, 3, '#3a3460'); pc.px(hx - 1, top + 55, '#1a1834'); pc.px(hx + 1, top + 55, '#1a1834'); }
+          if (R > 40) { const hx = tx + o + 18; pc.vline(hx, top + 14, 40, P.fth); pc.circle(hx, top + 56, 3, P.fbt); pc.px(hx - 1, top + 55, P.fg); pc.px(hx + 1, top + 55, P.fg); }
         });
       }
       // chão ondulado
       const gr = (x) => h - 18 + 4 * Math.sin((TAU * 4 * x) / w) + 2 * Math.sin((TAU * 9 * x) / w + 1);
-      ridgeFill(pc, w, h, gr, '#1a1834', '#2a2850', null);
-      for (let i = 0; i < 60; i++) { const x = r.int(0, w - 1); const y = Math.round(gr(x)); pc.vline(x, y - r.int(1, 3), 3, '#1a1834'); }
+      ridgeFill(pc, w, h, gr, P.fg, P.fgr, null);
+      for (let i = 0; i < 60; i++) { const x = r.int(0, w - 1); const y = Math.round(gr(x)); pc.vline(x, y - r.int(1, 3), 3, P.fg); }
     },
-    animate: glints(10, 91, 0.12, ['#b8a8ff', '#9af0ff'], 90, 220),
+    animate: glints(10, 91, 0.12, 90, 220),
   },
   // 3) névoa roxa média (deriva)
   {
-    width: 480, height: 90, speed: 0.2, speedY: 0.1, drift: 5, alpha: 0.5, y: -48,
-    paint(pc, w, h) {
+    width: 480, height: 90, speed: 0.2, speedY: 0.1, drift: 5, get alpha() { return PAL[curTod].mistA; }, y: -48,
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
       const r = lrng(55);
       for (let i = 0; i < 14; i++) {
         const cx = r.int(0, w), cy = r.int(30, h - 20), rx = r.int(40, 90), ry = r.int(6, 14);
-        wrap(w, (o) => pc.dither(Math.round(cx + o - rx), Math.round(cy - ry), rx * 2, ry * 2, null, '#7e68b4', (x, y) => {
+        wrap(w, (o) => pc.dither(Math.round(cx + o - rx), Math.round(cy - ry), rx * 2, ry * 2, null, P.mist, (x, y) => {
           const dx = (x - rx) / rx, dy = (y - ry) / ry, d = dx * dx + dy * dy;
           return d < 1 ? (1 - d) * 0.75 : 0;
         }));
       }
-      pc.dither(0, h - 26, w, 26, null, '#7e68b4', (x, y) => (y / 26) * 0.9);
+      pc.dither(0, h - 26, w, 26, null, P.mist, (x, y) => (y / 26) * 0.9);
     },
   },
   // 4) floresta média: carretéis gigantes, torres de blocos, cogumelos
   {
-    width: 576, height: 270, speed: 0.3, speedY: 0.15, fillBelow: '#121722',
-    paint(pc, w, h) {
+    width: 576, height: 270, speed: 0.3, speedY: 0.15, get fillBelow() { return PAL[curTod].mg; },
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
       const r = lrng(77);
-      const B = '#18202e', RIM = '#33465a', DK = '#10161f';
+      const DK = P.mt[2];
       // árvores médias
       for (const [tx, top, R] of [[200, 84, 34], [470, 70, 40]]) {
         wrap(w, (o) => {
-          trunk(pc, tx + o, top + 8, h, 10, 22, ['#1a2230', '#2c3c50', '#111823', '#34485e']);
-          pomCanopy(pc, tx + o, top, R, lrng(tx), ['#0f1a1e', '#16262a', '#1e3438', '#2c4a4a']);
+          trunk(pc, tx + o, top + 8, h, 10, 22, P.mt);
+          pomCanopy(pc, tx + o, top, R, lrng(tx), P.mc);
         });
       }
       // carretel gigante em pé
@@ -269,48 +275,50 @@ const layers = [
         for (let y = top + 6; y < top + shh - 5; y += 3) pc.hline(bx + 3, y, 3, thread[3]);
         pc.rect(bx + bw - 4, top + 5, 4, shh - 10, DK);
         // flanges de madeira
-        pc.ellipse(x, top + shh - 4, sw / 2 + 4, 5, '#241e2a'); pc.hline(Math.round(x - sw / 2 - 3), top + shh - 5, sw + 6, '#4a3e50');
-        pc.ellipse(x, top + 4, sw / 2 + 4, 5.5, '#2a2232');
-        pc.ellipse(x, top + 3, sw / 2 + 3, 4.2, '#4a3e52');
-        pc.ellipse(x - 2, top + 2, sw / 2 - 2, 2.6, '#5c4e62');
-        pc.ellipse(x, top + 3, 4, 2, '#140f18');
+        pc.ellipse(x, top + shh - 4, sw / 2 + 4, 5, P.fl[0]); pc.hline(Math.round(x - sw / 2 - 3), top + shh - 5, sw + 6, P.fl[1]);
+        pc.ellipse(x, top + 4, sw / 2 + 4, 5.5, P.fl[2]);
+        pc.ellipse(x, top + 3, sw / 2 + 3, 4.2, P.fl[3]);
+        pc.ellipse(x - 2, top + 2, sw / 2 - 2, 2.6, P.fl[4]);
+        pc.ellipse(x, top + 3, 4, 2, P.hole);
         // fio solto descendo até o chão
         pc.curve(bx + bw, top + shh * 0.4, x + sw / 2 + 20, top + shh * 0.7, x + sw / 2 + 30, h - 6, thread[2]);
       });
-      spool(80, 120, 46, 130, ['#4a2440', '#5c2e4c', '#7e4466', '#9a5a7e']);
-      spool(380, 170, 30, 82, ['#24444c', '#2e565e', '#447a80', '#5a949a']);
+      spool(80, 120, 46, 130, P.s1);
+      spool(380, 170, 30, 82, P.s2);
       // torre de blocos com letras
-      const blocks = [[296, h - 28, 26, '#2a2238', GLYPH_A], [300, h - 54, 26, '#1e2a36', GLYPH_B], [293, h - 80, 26, '#2e2826', GLYPH_C], [298, h - 102, 22, '#262036', GLYPH_A]];
+      const blocks = [[296, h - 28, 26, P.mb[0], GLYPH_A], [300, h - 54, 26, P.mb[1], GLYPH_B], [293, h - 80, 26, P.mb[2], GLYPH_C], [298, h - 102, 22, P.mb[3], GLYPH_A]];
       for (const [bx, by, s, c, gl] of blocks) wrap(w, (o) => {
+        const RIM = mix(c, '#ffffff', 0.25), BD = mix(c, '#000000', 0.4);
         pc.rect(bx + o, by, s, s, c); pc.hline(bx + o, by, s, RIM); pc.vline(bx + o, by, s, RIM);
-        pc.hline(bx + o + 1, by + s - 1, s - 1, DK); pc.vline(bx + o + s - 1, by + 1, s - 1, DK);
-        pc.strokeRect(bx + o + 3, by + 3, s - 6, s - 6, DK);
+        pc.hline(bx + o + 1, by + s - 1, s - 1, BD); pc.vline(bx + o + s - 1, by + 1, s - 1, BD);
+        pc.strokeRect(bx + o + 3, by + 3, s - 6, s - 6, BD);
         const sc = 2, gx = bx + o + Math.round((s - 10) / 2), gy = by + Math.round((s - 10) / 2);
-        for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) if (gl[j][i] === '#') pc.rect(gx + i * sc, gy + j * sc, sc, sc, '#3a4a5e');
+        for (let j = 0; j < 5; j++) for (let i = 0; i < 5; i++) if (gl[j][i] === '#') pc.rect(gx + i * sc, gy + j * sc, sc, sc, mix(c, '#ffffff', P.mbGl));
       });
       // bloco caído
-      wrap(w, (o) => { pc.rect(330 + o, h - 22, 18, 18, '#26203a'); pc.hline(330 + o, h - 22, 18, RIM); });
+      wrap(w, (o) => { pc.rect(330 + o, h - 22, 18, 18, P.mb[3]); pc.hline(330 + o, h - 22, 18, mix(P.mb[3], '#ffffff', 0.25)); });
       // chão com grama e cogumelos brilhando
       const gr = (x) => h - 14 + 3 * Math.sin((TAU * 5 * x) / w + 0.7) + 2 * Math.sin((TAU * 11 * x) / w);
-      ridgeFill(pc, w, h, gr, '#121722', '#24303e', null);
-      for (let i = 0; i < 120; i++) { const x = r.int(0, w - 1); const y = Math.round(gr(x)); const hh = r.int(2, 6); pc.vline(x, y - hh, hh, '#121722'); }
+      ridgeFill(pc, w, h, gr, P.mg, P.mgr, null);
+      for (let i = 0; i < 120; i++) { const x = r.int(0, w - 1); const y = Math.round(gr(x)); const hh = r.int(2, 6); pc.vline(x, y - hh, hh, P.mg); }
       for (let i = 0; i < 16; i++) {
-        const x = r.int(4, w - 5), y = Math.round(gr(x)), glow = r() < 0.5 ? '#5ff0e8' : '#ff7ac8';
+        const x = r.int(4, w - 5), y = Math.round(gr(x)), glow = P.glow ? (r() < 0.5 ? '#5ff0e8' : '#ff7ac8') : (r() < 0.6 ? P.cap : '#c89a5a');
         wrap(w, (o) => {
-          pc.circle(x + o, y - 4, 6, glow + '18'); pc.circle(x + o, y - 4, 3.5, glow + '24');
-          pc.vline(x + o, y - 3, 3, '#1a2430'); pc.hline(x + o - 2, y - 4, 5, glow); pc.hline(x + o - 1, y - 5, 3, glow);
+          if (P.glow) { pc.circle(x + o, y - 4, 6, glow + '18'); pc.circle(x + o, y - 4, 3.5, glow + '24'); }
+          pc.vline(x + o, y - 3, 3, P.glow ? P.mg : '#e8dcc8'); pc.hline(x + o - 2, y - 4, 5, glow); pc.hline(x + o - 1, y - 5, 3, glow);
           pc.px(x + o - 1, y - 5, '#ffffff');
         });
       }
     },
-    animate: glints(12, 17, 0.3, ['#5ff0e8', '#ff7ac8', '#d8ff9a'], 110, 250),
+    animate: glints(12, 17, 0.3, 110, 250),
   },
   // 5) folhagem escura próxima com pontos de luz
   {
-    width: 448, height: 150, speed: 0.58, speedY: 0.28, fillBelow: '#0c0814',
-    paint(pc, w, h) {
+    width: 448, height: 150, speed: 0.58, speedY: 0.28, get fillBelow() { return PAL[curTod].nDK; },
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
       const r = lrng(99);
-      const DK = '#0c0814', MID = '#160f22', HI = '#22192f';
+      const DK = P.nDK, MID = P.nMID, HI = P.nHI;
       const bush = (x, y, R) => wrap(w, (o) => {
         const rr = lrng(x * 13 + y);
         const bl = [];
@@ -333,23 +341,24 @@ const layers = [
       pc.rect(0, h - 26, w, 26, DK);
       // pontos de luz (cogumelos minúsculos)
       for (let i = 0; i < 18; i++) {
-        const x = r.int(2, w - 3), y = h - r.int(10, 50), c = r() < 0.5 ? '#5ff0e8' : '#ff7ac8';
-        wrap(w, (o) => { pc.circle(x + o, y, 3, c + '22'); pc.px(x + o, y, c); pc.px(x + o, y + 1, '#1a1428'); });
+        const x = r.int(2, w - 3), y = h - r.int(10, 50), c = P.dots[i % P.dots.length];
+        wrap(w, (o) => { if (P.glow) pc.circle(x + o, y, 3, c + '22'); pc.px(x + o, y, c); pc.px(x + o, y + 1, MID); });
       }
     },
-    animate: glints(14, 23, 0.58, ['#d8ff9a', '#9af0ff', '#ffb8e8'], -40, 140, true),
+    animate: glints(14, 23, 0.58, -40, 140, true),
   },
 ];
 
 const front = [
   // névoa roxa rasteira na frente de tudo
   {
-    width: 512, height: 70, speed: 1.2, speedY: 0.2, drift: 9, alpha: 0.3, y: 14,
-    paint(pc, w, h) {
+    width: 512, height: 70, speed: 1.2, speedY: 0.2, drift: 9, get alpha() { return PAL[curTod].fA; }, y: 14,
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
       const r = lrng(404);
       for (let i = 0; i < 12; i++) {
         const cx = r.int(0, w), cy = r.int(26, h - 14), rx = r.int(40, 100), ry = r.int(6, 14);
-        wrap(w, (o) => pc.dither(Math.round(cx + o - rx), Math.round(cy - ry), rx * 2, ry * 2, null, '#a68ae2', (x, y) => {
+        wrap(w, (o) => pc.dither(Math.round(cx + o - rx), Math.round(cy - ry), rx * 2, ry * 2, null, P.fmist, (x, y) => {
           const dx = (x - rx) / rx, dy = (y - ry) / ry, d = dx * dx + dy * dy;
           return d < 1 ? (1 - d) * 0.7 : 0;
         }));
@@ -358,4 +367,4 @@ const front = [
   },
 ];
 
-registerBackground('w1', { sky, layers, front });
+registerBackground('w1', { sky, layers, front, defaultTimeOfDay: 'day' });
