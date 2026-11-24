@@ -103,7 +103,7 @@ registerDialogues({
   w1_sign_run: placa('Segure CORRER (ou continue andando) para disparar. Correndo, o pulo vai mais longe!'),
   w1_sign_attack: placa('ATACAR: chicote de fio! Aperte 3 vezes para um combo e quebre esses blocos.'),
   w1_sign_downstrike: [
-    ...placa('O chão aqui soa oco... No ar, segure ↓ e aperte ATACAR para golpear para baixo.'),
+    ...placa('O chão aqui soa oco... No ar, segure BAIXO e aperte ATACAR para golpear para baixo.'),
     { who: 'tico', expr: 'confused', text: 'Oco? Chão oco esconde coisa. Todo mundo sabe disso.' },
   ],
   w1_sign_dash: placa('DASH: um impulso rápido! Funciona no ar também (uma vez por pulo).'),
@@ -145,7 +145,7 @@ registerDialogues({
     { who: 'tico', expr: 'scared', text: 'Que escuro... Tudo bem. Minhas costuras brilham um pouquinho. Eu acho.' },
   ],
   w1_sign_bear: placa('Ursinhos corrompidos investem sem frear. Desvie e deixe que batam na parede!'),
-  w1_sign_whisper: placa('"...lembra de mim...? ...alguém lembra...?" — sussurram as raízes.'),
+  w1_sign_whisper: placa('"...lembra de mim...? ...alguém lembra...?", sussurram as raízes.'),
   w1_sign_key: placa('Algo brilha lá embaixo, entre as raízes mais fundas...'),
   w1_sign_seam: [
     ...placa('Uma parede costurada com fio escuro. Hoje ela não abre.'),
@@ -164,6 +164,7 @@ registerDialogues({
     { who: 'tico', expr: 'determined', text: 'Tá bom. Coragem, Tico. Coragem de pelúcia, nível máximo.' },
   ],
   w1_sign_anchors: placa('Ilhós na névoa. Costure, atravesse e não olhe para baixo.'),
+  w1_sign_gate2: placa('Portão de espinhos. Lá no alto da árvore, um ilhó pisca... será que estão ligados?'),
   w1_sign_memory: [
     { who: 'tico', expr: 'surprised', text: 'Esse brilho quentinho... parece cheiro de colo de vó.' },
   ],

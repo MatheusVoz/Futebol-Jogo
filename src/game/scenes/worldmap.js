@@ -338,6 +338,7 @@ class WorldMapScene extends Scene {
     const pts = [];
     for (let i = 0; i < seq.length - 1; i++) pts.push(...this.linkPts(seq[i], seq[i + 1]).slice(1));
     T.path = pts; T.dest = target; T.speed = pts.length * 3 > 240 ? 240 : 120;
+    this.peek = null;
     this.info = target;
     this.playOnArrive = playAfter;
   }
@@ -410,20 +411,31 @@ class WorldMapScene extends Scene {
     this.manager.push(s, { onClose: null, from: 'map' });
   }
   toTitle() { const t = makeScene('title'); if (t) game.scenes.go(t, {}, { transition: 'fade' }); }
-  switchWorld(dir) {
-    let w = this.curWorld;
-    for (let i = 0; i < 5; i++) { w += dir; if (w < 1 || w > 5) return false; if (this.worldOpen(w) && this.chain.some((n) => n.world === w && this.isOpen(n))) break; }
-    if (w < 1 || w > 5 || !this.worldOpen(w)) return false;
+  get viewWorld() { return this.peek || this.curWorld; }
+  /** Vai para o mundo w: Tico salta para lá se houver fase aberta; senão a câmera só "espia". */
+  gotoWorld(w) {
+    if (w < 1 || w > 5) return false;
+    const has = this.worldOpen(w) && this.chain.some((n) => n.world === w && this.isOpen(n));
+    if (!has) {
+      this.peek = w === this.curWorld ? null : w;
+      this.info = this.chain[(w - 1) * 6];
+      audio.sfx('ui_move');
+      return true;
+    }
     const n = this.furthestOpen(w);
-    if (!n || n.world !== w) return false;
     const T = this.tico;
+    this.peek = null;
+    if (T.node === n && !T.path.length) { this.info = n; return true; }
     T.path = []; T.node = T.dest = n; T.x = n.x; T.y = n.y;
+    this.curWorld = n.world;
     this.info = n;
     this.poof = { x: n.x, y: n.y, t: 0 };
     audio.sfx('whoosh', { vol: 0.5 });
     return true;
   }
+  switchWorld(dir) { return this.gotoWorld(this.viewWorld + dir); }
   step(dir) { // ←/→ ao longo da linha
+    if (this.peek) { this.peek = null; this.info = this.tico.dest; return; }
     const T = this.tico, cur = T.path.length ? T.dest : T.node;
     let target;
     if (cur.bonus) target = cur.parent;
@@ -433,6 +445,7 @@ class WorldMapScene extends Scene {
     else { audio.sfx('ui_denied'); this.deny(target); this.info = target; }
   }
   vert() { // ↑/↓: ramo da fase bônus
+    if (this.peek) { this.peek = null; this.info = this.tico.dest; return; }
     const T = this.tico, cur = T.path.length ? T.dest : T.node;
     const target = cur.bonus ? cur.parent : cur.bonusNode;
     if (!target) return;
@@ -448,7 +461,8 @@ class WorldMapScene extends Scene {
       const k = clamp(S.t / S.dur, 0, 1), p = S.pts[Math.floor(k * (S.pts.length - 1))];
       return { x: p.x - areaCX, y: this.patchY(S.from.world) + PH / 2 - areaCY };
     }
-    return { x: this.patchX(this.curWorld) + PW / 2 - areaCX, y: this.patchY(this.curWorld) + PH / 2 - areaCY };
+    const vw = this.viewWorld;
+    return { x: this.patchX(vw) + PW / 2 - areaCX, y: this.patchY(vw) + PH / 2 - areaCY };
   }
   update(dt) {
     const T = this.tico;
@@ -469,7 +483,7 @@ class WorldMapScene extends Scene {
     }
     const near = T.path.length ? this.nearestNode() : T.node;
     if (near.world !== this.curWorld) { this.curWorld = near.world; }
-    if (this.skyWorld !== this.curWorld) { this.prevSky = this.skyWorld; this.skyWorld = this.curWorld; this.skyK = 0; }
+    if (this.skyWorld !== this.viewWorld) { this.prevSky = this.skyWorld; this.skyWorld = this.viewWorld; this.skyK = 0; }
     this.skyK = Math.min(1, this.skyK + dt * 1.6);
     const { w, h } = game.view;
     const ct = this.camTarget(w, h);
@@ -487,14 +501,17 @@ class WorldMapScene extends Scene {
     if (this.picker) {
       if (input.pressed('left')) { if (!this.switchWorld(-1)) audio.sfx('ui_denied'); }
       if (input.pressed('right')) { if (!this.switchWorld(1)) audio.sfx('ui_denied'); }
-      if (input.pressed('confirm') || input.pressed('down')) { input.consume('confirm'); input.consume('jump'); audio.sfx('ui_select'); this.picker = false; }
+      if (input.pressed('confirm') || input.pressed('down')) {
+        input.consume('confirm'); input.consume('jump');
+        if (this.peek) { audio.sfx('ui_denied'); this.deny(this.info); } else { audio.sfx('ui_select'); this.picker = false; }
+      }
       if (input.pressed('back')) { input.consume('back'); this.picker = false; this.focus = 'menu'; this.menu.sel = 0; audio.sfx('ui_open'); }
       return;
     }
     if (input.pressed('right')) this.step(1);
     else if (input.pressed('left')) this.step(-1);
     else if (input.pressed('up') || input.pressed('down')) this.vert();
-    if (input.pressed('cycle')) { if (!this.switchWorld(1) && !this.switchWorld(-5)) audio.sfx('ui_denied'); }
+    if (input.pressed('cycle')) { if (!this.switchWorld(1)) this.gotoWorld(1); }
     if (input.pressed('confirm')) {
       input.consume('confirm'); input.consume('jump');
       if (T.path.length) this.playOnArrive = this.isOpen(T.dest);
@@ -574,9 +591,10 @@ class WorldMapScene extends Scene {
       const x = this.patchX(wd.id), y = this.patchY(wd.id);
       ctx.drawImage(patchImage(wd.id, !open), x, y);
       // etiqueta com o nome curto
-      const label = wd.id + ' · ' + wd.short, lw = font.measure(label) + 10;
-      drawPanel(ctx, x + 10, y - 6, lw, 13, open ? 'paper' : 'dark');
-      font.draw(ctx, label, x + 10 + lw / 2, y - 3, { align: 'center', color: open ? '#2a1840' : '#8a80a0' });
+      const label = wd.id + ' - ' + wd.short, lw = font.measure(label) + 10;
+      const ly = wd.id % 2 === 0 ? y + PH - 8 : y - 8; // mundos espelhados: etiqueta embaixo
+      drawPanel(ctx, x + 10, ly, lw, 16, open ? 'paper' : 'dark');
+      font.draw(ctx, label, x + 10 + lw / 2, ly + 4, { align: 'center', color: open ? '#2a1840' : '#8a80a0' });
     }
     // linhas entre mundos
     for (let wi = 1; wi < 5; wi++) {
@@ -700,7 +718,7 @@ class WorldMapScene extends Scene {
     if (this.sew && this.sew.t > 0 && this.sew.t < this.sew.dur) { /* Tico assiste */ }
     const anim = T.path.length ? 'walk' : 'idle';
     const fr = animFrame('tico', anim, T.t);
-    const x = R0(T.x), y = R0(T.y) + 1;
+    const x = R0(T.x), y = R0(T.y) - 3;
     ctx.fillStyle = 'rgba(11,7,22,0.35)';
     ctx.fillRect(x - 6, y - 1, 12, 2);
     drawSprite(ctx, 'tico', anim, fr, x, y, { flip: T.flip });
@@ -712,15 +730,14 @@ class WorldMapScene extends Scene {
     }
   }
   drawHeader(ctx, w, t) {
-    const wd = WORLDS[this.curWorld - 1];
+    const wd = WORLDS[this.viewWorld - 1];
     const hw = Math.min(w - MENU_W - 52, 300), hx = R0(MENU_W + (w - MENU_W) / 2 - hw / 2);
     drawPanel(ctx, hx, 2, hw, 18, 'dark');
-    let name = `Mundo ${wd.id} — ${wd.name}`;
-    if (font.measure(name) > hw - 12) name = `Mundo ${wd.id} — ${wd.short}`;
+    let name = `Mundo ${wd.id} - ${wd.name}`;
+    if (font.measure(name) > hw - 12) name = `Mundo ${wd.id} - ${wd.short}`;
     if (this.picker) name = 'Escolha o mundo: ' + wd.short;
     font.draw(ctx, name, hx + hw / 2, 7, { align: 'center', color: lighten(wd.color, 0.25), shadow: '#0b0716' });
-    const canL = this.curWorld > 1 && this.worldOpen(this.curWorld - 1);
-    const canR = this.curWorld < 5 && this.worldOpen(this.curWorld + 1);
+    const canL = this.viewWorld > 1, canR = this.viewWorld < 5;
     const bob = this.picker ? R0(Math.sin(t * 6) * 1.5) : 0;
     this.rects.arrowL = canL ? { x: hx - 22, y: 2, w: 20, h: 18 } : null;
     this.rects.arrowR = canR ? { x: hx + hw + 2, y: 2, w: 20, h: 18 } : null;
@@ -765,7 +782,7 @@ class WorldMapScene extends Scene {
     const L2 = y + 19, L3 = y + 30;
     if (st === 'soon') { font.draw(ctx, 'Esta fase ainda está sendo costurada.', x + 8, L2, { color: '#a898d8', maxWidth: tw }); return; }
     if (st === 'locked') {
-      const msg = n.bonus ? `Junte ${wd.bonusStarsNeeded} estrelas do mundo.` : 'Termine a fase anterior para liberar.';
+      const msg = !this.worldOpen(n.world) ? 'Mundo costurado: vença o chefe anterior.' : n.bonus ? `Junte ${wd.bonusStarsNeeded} estrelas do mundo.` : 'Termine a fase anterior para liberar.';
       font.draw(ctx, msg, x + 8, L2, { color: '#a898d8', maxWidth: tw });
       return;
     }
@@ -782,7 +799,7 @@ class WorldMapScene extends Scene {
       font.draw(ctx, String(rec.secrets?.length || 0), cx, L2, { color: '#fff4dc' });
     }
     const rating = rec.rating || 0;
-    const stars = '★'.repeat(rating) + '☆'.repeat(0);
+    const stars = '★'.repeat(rating);
     const l3 = rating ? `Melhor nota: {#ffd23f}${stars}{/}` : 'Ainda não concluída';
     font.draw(ctx, l3, x + 8, L3, { color: '#a898d8', maxWidth: tw });
     const ws = `Mundo: ${this.worldStars(n.world)}/18`;

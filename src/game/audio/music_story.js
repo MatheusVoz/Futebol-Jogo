@@ -91,6 +91,9 @@ export const INS = {
   kit: { kit: 'soft', vol: 0.28, reverb: 0.12, snareTone: 2400 },
 };
 
+/** escala o volume de todos os instrumentos (mixagem por música) */
+export const vs = (o, f) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, { ...v, vol: (v.vol ?? 0.25) * f }]));
+
 // ------------------------------------------------------------ leitmotivs
 const bars = (a) => a.map((b) => mel(b));
 /** Tema do Tico (4/4, Dó maior) — A e B */
@@ -116,7 +119,7 @@ const DF = 'k . h? . s . h? . k . s? s? s s t T';
 // ============================================================ TÍTULO (90 bpm)
 registerSong('title', {
   bpm: 90, swing: 0.06, reverb: 0.5, echoSteps: 3, echoFeedback: 0.28,
-  instruments: { box: { ...INS.box, octave: 1 }, lead: INS.lead, str: INS.str, pad: INS.pad, bass: INS.bass, drums: INS.kit },
+  instruments: vs({ box: { ...INS.box, octave: 1 }, lead: INS.lead, str: INS.str, pad: INS.pad, bass: INS.bass, drums: INS.kit }, 0.88),
   patterns: {
     I1: { box: cat(TA.slice(0, 4)), box2: bass('C Am F G', 16, 'r?:4 f?:4 o?:4 f?:4', 3), drums: rep(tick4, 4) },
     I2: { box: cat(TA.slice(4)), box2: bass('C Am F:8 G:8 C', 16, 'r?:4 f?:4 o?:4 f?:4', 3), pad: pad('C Am F:8 G:8 C', 16, 60, 3),
@@ -140,7 +143,7 @@ const WB = cat(bars(['E5:6 D5:2 C5:4 G4:4', 'F#5:6 E5:2 D5:4 A4:4', 'B4:2 D5:2 F
 const DW = 'k . h . s . h h k . h . s . h o?';
 registerSong('worldmap', {
   bpm: 104, swing: 0.08, reverb: 0.4, echoSteps: 3, echoFeedback: 0.25,
-  instruments: { lead: { ...INS.pluck, vol: 0.14 }, bell: INS.bell, flute: { ...INS.flute, vol: 0.12 }, pad: INS.pad, bass: INS.bass, drums: INS.kit },
+  instruments: vs({ lead: { ...INS.pluck, vol: 0.14 }, bell: INS.bell, flute: { ...INS.flute, vol: 0.12 }, pad: INS.pad, bass: INS.bass, drums: INS.kit }, 0.88),
   patterns: {
     A: { lead: WA, bell: arp(PWA, 16, '. . 0 . . . 2 . . . 1 . . . 3 .', 67, 3), pad: pad(PWA, 16, 60, 3),
       bass: bass(PWA, 16, 'r:2 .:2 f:2 .:2 r:2 .:2 f:2 o:2'), drums: cat(rep(DW, 7), DF) },
@@ -180,7 +183,7 @@ registerSong('opening', {
     ghost: { wave: 'sine', voices: 2, spread: 45, detune: -30, attack: 0.003, decay: 0.8, sustain: 0, release: 0.5, vol: 0.08, vibrato: { rate: 3, depth: 0.3, delay: 0.1 }, reverb: 0.5, echo: 0.3 },
     low: { wave: 'saw', voices: 2, spread: 10, attack: 0.4, decay: 0.5, sustain: 0.9, release: 0.8, vol: 0.1, filter: { freq: 600, q: 2 }, reverb: 0.4 },
     pad: { ...INS.pad, vol: 0.04, filter: { freq: 700 } },
-    drums: { kit: 'storm', vol: 0.4, reverb: 0.4 },
+    drums: { kit: 'storm', vol: 0.25, reverb: 0.35 },
   },
   patterns: {
     S: { rain: hold(48), wind: hold(48), pad: pad('Am:24 F:24', 24, 52, 3), drums: cat('b!', drip(29, 3), 'b', drip(17, 5)) },
@@ -203,7 +206,7 @@ registerSong('revelation', {
     str: { ...INS.str, vol: 0.06, vibrato: { rate: 6, depth: 0.15, delay: 0.2 } },
     bell: { ...INS.bell, ratio: 3.7, vol: 0.06 },
     pad: { ...INS.pad, vol: 0.04, filter: { freq: 800 } }, sub: { ...INS.sub, vol: 0.24 },
-    drums: { kit: 'tense', vol: 0.32, reverb: 0.25 },
+    drums: { kit: 'tense', vol: 0.26, reverb: 0.25 },
   },
   patterns: {
     R1: { ost: rep('A2! . A2? A2 . A2? A2 . A2! . A2? A2 . A2? Bb2 .', 8),
@@ -214,7 +217,7 @@ registerSong('revelation', {
       low: cat(rep(mel('C3:8 B2:8 Bb2:8 A2:8'), 3), mel('F2:8 D#2:8 E2:16')),
       bell: rep(mel('A5+D#6?:16'), 8),
       pad: pad(cat(rep('Am/C:8 E/B:8 Gm/Bb:8 D/A:8', 3), 'F:8 D#dim:8 E:16'), 16, 60, 3),
-      drums: cat('k+b! . p . s . p k . k p . s . p T', rep('k . p . s . p k . k p . s . p T', 6), 'k . s s s . s s s s s s s! s! T t') },
+      drums: cat('b . p . s . p k . k p . s . p T', rep('k . p . s . p k . k p . s . p T', 6), 'k . s s s . s s s s s s s! s! T t') },
   },
   order: ['R1', 'R2'],
 });
@@ -224,8 +227,8 @@ const WZ = 'k . h? . s? . h? . s? . h? .';
 const PE4 = 'D Bm G A D Bm Em7:6 A7:6 D'; // PL em Ré (clímax, um tom acima)
 registerSong('ending', {
   bpm: 76, reverb: 0.6, echoSteps: 3, echoFeedback: 0.3,
-  instruments: { box: { ...INS.box, vol: 0.14 }, flute: INS.flute, lead: { ...INS.lead, vol: 0.11 }, bell: { ...INS.bell, octave: 1, vol: 0.07 },
-    str: INS.str, pad: { ...INS.pad, vol: 0.04 }, bass: { ...INS.bass, vol: 0.22 }, drums: { ...INS.kit, vol: 0.3, reverb: 0.25 } },
+  instruments: vs({ box: { ...INS.box, vol: 0.14 }, flute: INS.flute, lead: { ...INS.lead, vol: 0.11 }, bell: { ...INS.bell, octave: 1, vol: 0.07 },
+    str: INS.str, pad: { ...INS.pad, vol: 0.04 }, bass: { ...INS.bass, vol: 0.22 }, drums: { ...INS.kit, vol: 0.3, reverb: 0.25 } }, 0.8),
   patterns: {
     E1: { box: NINAR, box2: arp(PL, 12, '0? . 1? . 2? . 1? . 2? . 1? .', 55, 3, true), pad: cat(rep('.', 48), pad('C Am Dm7:6 G7:6 C', 12, 60, 3, 'x?:12')) },
     E2: { flute: NINAR, box: arp(PL, 12, '0? . 1? . 2? . 3? . 2? . 1? .', 60, 3, true), str: pad(PL, 12, 62, 3), bass: bass(PL, 12, 'r?:8 f?:4') },
@@ -290,8 +293,8 @@ registerSong('shop', {
 });
 
 // ============================================================ JINGLES (loop:false)
-const JI = { lead: { ...INS.lead, vol: 0.13, duty: 0.25 }, brass: { wave: 'saw', voices: 2, spread: 8, attack: 0.02, decay: 0.2, sustain: 0.7, release: 0.3, vol: 0.06, filter: { freq: 2200 }, reverb: 0.3 },
-  bell: { ...INS.bell, vol: 0.1, echo: 0.2 }, box: INS.box, bass: INS.bass, pad: { ...INS.pad, attack: 0.2 }, drums: { ...INS.kit, vol: 0.32 } };
+const JI = { lead: { ...INS.lead, vol: 0.13, duty: 0.25 }, brass: { wave: 'saw', voices: 2, spread: 8, attack: 0.02, decay: 0.2, sustain: 0.7, release: 0.3, vol: 0.045, filter: { freq: 2200 }, reverb: 0.3 },
+  bell: { ...INS.bell, vol: 0.1, echo: 0.2 }, box: INS.box, bass: { ...INS.bass, vol: 0.22 }, pad: { ...INS.pad, attack: 0.2 }, drums: { ...INS.kit, vol: 0.24 } };
 registerSong('jingle_clear', {
   bpm: 120, reverb: 0.4, loop: false, instruments: JI,
   patterns: { J: {
