@@ -30,6 +30,17 @@ export function clk(m, x, y, w, phase, period = 3, more) {
 }
 /** Bloco flutuante (ilha de rua / pilar) de x0..x1 a partir de `top` com `d` linhas. */
 export function isle(m, x0, x1, top, d = 4, ch = '#') { return m.fill(x0, top, x1, Math.min(m.H - 1, top + d - 1), ch); }
+const HIDE_T = { o: 'button', r: 'patch', X: 'secret_marker', e: 'energy', h: 'heart', M: 'memory', T: 'ancient_thread', c: 'chest' };
+/** Sala secreta: o vazio vira parede falsa 'H' (some quando o Tico entra) e os itens
+ *  viram `objects` para ficarem escondidos atrás dela. Estrelas continuam no mapa. */
+export function hide(m, x0, y0, x1, y1) {
+  for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+    const ch = m.get(x, y), t = HIDE_T[ch];
+    if (t) { m.obj({ type: t, x, y, ...(m.props[`${x},${y}`] || {}) }); delete m.props[`${x},${y}`]; m.put(x, y, 'H'); }
+    else if (ch === '.' || ch === ':') m.put(x, y, 'H');
+  }
+  return m;
+}
 export function npc(m, x, y, id, dialog) { return m.put(x, y, 'n', { npc: id, dialog }); }
 
 // =============================================================================
@@ -91,7 +102,7 @@ export function npc(m, x, y, id, dialog) { return m.put(x, y, 'n', { npc: id, di
   m.fill(153, 20, 156, 20, 'C'); m.line(153, 156, 18);
   m.fill(160, 17, 163, 17, 'C'); m.line(160, 163, 15);
   m.fill(167, 16, 169, 16, 'C'); m.fill(171, 17, 172, 17, 'C'); m.line(167, 172, 14);
-  m.put(162, 11, 'f');
+  m.put(162, 11, 'f'); m.put(150, 19, 'h');
   // --- H: rolhas refletidas, checkpoint e plataformas-relógio (★2) -----------
   m.sign(176, 20, 'w3_sign_reflect');
   m.put(183, 20, 'a');
@@ -107,12 +118,13 @@ export function npc(m, x, y, id, dialog) { return m.put(x, y, 'n', { npc: id, di
   m.put(216, G, 'H'); m.put(217, G, 'H');
   m.clear(213, 22, 222, 24);
   m.line(214, 215, 24); m.put(218, 24, 'X'); m.put(220, 24, 'r'); m.put(221, 24, 'o');
+  hide(m, 213, 22, 222, 24);
   // --- I: nicho costurado (★3) e saída ---------------------------------------
   m.fill(223, 18, 224, 20, '%');
   m.fill(226, 14, 232, 20, '%'); m.clear(227, 18, 231, 20); m.fill(226, 18, 226, 20, 'S');
   m.put(228, 20, 'o'); m.put(230, 20, '*');                   // ★3 (Descosturar)
   m.line(227, 231, 13);
-  m.put(237, 20, 'b');
+  m.put(237, 20, 'b'); m.put(225, 20, 'K');
   m.fill(241, 19, 249, 20, '%'); m.fill(244, 17, 249, 18, '%');
   m.put(242, 18, 'o'); m.put(245, 16, 'o');
   m.put(247, 16, 'E');
@@ -156,7 +168,7 @@ export function npc(m, x, y, id, dialog) { return m.put(x, y, 'n', { npc: id, di
   I(88, 90, 15, 3);
   m.put(94, 10, 'f');
   clk(m, 92, 14, 2, 0, 2.4); clk(m, 95, 15, 2, 1, 2.4);
-  I(97, 112, 17); m.put(104, 16, 'b'); m.line(99, 103, 14);
+  I(97, 112, 17); m.put(104, 16, 'b'); m.put(99, 16, 'h'); m.line(99, 103, 14);
   m.put(110, 9, 'v', { trigger: 'below' });
   // --- subida à ilha alta (Tique-Taque) --------------------------------------
   clk(m, 114, 14, 2, 1); I(117, 119, 13, 2); clk(m, 121, 11, 2, 0);
@@ -174,7 +186,7 @@ export function npc(m, x, y, id, dialog) { return m.put(x, y, 'n', { npc: id, di
   m.put(162, 11, 'l', { len: 3, step: 30, beat: 0.5, angle: 90 });
   m.arc(141, 8, 7, 2);
   // --- ilha 8: checkpoint 2 --------------------------------------------------
-  I(166, 180, 14); m.put(168, 13, 'K'); m.put(176, 13, 'a'); m.line(170, 174, 11);
+  I(166, 180, 14); m.put(168, 13, 'K'); m.put(170, 13, 'h'); m.put(176, 13, 'a'); m.line(170, 174, 11);
   // --- trecho 9: rua com relógios que despencam + prédio (segredo, ★2) -------
   I(184, 214, 19, 5);
   m.sign(185, 18, 'w3_sign_fast');
@@ -185,10 +197,11 @@ export function npc(m, x, y, id, dialog) { return m.put(x, y, 'n', { npc: id, di
   m.fill(196, 12, 204, 18, '%');                              // prédio
   m.clear(198, 16, 203, 18); m.fill(204, 16, 204, 18, 'H');   // sala escondida (entra pela direita)
   m.put(198, 18, 'r'); m.put(200, 18, 'X'); m.line(201, 203, 18);
+  hide(m, 198, 16, 203, 18);
   m.line(197, 203, 11, 'o', 2);
   m.put(206, 8, 'v', { trigger: 'below' });                   // Remendo → degrau p/ a coluna
   m.fill(208, 4, 210, 10, '%'); m.put(209, 3, '*');           // ★2
-  m.put(212, 18, 'b');
+  m.put(212, 18, 'b'); m.put(214, 18, 'K');
   // --- trecho 10: corrida final de relógios ----------------------------------
   clk(m, 216, 18, 2, 0, 2); clk(m, 219, 17, 2, 1, 2);
   I(221, 222, 17, 2);

@@ -155,7 +155,7 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.fill(108, 21, 112, 21, '^');
   m.line(99, 121, 14, 'o', 3);
   // --- E: torre de gêiseres ---------------------------------------------------
-  m.ground(131, 157, 24);
+  m.ground(131, 156, 24);
   m.put(132, 23, 'K');
   m.put(135, 23, 's', { always: true, h: 10, power: 460 });
   m.put(145, 23, 's', { h: 12, period: 3, burst: 1.4, phase: 1, power: 420 });
@@ -163,8 +163,8 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.line(138, 141, 18, 'o', 3); m.put(143, 14, 'o'); m.put(149, 10, 'o');
   m.plat(141, 144, 5); m.put(142, 4, '*'); m.put(144, 4, 'o');  // ★2 no alto da torre
   m.put(151, 23, 'g');
-  wblock(m, 153, 20, 3, 3, { dy: -11, speed: 22, pause: 1.2 });
-  m.ground(158, 170, 8);
+  wblock(m, 153, 20, 3, 3, { dy: -10, speed: 22, pause: 1.2 });
+  m.ground(157, 170, 8);
   m.put(164, 7, 'K'); m.line(160, 168, 6, 'o', 4);
   // --- F: rota alta — blocos e bolsões; pilar com sala escondida ----------------
   wblock(m, 172, 6, 4, 4, { dx: 9, speed: 24 });
@@ -180,7 +180,7 @@ import { grid, wblock, marujo } from './w2_a.js';
   wblock(m, 215, 10, 3, 3, { dy: -6, speed: 20, pause: 1.4 });
   m.plat(218, 222, 5, '#'); m.put(221, 4, '*'); marujo(m, 219, 4);  // ★3 + marujo 2/3
   // --- G: descida, barquinho no lago e saída ------------------------------------
-  m.ground(217, 222, 26); m.put(219, 25, 'K');
+  m.ground(217, 222, 22); m.put(219, 21, 'K'); m.put(221, 21, 'h');
   m.put(223, 29, 'p', { dx: 18, w: 3, speed: 26, pause: 0.8 });
   m.put(228, 31, 'f'); m.put(238, 31, 'f');
   m.arc(224, 26, 20, 2);
