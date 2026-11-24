@@ -296,7 +296,8 @@ export class Player extends Entity {
     this.facing = dir;
     this.dashCd = this.stats.dashCooldown;
     if (!this.grounded) this.canAirDash = false;
-    this.invuln = Math.max(this.invuln, P.DASH_T + 0.06);
+    // a esquiva NÃO deixa atravessar inimigos (só um instante mínimo de tolerância)
+    this.invuln = Math.max(this.invuln, 0.03);
     this.vx = dir * P.DASH_V * this.mods.speed;
     this.vy = 0;
     this.attackT = 0;
@@ -311,6 +312,14 @@ export class Player extends Entity {
     this.vy = 0;
     moveBody(this, this.vx * dt, 0, this.level, {});
     if (Math.random() < 0.6) this.level.particles.emit('thread', this.cx - this.dashDir * 6, this.cy, 1, { speed: [5, 20] });
+    // bateu num inimigo/chefe durante a esquiva: para e recua (o dano vem do contato normal)
+    if (!this.mods.phase) {
+      for (const e of this.level.entities) {
+        if (e.dead || e === this || !(e.enemy || e.boss) || !rectsOverlap(this, e)) continue;
+        this.state = 'normal'; this.vx = -this.dashDir * 120; this.dashT = 0;
+        break;
+      }
+    }
     if (this.dashT <= 0 || this.hitWall) {
       this.state = 'normal';
       this.vx = this.dashDir * P.WALK * 1.1;

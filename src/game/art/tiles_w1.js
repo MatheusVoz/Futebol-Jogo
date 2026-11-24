@@ -756,7 +756,8 @@ function decorate(map, rng, data) {
   flush();
   // ---- árvores de fundo (sensação de floresta): troncos altos e copas em tons apagados
   {
-    const open = (tx, ty) => { const t = map.get(tx, ty); return t === T.EMPTY || t === T.BG; };
+    const open = (tx, ty) => map.get(tx, ty) === T.EMPTY;   // nada de árvore dentro de cavernas
+    const tod = data?.timeOfDay || 'day';
     const headroom = (tx, ty, n) => { for (let k = 1; k <= n; k++) if (!open(tx, ty - k)) return false; return true; };
     let tx = rng.int(2, 6);
     while (tx < map.cols - 2) {
@@ -765,8 +766,13 @@ function decorate(map, rng, data) {
       if (gy > 0) {
         const bx = tx * 16 + 8, by = gy * 16 + 2;
         const h = rng.int(44, 78), r = rng.int(15, 22), tone = rng() < 0.5 ? 0 : 1;
-        const C = tone ? ['#1f3f30', '#2a5440', '#36684c', '#4a7e5a'] : ['#24402e', '#2f5a38', '#3c6e44', '#548a52'];
-        const trunk = tone ? ['#3a2c26', '#4a3a30'] : ['#3e2e22', '#52402e'];
+        const PAL = {
+          day: [['#1f3f30', '#2a5440', '#36684c', '#4a7e5a'], ['#24402e', '#2f5a38', '#3c6e44', '#548a52']],
+          dusk: [['#2a2440', '#3a3254', '#4a3e62', '#7a5a7a'], ['#2e2a3e', '#40384e', '#52465c', '#8a6070']],
+          night: [['#0e1626', '#152034', '#1c2a42', '#2a3c58'], ['#101a24', '#182632', '#203240', '#30465a']],
+        }[tod] || null;
+        const C = (PAL || [])[tone] || ['#24402e', '#2f5a38', '#3c6e44', '#548a52'];
+        const trunk = tod === 'night' ? ['#141018', '#1e1822'] : tod === 'dusk' ? ['#2a2028', '#3a2c34'] : tone ? ['#3a2c26', '#4a3a30'] : ['#3e2e22', '#52402e'];
         const blobs = [];
         for (let i = 0; i < 4; i++) blobs.push([bx + rng.int(-r, r) * 0.7, by - h + rng.int(-6, 8), r * rng.range(0.6, 0.95)]);
         blobs.push([bx, by - h - 4, r]);
