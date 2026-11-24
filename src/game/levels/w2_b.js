@@ -46,7 +46,7 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.fill(61, 28, 63, 31, 'H');
   m.put(58, 31, 'o'); m.put(60, 31, 'o');
   m.fill(64, 20, 96, 31, '~');
-  m.put(66, 31, 'X'); m.line(69, 87, 30, 'o', 3); m.put(80, 24, 'h');
+  m.put(66, 31, 'X'); m.line(69, 87, 30, 'o', 6); m.put(80, 24, 'h');
   m.put(77, 26, 'b'); m.put(92, 31, 'r'); m.put(94, 22, 'e');
   // --- C: corredor seco (U1/U2) -----------------------------------------------
   m.fill(28, 12, 100, 17, ':');
@@ -87,8 +87,8 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.fill(118, 27, 122, 31, '%'); m.fill(140, 25, 143, 31, '%'); m.fill(176, 26, 180, 31, '%');
   m.put(130, 24, 'b'); m.put(150, 26, 'a'); m.put(185, 23, 'a'); m.put(170, 31, 'd');
   m.fill(134, 32, 136, 33, '~'); m.fill(134, 31, 136, 31, 'S'); marujo(m, 135, 33);
-  m.line(106, 116, 23, 'o', 2); m.line(124, 138, 22, 'o', 3);
-  m.line(145, 160, 28, 'o', 3); m.line(182, 194, 25, 'o', 3);
+  m.line(106, 116, 23, 'o', 2);
+  m.line(145, 160, 28, 'o', 5); m.line(182, 194, 25, 'o', 3);
   m.put(127, 31, 'e'); m.put(160, 22, 'b');
   m.fill(196, 18, 198, 19, '~');                                // escotilha H5 (cabine)
   // --- G: cabine da capitã (U4) + sala escondida (★3) — segredo 2 --------------

@@ -160,7 +160,7 @@ export function marujo(m, x, y) {
   m.fill(51, 16, 53, 16, '^'); m.fill(61, 16, 62, 16, '^');
   m.line(43, 68, 19, 'o', 3);
   m.put(52, 24, 'l');
-  m.fill(73, 8, 76, 24, '#'); m.line(73, 76, 7, 'o', 3);
+  m.fill(73, 8, 76, 24, '#'); m.line(73, 76, 7, 'o', 3); m.put(75, 7, 'K');
   // --- C: bacia das águas-vivas + elevador de correnteza ------------------------
   m.ground(77, 112, 30);
   m.put(82, 14, 'b'); m.put(88, 21, 'b'); m.put(94, 13, 'b'); m.put(100, 22, 'b');
@@ -171,7 +171,7 @@ export function marujo(m, x, y) {
   current(m, 106, 11, 3, 18, 'u', 380);
   m.line(107, 107, 14); m.put(107, 18, 'o'); m.put(107, 22, 'o'); m.put(107, 26, 'o');
   m.fill(110, 8, 114, 21, '#');                                 // saliência do paredão
-  m.put(112, 7, 'K'); m.sign(113, 7, 'w2_sign_lever');
+  m.put(112, 7, 'K'); m.put(111, 7, 'h'); m.sign(113, 7, 'w2_sign_lever');
   // --- D: paredão do recife — cavernas com bolsões de ar e alavanca -------------
   m.ground(115, 152, 0);
   m.fill(115, 22, 124, 27, '~');                                // túnel 1

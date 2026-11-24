@@ -62,7 +62,7 @@ import { grid, current, marujo } from './w2_a.js';
   m.fill(138, 34, 139, 34, 'H');                                // "chão" falso — segredo
   m.put(136, 33, 'o'); m.put(137, 33, 'o');
   m.fill(134, 35, 146, 38, '~');
-  m.put(135, 38, 'l'); m.put(140, 37, 'X'); m.line(141, 143, 36);
+  m.put(135, 38, 'l'); m.put(140, 37, 'X'); m.line(141, 143, 36); m.put(142, 37, 'r');
   m.put(145, 37, 'M', { memory: 'mem_3' });
   m.fill(151, 0, 153, 26, '#');
   // --- E: caverna 2 — plataformas penduradas, ★2 no teto ------------------------
