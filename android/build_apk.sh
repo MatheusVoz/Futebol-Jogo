@@ -54,7 +54,7 @@ if [ ! -f "$KS" ]; then
 fi
 mkdir -p release
 "$BT/apksigner" sign --ks "$KS" --ks-key-alias stitched --ks-pass "pass:$KS_PASS" --key-pass "pass:$KS_PASS" \
-  --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
+  --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --v4-signing-enabled false \
   --out release/StitchedWorlds.apk "$B/aligned.apk"
 "$BT/apksigner" verify --verbose release/StitchedWorlds.apk | head -5
 ls -la release/StitchedWorlds.apk
