@@ -154,10 +154,10 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   m.put(140, 19, 'b');
   m.put(145, 19, 'l', { kind: 'blanket' });
   m.put(150, 19, 'b');
-  m.fill(155, 4, 164, 19, '%');
+  m.fill(155, 9, 164, 19, '%');
   m.fill(155, 15, 156, 19, 'H'); m.fill(157, 15, 163, 19, ':');
   m.put(158, 19, 'X'); m.line(159, 161, 17); m.put(162, 19, '*'); m.put(163, 19, 'r');
-  m.plat(152, 154, 15); m.line(156, 163, 14, 'o', 3);   // degraus por cima do armário
+  m.plat(151, 153, 14); m.line(156, 163, 8, 'o', 3);   // degraus por cima do armário
   m.put(168, 19, 'K');
   // --- F: corredor que range, sombras, caixa-surpresa (★3) e saída --------------
   m.fill(173, 20, 192, 20, 'q');
