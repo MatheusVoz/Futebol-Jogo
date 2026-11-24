@@ -189,7 +189,7 @@ registerSong('opening', {
     E: { rain: hold(96), bad: minor(NINAR), ghost: minor(NINAR), low: mel('C3:12 B2:12 Bb2:12 A2:12 Eb3:12 A2:12 Eb3:12 A2:12'),
       pad: pad(PLm, 12, 55, 3), drums: cat(rep('p? . . . p? . . . p? . . .', 4), 'b', rep('.', 11), rep('p? . . . p? . . . p? . . .', 2), 'b!', rep('.', 11)) },
     X: { rain: hold(48), wind: hold(48), low: mel('C3:12 B2:12 Bb2:12 A2:6 Eb2:6'), bad: mel('C6:12 B5:12 Bb5:12 A5:6 Eb5:6'),
-      pad: pad('Cm:12 G:12 Gm:12 D:6 Adim:6', 12, 55, 3), drums: cat('b!+c', drip(23, 7), 'b', drip(11, 4), 'b!', rep('.', 11)) },
+      pad: pad('Cm:12 G:12 Gm:12 D:6 Adim:6', 12, 55, 3), drums: cat('c+b!', drip(23, 7), 'b', drip(11, 4), 'b!', rep('.', 11)) },
   },
   order: ['S', 'L', 'E', 'X'],
 });
