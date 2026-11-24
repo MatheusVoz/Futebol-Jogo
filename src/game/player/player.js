@@ -445,10 +445,10 @@ export class Player extends Entity {
     if (el < 0.03 || el > 0.16) return null;
     const f = this.facing;
     switch (this.attackKind) {
-      case 'up': return { x: this.cx - 12, y: this.y - 22, w: 24, h: 26 };
-      case 'down': return { x: this.cx - 10, y: this.bottom - 4, w: 20, h: 22 };
-      case 'side3': return { x: f > 0 ? this.right - 2 : this.x - 32, y: this.y - 4, w: 34, h: 24 };
-      default: return { x: f > 0 ? this.right - 2 : this.x - 26, y: this.y + 1, w: 28, h: 16 };
+      case 'up': return { x: this.cx - 16, y: this.y - 34, w: 32, h: 38 };
+      case 'down': return { x: this.cx - 14, y: this.bottom - 4, w: 28, h: 30 };
+      case 'side3': return { x: f > 0 ? this.right - 2 : this.x - 52, y: this.y - 6, w: 54, h: 28 };
+      default: return { x: f > 0 ? this.right - 2 : this.x - 42, y: this.y, w: 44, h: 20 };
     }
   }
 
@@ -646,6 +646,23 @@ export class Player extends Entity {
   }
   drawExtras(ctx) {
     for (const ab of R.abilities.values()) ab.draw?.(ctx, this);
+    // fio do chicote mostrando o alcance real do ataque
+    const box = this.attackBox();
+    if (box && this.attackKind !== 'needle') {
+      const hx = this.cx + this.facing * 6, hy = this.cy - 2;
+      let ex, ey;
+      if (this.attackKind === 'up') { ex = this.cx + this.facing * 4; ey = box.y + 2; }
+      else if (this.attackKind === 'down') { ex = this.cx; ey = box.y + box.h - 2; }
+      else { ex = this.facing > 0 ? box.x + box.w - 2 : box.x + 2; ey = box.y + box.h / 2; }
+      const n = 18;
+      for (let i = 0; i <= n; i++) {
+        const k = i / n, wob = Math.sin(k * Math.PI) * (this.attackKind.startsWith('side') ? -5 : 4);
+        const x = Math.round(hx + (ex - hx) * k), y = Math.round(hy + (ey - hy) * k + wob);
+        ctx.fillStyle = i % 3 === 0 ? '#fff6a8' : '#ffd23f';
+        ctx.fillRect(x, y, 2, 1);
+      }
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(Math.round(ex) - 1, Math.round(ey) - 1, 3, 3);
+    }
     if (this.chargeT > P.CHARGE_T) {
       const k = (Math.sin(this.t * 30) + 1) / 2;
       ctx.fillStyle = k > 0.5 ? '#ffffff' : '#8ff0ff';

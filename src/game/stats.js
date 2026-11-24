@@ -8,7 +8,7 @@ import { save } from '../engine/save.js';
 import { R } from './registry.js';
 
 export const BASE_STATS = {
-  maxHp: 3,          // corações
+  maxHp: 4,          // corações
   maxEnergy: 100,    // energia dimensional
   power: 1,          // multiplicador de dano
   speed: 1,          // multiplicador de velocidade
