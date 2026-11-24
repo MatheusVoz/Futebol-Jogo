@@ -14,6 +14,7 @@
 // Controles: confirmar = jogar · voltar = menu lateral · Q/E (cycle) = mundo.
 // =============================================================================
 import { Scene } from '../../engine/scene.js';
+import { islandImage, castleImage, drawSea, drawClouds, ISLE_M } from './overworld_art.js';
 import { game } from '../../engine/game.js';
 import { input } from '../../engine/input.js';
 import { save } from '../../engine/save.js';
@@ -560,24 +561,16 @@ class WorldMapScene extends Scene {
   // ------------------------------------------------------------- desenho
   draw(ctx) {
     const { w, h } = game.view, t = this.time;
-    // céu do mundo atual (cruzando com o anterior)
-    if (this.prevSky && this.skyK < 1) drawSky(ctx, w, h, t, null, skyPreset('w' + this.prevSky, null));
-    ctx.save();
-    if (this.prevSky && this.skyK < 1) ctx.globalAlpha = Ease.inOutQuad(this.skyK);
-    drawSky(ctx, w, h, t, null, skyPreset('w' + this.skyWorld, null));
-    ctx.restore();
-    // fiapos de algodão flutuando
-    ctx.fillStyle = 'rgba(255,244,220,0.35)';
-    for (let i = 0; i < 14; i++) {
-      const x = ((i * 73 + t * 7 * (1 + (i % 3))) % (w + 20)) - 10, y = (i * 47) % h + Math.sin(t * 0.8 + i) * 5;
-      ctx.fillRect(R0(x), R0(y), i % 4 ? 1 : 2, i % 4 ? 1 : 2);
-    }
     const cx = R0(this.camX), cy = R0(this.camY);
+    // mar animado (estilo overworld) — o mundo atual tinge a água
+    drawSea(ctx, w, h, cx, cy, t, this.skyWorld);
     ctx.save();
     ctx.translate(-cx, -cy);
     this.drawWorlds(ctx, w, cx, t);
     this.drawTico(ctx, t);
     ctx.restore();
+    drawClouds(ctx, w, h, cx, cy, t, 'shadow');
+    drawClouds(ctx, w, h, cx, cy, t, 'cloud');
     this.drawHeader(ctx, w, t);
     this.drawMenu(ctx, w, h, t);
     this.drawInfo(ctx, w, h, t);
@@ -589,7 +582,7 @@ class WorldMapScene extends Scene {
       if (!vis(wd.id)) continue;
       const open = this.worldOpen(wd.id) && !(this.sew && this.sew.to.world === wd.id);
       const x = this.patchX(wd.id), y = this.patchY(wd.id);
-      ctx.drawImage(patchImage(wd.id, !open), x, y);
+      ctx.drawImage(islandImage(wd.id, !open, PW, PH, ...this.isleGeom(wd.id)), x - ISLE_M, y - ISLE_M);
       // etiqueta com o nome curto
       const label = wd.id + ' - ' + wd.short, lw = font.measure(label) + 10;
       const ly = wd.id % 2 === 0 ? y + PH - 8 : y - 8; // mundos espelhados: etiqueta embaixo
@@ -610,6 +603,8 @@ class WorldMapScene extends Scene {
       if (!open) { this.drawStitchedShut(ctx, wd.id, t, 1); continue; }
       if (this.unlockFx[wd.id] != null) this.drawStitchedShut(ctx, wd.id, t, 1 - this.unlockFx[wd.id]);
       const ns = this.chain.filter((n) => n.world === wd.id);
+      for (let i = 0; i < 5; i++) this.drawRoad(ctx, this.linkPts(ns[i], ns[i + 1]), wd.id);
+      if (this.bonusShown(wd.id)) this.drawRoad(ctx, this.linkPts(this.bonus[wd.id].parent, this.bonus[wd.id]), wd.id);
       for (let i = 0; i < 5; i++) this.drawThread(ctx, this.linkPts(ns[i], ns[i + 1]), this.isOpen(ns[i + 1]), 1, t);
       const b = this.bonus[wd.id];
       if (this.bonusShown(wd.id)) this.drawThread(ctx, this.linkPts(b.parent, b), this.isOpen(b), 1, t);
@@ -627,6 +622,24 @@ class WorldMapScene extends Scene {
       ctx.fillStyle = '#fff6b0';
       if (Math.floor(t * 10) % 2) ctx.fillRect(R0(p.x + ux * 6) - 1, R0(p.y + uy * 6) - 2, 2, 2);
     }
+  }
+  /** Pontos/segmentos dos caminhos em coordenadas locais da ilha (para não pôr decoração em cima). */
+  isleGeom(world) {
+    const flip = world % 2 === 0;
+    const nodes = LAYOUT.map(([x, y]) => [x, flip ? PH - y : y]).concat([[BONUS.at[0], flip ? PH - BONUS.at[1] : BONUS.at[1]]]);
+    const segs = [];
+    for (let i = 0; i < 5; i++) segs.push([nodes[i], nodes[i + 1]]);
+    segs.push([nodes[BONUS.parent], nodes[6]]);
+    return [nodes, segs];
+  }
+  /** Estrada de terra sob o fio (como nos mapas clássicos). */
+  drawRoad(ctx, pts, world) {
+    const edge = world === 4 ? '#1a1228' : world === 5 ? '#3a0a1a' : '#7a5a32';
+    const fill = world === 4 ? '#4a4060' : world === 5 ? '#7a3a4a' : world === 2 ? '#f0dca8' : '#d8b878';
+    ctx.fillStyle = edge;
+    for (const p of pts) ctx.fillRect(R0(p.x) - 3, R0(p.y) - 2, 6, 5);
+    ctx.fillStyle = fill;
+    for (const p of pts) ctx.fillRect(R0(p.x) - 2, R0(p.y) - 1, 4, 3);
   }
   drawThread(ctx, pts, active, frac, t) {
     const col = active ? threadColor() : 'rgba(27,16,48,0.55)';
@@ -657,6 +670,7 @@ class WorldMapScene extends Scene {
     const img = buttonImage(r, face, st === 'done' ? 'done' : 'open');
     if (sc <= 0.05 && this.pop?.node === n) return;
     const x = R0(n.x) + ox, y = R0(n.y) + oy;
+    if (n.boss) ctx.drawImage(castleImage(n.world, st === 'locked' || st === 'soon'), x - 15, y - 33);
     if (sc !== 1) {
       const s = Math.max(0.1, sc), iw = img.width * s, ih = img.height * s;
       ctx.drawImage(img, R0(x - iw / 2), R0(y - ih / 2 + 1), R0(iw), R0(ih));

@@ -6,7 +6,7 @@
 //   botões de toque, 16–22 px). Tudo procedural e cacheado.
 // =============================================================================
 import { defineImage, getImage, drawSprite, animFrame, hasSprite } from '../../engine/sprites.js';
-import { PixelCanvas, createCanvas } from '../../engine/pixel.js';
+import { PixelCanvas, createCanvas, colorU32 } from '../../engine/pixel.js';
 import { lighten, darken } from '../../engine/util.js';
 import font from '../../engine/font.js';
 
@@ -427,12 +427,33 @@ export function drawLogo(ctx, cx, y, scale = 1, t = 0, opts = {}) {
 }
 
 // ===================================================================== ÍCONES
+/** Acabamento comum a todos os ícones: luz nas bordas de cima, sombra nas de baixo e sombra projetada. */
+function polishIcon(pc) {
+  const { w, h, buf } = pc;
+  const ink = colorU32(INK);
+  const src = buf.slice();
+  const at = (x, y) => (x < 0 || y < 0 || x >= w || y >= h ? 0 : src[y * w + x]);
+  const shade = (v, k) => {
+    const r = v & 255, g = (v >>> 8) & 255, b = (v >>> 16) & 255, a = v >>> 24;
+    const f = (c) => Math.max(0, Math.min(255, Math.round(k > 0 ? c + (255 - c) * k : c * (1 + k))));
+    return ((a << 24) | (f(b) << 16) | (f(g) << 8) | f(r)) >>> 0;
+  };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const v = src[y * w + x];
+    if (!(v >>> 24) || v === ink) continue;
+    if (at(x, y - 1) === ink && at(x, y + 1) !== ink) buf[y * w + x] = shade(v, 0.28);
+    else if (at(x, y + 1) === ink && at(x, y - 1) !== ink) buf[y * w + x] = shade(v, -0.22);
+  }
+  for (let y = h - 1; y > 0; y--) for (let x = 0; x < w; x++) {
+    if (!(buf[y * w + x] >>> 24) && (src[(y - 1) * w + x] >>> 24)) buf[y * w + x] = colorU32('#0b07165c');
+  }
+}
 function icon(name, rows, pal, opts = {}) {
-  const w = Math.max(...rows.map((r) => r.length)) + 2, h = rows.length + 2;
-  defineImage(name, w, h, (pc) => { pc.ascii(rows, pal, 1, 1, opts); opts.extra?.(pc); pc.outline(INK); });
+  const w = Math.max(...rows.map((r) => r.length)) + 2, h = rows.length + 3;
+  defineImage(name, w, h, (pc) => { pc.ascii(rows, pal, 1, 1, opts); opts.extra?.(pc); pc.outline(INK); polishIcon(pc); });
 }
 function iconFn(name, w, h, fn) {
-  defineImage(name, w, h, (pc) => { pc.translate(1, 1); fn(pc); pc.resetTranslate(); pc.outline(INK); });
+  defineImage(name, w, h + 1, (pc) => { pc.translate(1, 1); fn(pc); pc.resetTranslate(); pc.outline(INK); polishIcon(pc); });
 }
 
 // --- corações de pelúcia com costura no meio
