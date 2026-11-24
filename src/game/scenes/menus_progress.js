@@ -561,8 +561,8 @@ class MemoriesScene extends ProgressMenu {
     } else {
       font.draw(ctx, '???', tx, py + 8, { color: '#8a6a50' });
       const wd = def && WORLDS[(def.world || 1) - 1];
-      font.draw(ctx, `Uma memória perdida${wd ? ' em: ' + wd.name : ''}.`, tx, py + 22, { color: '#8a6a50', maxWidth: tw });
-      font.draw(ctx, 'Encontre-a para lembrar.', tx, py + 48, { color: '#a08a70', maxWidth: tw });
+      const r1 = font.draw(ctx, `Uma memória perdida${wd ? ' em: ' + wd.name : ''}.`, tx, py + 22, { color: '#8a6a50', maxWidth: tw });
+      font.draw(ctx, 'Encontre-a para lembrar.', tx, py + 22 + r1.height + 6, { color: '#a08a70', maxWidth: tw });
     }
     // página virando
     if (this.turn) {
