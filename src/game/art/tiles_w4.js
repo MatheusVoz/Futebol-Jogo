@@ -50,7 +50,7 @@ const GRAIN = ['#5e4c5e', '#403446', '#28202f', '#16121c'];
 const NAILH = ['#aaa6c0', '#6e6a86', '#45425a'];
 const RIM = ['#bca6ba', '#968098'];
 const CAR = { hi: '#9e70b0', lt: '#7e5494', md: '#643e7a', dk: '#4a2a5e', sh: '#2a1838', st: '#aa6280', st2: '#c8a060' };
-const WP = { a: '#2f2c4e', b: '#353259', line: '#403c6a', lineD: '#25223f', mot: '#4a467c', mot2: '#58528c', speck: '#27243f', ao: '#15132a', edge: '#1a1828', pl: '#625c70', plD: '#4a445c', plC: '#34303f', back: '#8a84a2', backD: '#625c7c' };
+const WP = { a: '#2f2c4e', b: '#353259', line: '#403c6a', lineD: '#25223f', mot: '#4a467c', mot2: '#58528c', speck: '#27243f', ao: '#15132a', edge: '#1a1828', pl: '#4e4a60', plD: '#403a52', plC: '#34303f', back: '#8a84a2', backD: '#625c7c' };
 
 // ------------------------------------------------------------------ sólido: assoalho / carpete
 const carpetAt = (tx, ty) => h2(Math.floor(tx / 9), Math.floor(ty / 5), 77) < 0.42;
@@ -246,7 +246,7 @@ function drawWall(pc, x, y, n, rng, info) {
   const { tx, ty, map } = info;
   const sol = (dx, dy) => solidLike(S(map, tx + dx, ty + dy));
   const su = sol(0, -1), sl = sol(-1, 0), sr = sol(1, 0), sd = sol(0, 1);
-  const peel = h2(tx, ty, 61) < 0.17 && !sd && !su;
+  const peel = h2(tx, ty, 61) < 0.07 && !sd && !su;
   const pcx = 4 + ((h2(tx, ty, 62) * 8) | 0), pcy = 4 + ((h2(tx, ty, 63) * 6) | 0);
   const prx = 3 + ((h2(tx, ty, 64) * 3) | 0), pry = 2 + ((h2(tx, ty, 65) * 3) | 0);
   const drip = h2(tx, 0, 68) < 0.18 ? 2 + ((h2(tx, 1, 69) * 12) | 0) : -1;
@@ -270,7 +270,7 @@ function drawWall(pc, x, y, n, rng, info) {
     if (peel) {
       const dx = (lx - pcx) / prx, dy = (ly - pcy) / pry, q = dx * dx + dy * dy + (h2(wx, wy, 71) - 0.5) * 0.6;
       if (q < 1) c = h2(wx, wy, 72) < 0.1 ? WP.plC : dy < -0.2 ? WP.pl : WP.plD;
-      else if (q < 1.4) c = WP.edge;
+      else if (q < 1.3) c = WP.lineD;
     }
     if (su) { if (ly === 0) c = '#100e1c'; else if (ly === 1) c = '#4a4672'; else if (ly === 2) c = WP.ao; }
     if (sd) { // rodapé
@@ -690,7 +690,7 @@ function decorate(map, rng, data) {
           if (sol(tx, ty + 1) && map.get(tx, ty - 1) === T.BG && farFrom(lights, tx, ty, 14) && rng() < 0.5) {
             lights.push([tx, ty]);
             out.push(lightDecor(wx + 3, wy - 1, rng() < 0.5 ? SPR.nlMoon : SPR.nlStar, rng() * 6, 54));
-          } else if (map.get(tx + 1, ty) === T.BG && map.get(tx, ty + 1) === T.BG && map.get(tx + 1, ty + 1) === T.BG && !sol(tx, ty + 2) && farFrom(pics, tx, ty, 5) && rng() < 0.14) {
+          } else if (map.get(tx + 1, ty) === T.BG && map.get(tx, ty + 1) === T.BG && map.get(tx + 1, ty + 1) === T.BG && !sol(tx, ty + 2) && farFrom(pics, tx, ty, 8) && rng() < 0.08) {
             pics.push([tx, ty]); // desenho de criança preso na parede
             const s = SPR.draw[rng.int(0, SPR.draw.length - 1)], x = wx + rng.int(2, 9), y = wy + rng.int(2, 10);
             out.push({ x, y, w: s.w, h: s.h, layer: 'back', paint: (pc) => pc.blit(s, x, y) });
@@ -712,7 +712,17 @@ function decorate(map, rng, data) {
       tx += rng.int(7, 13);
     }
   }
-  return out;
+  // decor dentro de cômodos (célula de parede ':') precisa ir na frente do papel de parede;
+  // a luz fica num decor "fantasma" de trás (só o laço de trás acende luzes).
+  const extra = [];
+  for (const dd of out) {
+    if (dd.layer === 'front') continue;
+    const ctx = Math.floor((dd.x + (dd.w || 16) / 2) / 16), cty = Math.floor((dd.y + (dd.h || 16) / 2) / 16);
+    if (map.get(ctx, cty) !== T.BG) continue;
+    dd.layer = 'front';
+    if (dd.light) extra.push({ x: dd.x, y: dd.y, w: dd.w, h: dd.h, layer: 'back', light: dd.light, anim: () => {} });
+  }
+  return out.concat(extra);
 }
 
 // ------------------------------------------------------------------ registro
