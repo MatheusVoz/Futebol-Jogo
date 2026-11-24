@@ -312,12 +312,8 @@ registerEntity('w5_sentinel', Sentinel);
 // =============================================================================
 // d) w5_patchgolem
 // =============================================================================
-defineSprite('w5_patchgolem', {
-  w: 40, h: 40, ox: 20, oy: 39,
-  anims: { walk: { frames: 4, fps: 5 }, windup: { frames: 2, fps: 10 }, slam: { frames: 1, fps: 1 } },
-  meta: {},
-  draw(pc, anim, f, n, variant) {
-    const armored = !variant;
+function golemDraw(pc, anim, f, armored) {
+  {
     const step = anim === 'walk' ? [0, 1, 0, -1][f] : 0;
     const up = anim === 'windup', down = anim === 'slam';
     // pernas
@@ -345,16 +341,11 @@ defineSprite('w5_patchgolem', {
       pc.ellipse(20, by + 8, 7, 4, '#f0e4e8'); pc.px(18, by + 7, '#ffffff'); pc.px(23, by + 9, '#c8b8c0');
     }
     pc.outline(OUT);
-  },
-});
-// sprite sem armadura = variante desenhada com flag (usa nome próprio)
-defineSprite('w5_patchgolem_bare', {
-  w: 40, h: 40, ox: 20, oy: 39,
-  anims: { walk: { frames: 4, fps: 5 }, windup: { frames: 2, fps: 10 }, slam: { frames: 1, fps: 1 } },
-  draw(pc, anim, f, n) { (spriteDraw('w5_patchgolem'))(pc, anim, f, n, 'bare'); },
-});
-function spriteDraw() { return GOLEM_DRAW; }
-let GOLEM_DRAW = null;
+  }
+}
+const GOLEM_ANIMS = { walk: { frames: 4, fps: 5 }, windup: { frames: 2, fps: 10 }, slam: { frames: 1, fps: 1 } };
+defineSprite('w5_patchgolem', { w: 40, h: 40, ox: 20, oy: 39, anims: GOLEM_ANIMS, draw: (pc, a, f) => golemDraw(pc, a, f, true) });
+defineSprite('w5_patchgolem_bare', { w: 40, h: 40, ox: 20, oy: 39, anims: GOLEM_ANIMS, draw: (pc, a, f) => golemDraw(pc, a, f, false) });
 
 class Shockwave extends Entity {
   constructor(level, x, y, dir) {
@@ -561,8 +552,8 @@ class NeedleBat extends DimEnemy {
         const nx = u * u * x0 + 2 * u * k * cx + k * k * x1, ny = u * u * y0 + 2 * u * k * cy + k * k * y1;
         this.facing = nx >= this.cx ? 1 : -1;
         this.x = nx - this.w / 2; this.y = ny - this.h / 2;
-        if (this.level.map.rectSolid(this.x + 2, this.y + 2, this.w - 4, this.h - 4) && k > 0.5) k === 1;
-        if (k >= 1) { this.homeX = this.x; this.go('idle'); this.cool = 1.4; }
+        const bonk = k > 0.55 && this.level.map.rectSolid(this.x + 2, this.y + 2, this.w - 4, this.h - 4);
+        if (k >= 1 || bonk) { this.homeX = this.x; this.go('idle'); this.cool = 1.4; }
         break;
       }
     }
