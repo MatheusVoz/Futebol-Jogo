@@ -238,3 +238,56 @@ export function drawClouds(ctx, w, h, camX, camY, t, layer) {
     else { ctx.globalAlpha = 0.9; ctx.drawImage(c.img, x, y); ctx.globalAlpha = 1; }
   }
 }
+
+/**
+ * Faixa de terra ligando a ilha do mundo `world` à do próximo (continente contínuo).
+ * Retorna { img, x, y } em coordenadas do mapa. Só pixels de terra (fundo transparente),
+ * desenhada POR CIMA das ilhas, cobrindo a água entre elas.
+ */
+export function bridgeImage(world, PW, PH, GAP, patchX, patchY) {
+  return cached(`bridge${world}`, () => {
+    const A = THEME[world], B = THEME[world + 1];
+    const x0 = patchX(world) + PW - 8, x1 = patchX(world + 1) + 8;
+    const ya = patchY(world), yb = patchY(world + 1);
+    const W = x1 - x0, top = Math.min(ya, yb) + 26, bot = Math.max(ya, yb) + PH + 12, H = bot - top;
+    const pc = new PixelCanvas(W, H + 8);
+    const rng = makeRng(world * 131 + 9);
+    const ph = rng() * 6;
+    const edgeT = (x) => 14 + Math.sin(x * 0.09 + ph) * 6 + Math.sin(x * 0.23) * 2;
+    const edgeB = (x) => H - 12 + Math.sin(x * 0.07 + ph * 2) * 5 + Math.sin(x * 0.31) * 2;
+    const mix = (pa, pb, k, x, y) => {
+      const B4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+      return k > (B4[(y & 3) * 4 + (x & 3)] + 0.5) / 16 ? pb : pa;
+    };
+    const lake = { x: W * (0.35 + rng() * 0.3), y: H * 0.45, rx: 9 + rng() * 5, ry: 6 + rng() * 3 };
+    for (let x = 0; x < W; x++) {
+      const k = clamp((x - 10) / (W - 20), 0, 1);
+      const t0 = edgeT(x), b0 = edgeB(x);
+      for (let y = 0; y < H; y++) {
+        if (y < t0 - 2 || y > b0) continue;
+        if (y < t0) { pc.px(x, y, (x * 3 + y) % 4 ? '#ffffff' : '#ffffff00'); continue; }  // espuma do litoral de cima
+        if (y < t0 + 3) { pc.px(x, y, mix(A.sand[0], B.sand[0], k, x, y)); continue; }
+        const lk = ((x - lake.x) / lake.rx) ** 2 + ((y - lake.y) / lake.ry) ** 2;
+        if (lk < 1) { pc.px(x, y, lk < 0.55 ? '#3fa8e0' : '#7fd0f0'); continue; }
+        if (lk < 1.5) { pc.px(x, y, mix(A.sand[0], B.sand[0], k, x, y)); continue; }
+        const g = (Math.sin(x * 0.31 + y * 0.17) + Math.sin(x * 0.11 - y * 0.29)) > 0.8 ? 2 : 1;
+        let c = mix(A.g[g], B.g[g], k, x, y);
+        if (y > b0 - 3) c = mix(A.sand[0], B.sand[0], k, x, y);
+        pc.px(x, y, c);
+      }
+      // penhasco embaixo
+      for (let j = 1; j <= 5; j++) pc.px(x, Math.round(b0) + j, mix(j < 3 ? A.cliff[0] : A.cliff[1], j < 3 ? B.cliff[0] : B.cliff[1], k, x, j));
+      pc.px(x, Math.round(b0) + 6, '#ffffff');
+    }
+    // árvores e morrinhos na faixa
+    for (let i = 0; i < 9; i++) {
+      const x = rng.int(12, W - 12), y = rng.int(Math.round(edgeT(x)) + 10, Math.round(edgeB(x)) - 8);
+      if (((x - lake.x) / (lake.rx + 6)) ** 2 + ((y - lake.y) / (lake.ry + 6)) ** 2 < 1) continue;
+      const k = clamp(x / W, 0, 1), T = k < 0.5 ? A : B;
+      if (rng() < 0.6) { pc.rect(x, y, 2, 3, '#6a4428'); pc.circle(x + 1, y - 3, 4, T.hill[2]); pc.circle(x, y - 4, 3, T.hill[0]); }
+      else { pc.ellipse(x, y, 7, 5, T.hill[2]); pc.ellipse(x - 1, y - 1, 6, 4, T.hill[0]); pc.ellipse(x - 3, y - 2, 3, 2, T.hill[1]); }
+    }
+    pc.flush();
+    return { img: pc.canvas, x: x0, y: top };
+  });
+}

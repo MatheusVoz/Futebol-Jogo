@@ -23,7 +23,7 @@
 // =============================================================================
 import { R, registerPortrait } from '../registry.js';
 import { PixelCanvas } from '../../engine/pixel.js';
-import { defineSprite, drawSprite, hasSprite, defineImage, drawImage } from '../../engine/sprites.js';
+import { defineSprite, drawSprite, hasSprite, defineImage, drawImage, getSprite, frameMeta } from '../../engine/sprites.js';
 import { mixColor, hashString } from '../../engine/util.js';
 
 export const PORTRAIT_SIZE = 48;
@@ -1710,8 +1710,42 @@ export function portraitInfo(who) {
 }
 
 /** Desenha o retrato 48x48 com canto sup. esq. em (x,y). opts: { talking, t, flip } */
+// O retrato do Tico é tirado do PRÓPRIO sprite do jogo (close na cabeça, 2x),
+// para ele ser sempre o mesmo dinossauro que o jogador controla.
+const TICO_EXPR = {
+  neutral: ['idle', 0, 2], happy: ['celebrate', 4, 5], sad: ['sad', 0, 1], scared: ['scared', 0, 1], surprised: ['surprise', 2, 3],
+  confused: ['think', 0, 1], determined: ['charge', 0, 1], sleepy: ['sleep', 0, 1], angry: ['charge', 2, 3],
+};
+function drawTicoPortrait(ctx, expr, x, y, opts) {
+  const sp = getSprite('tico');
+  if (!sp) return false;
+  const [anim0, fa, fb] = TICO_EXPR[expr] || TICO_EXPR.neutral;
+  const anim = sp.rows[anim0] !== undefined ? anim0 : 'idle';
+  const talking = opts.talking && Math.floor((opts.t || 0) * 8) % 2 === 1;
+  const f = Math.min(sp.anims[anim].frames - 1, talking ? fb : fa);
+  const m = frameMeta('tico', anim, f) || { head: { x: 38, y: 14 } };
+  const S = PORTRAIT_SIZE;
+  const p = R.portraits.get('tico');
+  const rx = Math.round(x), ry = Math.round(y);
+  if (p?.bgImage) drawImage(ctx, p.bgImage, rx, ry);
+  else { ctx.fillStyle = '#e8a0c0'; ctx.fillRect(rx, ry, S, S); }
+  // recorte 22x21 em volta da cabeça -> 44x42 dentro da moldura
+  const cw = 24, ch = 24;
+  const cx0 = Math.round(m.head.x - 12), cy0 = Math.round(m.head.y - 5);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(rx + 3, ry + 3, S - 6, S - 6); ctx.clip();
+  const prev = ctx.imageSmoothingEnabled; ctx.imageSmoothingEnabled = false;
+  const sx = f * sp.w + cx0, sy = sp.rows[anim] * sp.h + cy0;
+  if (opts.flip) { ctx.translate(rx + S, ry); ctx.scale(-1, 1); ctx.drawImage(sp.atlas, sx, sy, cw, ch, 0, 0, cw * 2, ch * 2); }
+  else ctx.drawImage(sp.atlas, sx, sy, cw, ch, rx, ry, cw * 2, ch * 2);
+  ctx.imageSmoothingEnabled = prev;
+  ctx.restore();
+  return true;
+}
+
 export function drawPortrait(ctx, who, expr = 'neutral', x, y, opts = {}) {
   if (!who || NO_PORTRAIT.has(who)) return;
+  if (who === 'tico' && hasSprite('tico') && drawTicoPortrait(ctx, expr, x, y, opts)) return;
   const p = R.portraits.get(who);
   if (!p || p.none) return;
   if (!p.sprite && !ensureExternal(p)) return;

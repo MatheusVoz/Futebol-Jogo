@@ -477,21 +477,36 @@ function drawLia(pc, anim, f) {
     return;
   }
   const by = anim === 'sleep' && f ? 1 : 0;
-  pc.ellipse(38, 37 + by, 10, 6, C.PJ); pc.ellipse(36, 35 + by, 7, 3, C.PJL);
-  pc.px(34, 37 + by, C.ST); pc.px(41, 39 + by, C.ST); pc.px(44, 35 + by, C.ST);
-  pc.ellipse(18, 22, 13, 12, C.H1); pc.ellipse(9, 29, 7, 6, C.H1); pc.ellipse(13, 34, 6, 4, C.H1); pc.ellipse(22, 33, 5, 4, C.H0);
-  pc.ellipse(26, 25, 8, 8, C.SK2); pc.ellipse(28, 24, 8, 8, C.SK);
-  pc.poly([[16, 13], [36, 15], [35, 20], [31, 18], [28, 21], [24, 18], [20, 22], [16, 20]], C.H1);
-  pc.poly([[33, 15], [38, 19], [37, 27], [34, 22]], C.H1);
-  pc.px(21, 15, C.H2); pc.px(22, 15, C.H2); pc.px(23, 14, C.H2); pc.px(26, 15, C.H2); pc.px(12, 17, C.H2); pc.px(11, 18, C.H2);
-  const eyes = [[25, 25], [32, 25]];
-  for (const [x, y] of eyes) {
-    if (anim === 'stir') { pc.hline(x - 1, y, 3, C.EY); pc.px(x - 1, y - 2, C.EY); pc.px(x, y - 2, C.EY); }
-    else { pc.px(x - 1, y, C.EY); pc.px(x, y + 1, C.EY); pc.px(x + 1, y, C.EY); }
-    if (anim === 'murmur') { pc.px(x + (x < 30 ? 1 : -1), y - 3, C.EY); pc.px(x, y - 2, C.EY); }
+  // ombro e gola do pijama (o resto fica sob a colcha)
+  pc.ellipse(39, 38 + by, 11, 6, C.PJ2); pc.ellipse(38, 37 + by, 10, 5, C.PJ); pc.ellipse(35, 35 + by, 6, 2.5, C.PJL);
+  pc.poly([[30, 33 + by], [36, 33 + by], [33, 37 + by]], '#ffffff');
+  pc.px(37, 38 + by, C.ST); pc.px(42, 37 + by, C.ST); pc.px(45, 39 + by, C.ST);
+  // cabelo espalhado no travesseiro (atrás)
+  pc.ellipse(16, 24, 13, 12, C.H0);
+  pc.ellipse(15, 23, 12, 11, C.H1);
+  pc.ellipse(6, 31, 7, 5, C.H1); pc.ellipse(4, 35, 4, 3, C.H0); pc.ellipse(12, 35, 6, 4, C.H1);
+  pc.curve(4, 20, 2, 28, 5, 34, C.H2); pc.curve(9, 14, 6, 22, 7, 30, C.H2);
+  // rosto
+  pc.ellipse(27, 25, 8, 8.5, C.SK2);
+  pc.ellipse(26.5, 24.5, 7.5, 8, C.SK);
+  pc.ellipse(23, 29, 2, 1.5, C.SK2);                 // sombra do queixo no travesseiro
+  pc.ellipse(20, 27, 2, 2.5, C.SK); pc.px(20, 27, C.SK2); // orelha
+  // franja com risca lateral e brilho
+  pc.poly([[16, 14], [24, 11], [33, 13], [36, 18], [35, 21], [32, 18], [30, 21], [27, 17], [24, 21], [21, 17], [18, 21]], C.H1);
+  pc.poly([[33, 14], [37, 18], [37, 25], [35, 21]], C.H1);
+  pc.curve(17, 15, 24, 11, 32, 14, C.H2); pc.px(22, 13, '#b8784a'); pc.px(23, 13, '#b8784a');
+  pc.px(30, 17, C.H0); pc.px(25, 18, C.H0);
+  // olhos fechados (sono tranquilo) com cílios
+  for (const [x, y] of [[24, 25], [31, 25]]) {
+    if (anim === 'stir') { pc.hline(x - 1, y, 3, C.EY); pc.px(x - 1, y - 2, C.EY); pc.px(x + 1, y - 2, C.EY); }
+    else { pc.px(x - 1, y, C.EY); pc.px(x, y + 1, C.EY); pc.px(x + 1, y + 1, C.EY); pc.px(x + 2, y, C.EY); pc.px(x - 2, y - 1, C.EY); }
+    if (anim === 'murmur') pc.px(x, y - 3, C.H0);
   }
-  pc.px(23, 28, C.BL); pc.px(24, 28, C.BL); pc.px(34, 28, C.BL); pc.px(35, 28, C.BL); pc.px(30, 27, C.SK2);
-  if (anim === 'murmur' && !f) { pc.rect(29, 30, 2, 2, '#9a3a3a'); } else if (anim === 'stir') { pc.hline(28, 30, 3, '#b0504a'); } else pc.px(29, 30, '#c0605a');
+  pc.px(22, 28, C.BL); pc.px(23, 28, C.BL); pc.px(22, 29, C.BL); pc.px(33, 28, C.BL); pc.px(34, 28, C.BL); pc.px(34, 29, C.BL);
+  pc.px(28, 28, C.SK2);                                // nariz
+  if (anim === 'murmur' && !f) { pc.rect(28, 31, 2, 2, '#9a3a3a'); pc.px(28, 31, '#d07070'); }
+  else if (anim === 'stir') pc.hline(27, 31, 3, '#b0504a');
+  else { pc.px(27, 31, '#c0605a'); pc.px(28, 31, '#d07070'); }
   pc.outline(C.OUT);
 }
 defineSprite('cs_lia', {
@@ -586,7 +601,7 @@ function drawCurtains(ctx, S, t) {
 // ---- rasgo costurado e portal
 function riftHW(R, yy) {
   const k = 1 - (2 * yy / R.h) ** 2;
-  return k <= 0 ? 0 : R.open * 13 * Math.sqrt(k) + (hash2(yy | 0, 0, 7) - 0.5) * 2.2 * Math.min(1, R.open * 3);
+  return k <= 0 ? 0 : R.open * 27 * Math.sqrt(k) + (hash2(yy | 0, 0, 7) - 0.5) * 2.2 * Math.min(1, R.open * 3);
 }
 function drawRiftBack(ctx, R, t) {
   if (R.seam <= 0 && R.open <= 0) return;
@@ -765,7 +780,7 @@ registerCutscene('opening', {
   run: function* (cs) {
     const S = cs.S = {
       L: 0, strikes: [], bolt: null, amb: '#2c2e5c', lamp: 1, wind: 0, black: 1, flow: 0, auto: false, titleT: 0, lia: 'sleep',
-      rift: { x: 196, y: 6, h: 64, open: 0, seam: 0, glow: 0, stitches: [-24, -14, -4, 6, 16, 25].map((y) => ({ y, b: 0 })) },
+      rift: { x: 196, y: 14, h: 104, open: 0, seam: 0, glow: 0, stitches: [-40, -24, -8, 8, 24, 40].map((y) => ({ y, b: 0 })) },
       portal: { x: 132, y: 2, r: 0, a: 0 },
       cost: { vis: 0, x: 230, y: 36, lean: -0.25, head: 0, arm: Math.PI - 0.2, bend: 0.3, spread: 0.12, eye: 0, mouth: 0 },
     };
@@ -901,7 +916,8 @@ function* fallTo(cs, a, x, y, dur) {
   }
 }
 function* faceplant(cs, a, gy) {
-  a.anim = 'hurt'; a.rot = 1.95; a.y = gy + 6; a.sx = 1.2; a.sy = 0.8;
+  // cai de cara no chão: pose deitada de verdade (sem girar o sprite para dentro do chão)
+  a.anim = 'lying'; a.frame = null; a.t = 0; a.rot = 0; a.y = gy; a.sx = 1.25; a.sy = 0.75;
   cs.sfx('land'); cs.sfx('en_bonk'); cs.shake(0.4);
   cs.particles('dust', a.x + 12, gy, 12); cs.particles('fluff', a.x + 10, gy - 4, 6);
   yield* tws(cs, a, { sx: 1, sy: 1 }, 0.2, 'outQuad');
@@ -926,8 +942,9 @@ registerCutscene('arrival', {
     yield* faceplant(cs, tico, gy);
     yield* cs.zoom(1.8, 0.5, 'outQuad');
     yield 0.6;
-    tico.anim = 'swim';   // perninhas balançando no ar
-    yield 1.1;
+    // perninhas tremendo no chão
+    for (let i = 0; i < 6; i++) { tico.sx = i % 2 ? 1.05 : 0.97; tico.sy = i % 2 ? 0.96 : 1.03; yield 0.16; }
+    tico.sx = 1; tico.sy = 1;
     tico.anim = 'lying'; tico.rot = 0; tico.y = gy;
     cs.particles('dust', gx, gy, 6); cs.sfx('land', { vol: 0.5 });
     yield 0.6;
@@ -939,7 +956,7 @@ registerCutscene('arrival', {
     yield* cs.say([{ who: 'tico', expr: 'surprised', text: 'Patas! Eu tenho patas que MEXEM!', at: tico }]);
     tico.anim = 'idle';
     yield* cs.walk(tico, gx + 12, 26);
-    tico.y = gy; yield* faceplant(cs, tico, gy);
+    tico.rot = 0; tico.y = gy; yield* faceplant(cs, tico, gy);
     yield 0.5;
     yield* cs.say([{ who: 'tico', expr: 'confused', text: 'Tá. Andar é mais difícil do que parece.', at: tico }]);
     tico.rot = 0; tico.y = gy; tico.anim = 'land'; tico.t = 0; cs.particles('dust', tico.x, gy, 5);

@@ -11,6 +11,7 @@ import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -70,9 +71,16 @@ public class MainActivity extends Activity {
             return v.onApplyWindowInsets(insets);
         });
         web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        web.addJavascriptInterface(new AppBridge(), "AndroidApp");
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
         hideSystemUi();
+    }
+
+    /** Ponte JS -> Android (botão "Sair do jogo" do título). */
+    public class AppBridge {
+        @JavascriptInterface
+        public void exit() { runOnUiThread(() -> finishAndRemoveTask()); }
     }
 
     /** Esconde barras de status/navegação (modo imersivo). */

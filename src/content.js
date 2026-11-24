@@ -67,6 +67,7 @@ import './game/cutscenes/world_intros.js';
 import './game/cutscenes/ending.js';
 // ---- cenas / UI
 import './game/scenes/title.js';
+import './game/scenes/slots.js';
 import './game/scenes/menus_basic.js';
 import './game/scenes/worldmap.js';
 import './game/scenes/menus_progress.js';

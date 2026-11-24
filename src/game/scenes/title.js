@@ -201,21 +201,24 @@ class TitleScene extends Scene {
   }
   resume() { this.buildMenu(this.menu?.sel); }
   buildMenu(sel = 0) {
-    const has = save.hasGame();
-    const worlds = save.data?.progress?.unlockedWorlds?.length || 1;
+    const has = save.hasAnyGame();
+    const canExit = !!(window.AndroidApp && window.AndroidApp.exit);
     this.menu = new ButtonList([
-      { label: 'Novo Jogo', action: () => this.newGame() },
-      { label: 'Continuar', hidden: !has, action: () => this.continueGame() },
-      { label: 'Seleção de Mundos', icon: worlds > 1 ? 'icon_map' : 'icon_lock', disabled: !has || worlds <= 1, action: () => this.worldSelect() },
+      { label: 'Jogar', hidden: !has, icon: 'icon_star', action: () => this.openSlots() },
+      { label: 'Novo Jogo', hidden: has, icon: 'icon_star', action: () => this.newGame(0) },
       { label: 'Configurações', icon: 'icon_gear', action: () => this.push('settings', { onClose: null }) },
-      { label: 'Créditos', icon: 'icon_book', action: () => this.push('credits', {}) },
-    ], { sel: has && !sel ? 1 : sel });
+      { label: 'Sair do jogo', hidden: !canExit, icon: 'icon_arrow_l', action: () => window.AndroidApp.exit() },
+    ], { sel });
+  }
+  openSlots() {
+    const s = makeScene('slots', {});
+    if (s) this.manager.push(s, { onPlay: (n) => { save.selectSlot(n); this.continueGame(); }, onNew: (n) => this.newGame(n) });
   }
   push(name, params) { const s = makeScene(name, params); if (s) this.manager.push(s, params); }
   setTico(a) { if (this.tico !== a) { this.tico = a; this.ticoT = 0; } }
-  newGame() {
+  newGame(slot = 0) {
     const start = () => {
-      save.newGame();
+      save.newGame(slot);
       audio.sfx('menu_confirm_big');
       const first = R.levels.has('w1_1') ? 'w1_1' : [...R.levels.keys()][0];
       const toLevel = () => game.scenes.go(new LevelScene(), { levelId: first });
@@ -223,8 +226,7 @@ class TitleScene extends Scene {
       if (cs) game.scenes.go(cs, {}, { transition: 'fade', time: 0.8 });
       else toLevel();
     };
-    if (save.hasGame()) this.confirm = new ConfirmBox('Apagar o jogo salvo?', start, null, { yes: 'Apagar', no: 'Não' });
-    else start();
+    start();
   }
   continueGame() {
     const wm = makeScene('worldmap', {});
@@ -305,13 +307,12 @@ class SettingsScene extends Scene {
     this.rows = [
       { id: 'music', label: 'Música', icon: 'icon_music', type: 'slider', min: 0, max: 1, step: 0.1 },
       { id: 'sfx', label: 'Efeitos', icon: 'icon_sfx', type: 'slider', min: 0, max: 1, step: 0.1 },
-      { id: 'shake', label: 'Tremor de tela', type: 'toggle' },
       { id: 'vibrate', label: 'Vibração', type: 'toggle' },
-      { id: 'showTimer', label: 'Mostrar cronômetro', icon: 'icon_clock', type: 'toggle' },
       { id: 'textSpeed', label: 'Velocidade do texto', type: 'choice', options: TEXT_SPEEDS },
-      { id: 'touchOpacity', label: 'Toque: opacidade', icon: 'icon_hand', type: 'slider', min: 0.15, max: 1, step: 0.05 },
-      { id: 'touchScale', label: 'Toque: tamanho', icon: 'icon_hand', type: 'choice', options: TOUCH_SIZES },
-      { id: 'wipe', label: 'Apagar progresso', icon: 'icon_skull', type: 'action' },
+      { id: 'touchOpacity', label: 'Transparência dos botões', icon: 'icon_hand', type: 'slider', min: 0.15, max: 1, step: 0.05 },
+      { id: 'touchScale', label: 'Tamanho dos botões', icon: 'icon_hand', type: 'choice', options: TOUCH_SIZES },
+      { id: 'credits', label: 'Créditos', icon: 'icon_book', type: 'action' },
+      { id: 'wipe', label: 'Apagar todos os jogos', icon: 'icon_skull', type: 'action' },
       { id: 'back', label: 'Voltar', type: 'action' },
     ];
   }
@@ -349,6 +350,7 @@ class SettingsScene extends Scene {
   }
   action(row) {
     if (row.id === 'back') { this.close(); return; }
+    if (row.id === 'credits') { const c = makeScene('credits', {}); if (c) this.manager.push(c, {}); return; }
     if (row.id === 'wipe') {
       audio.sfx('ui_open');
       this.confirm = new ConfirmBox('Apagar TODO o progresso? Isso não pode ser desfeito.', () => {
@@ -404,7 +406,7 @@ class SettingsScene extends Scene {
     const { w, h } = game.view, t = game.time;
     dimScreen(ctx, 0.62);
     const n = this.rows.length;
-    const rh = clamp(Math.floor((h - 44) / n), 12, 16);
+    const rh = clamp(Math.floor((h - 44) / n), 13, 19);
     const pw = Math.min(w - 16, 330), ph = n * rh + 10;
     const px = Math.round(w / 2 - pw / 2), py = Math.max(22, Math.round((h - ph) / 2) + 6);
     font.draw(ctx, 'Configurações', w / 2, py - 15, { align: 'center', color: '#ffd23f', outline: '#1b1030' });

@@ -14,7 +14,7 @@
 // Controles: confirmar = jogar · voltar = menu lateral · Q/E (cycle) = mundo.
 // =============================================================================
 import { Scene } from '../../engine/scene.js';
-import { islandImage, castleImage, drawSea, drawClouds, ISLE_M } from './overworld_art.js';
+import { islandImage, castleImage, drawSea, drawClouds, ISLE_M, bridgeImage } from './overworld_art.js';
 import { game } from '../../engine/game.js';
 import { input } from '../../engine/input.js';
 import { save } from '../../engine/save.js';
@@ -527,8 +527,10 @@ class WorldMapScene extends Scene {
       if (inRect(p, r.play)) return { k: 'play' };
       if (inRect(p, r.arrowL)) return { k: 'arrow', d: -1 };
       if (inRect(p, r.arrowR)) return { k: 'arrow', d: 1 };
+      if (inRect(p, r.menuBtn)) return { k: 'menuBtn' };
       const mi = this.menu.hit(p);
       if (mi >= 0) return { k: 'menu', i: mi };
+      if (this.focus === 'menu') return { k: 'outside' };
       if (inRect(p, r.info)) return { k: 'info' };
       const mx = p.x + this.camX, my = p.y + this.camY;
       let best = null, bd = 13;
@@ -546,7 +548,9 @@ class WorldMapScene extends Scene {
     const a = this.press, b = hitAt();
     this.press = null;
     if (!a || !b || a.k !== b.k || a.i !== b.i || a.n !== b.n || a.d !== b.d) return;
-    if (b.k === 'menu') { this.focus = 'map'; this.menu.activate(b.i); }
+    if (b.k === 'menuBtn') { this.focus = this.focus === 'menu' ? 'map' : 'menu'; this.menu.sel = 0; audio.sfx(this.focus === 'menu' ? 'ui_open' : 'ui_back'); }
+    else if (b.k === 'outside') { this.focus = 'map'; audio.sfx('ui_back'); }
+    else if (b.k === 'menu') { this.focus = 'map'; this.menu.activate(b.i); }
     else if (b.k === 'arrow') { if (!this.switchWorld(b.d)) audio.sfx('ui_denied'); this.picker = false; }
     else if (b.k === 'play') { const n = this.info; if (this.isOpen(n)) { audio.sfx('ui_select'); this.walkTo(n, true); } else { audio.sfx('ui_denied'); this.deny(n); } }
     else if (b.k === 'node') {
@@ -588,6 +592,16 @@ class WorldMapScene extends Scene {
       const ly = wd.id % 2 === 0 ? y + PH - 8 : y - 8; // mundos espelhados: etiqueta embaixo
       drawPanel(ctx, x + 10, ly, lw, 16, open ? 'paper' : 'dark');
       font.draw(ctx, label, x + 10 + lw / 2, ly + 4, { align: 'center', color: open ? '#2a1840' : '#8a80a0' });
+    }
+    // faixas de terra ligando as ilhas (um continente só)
+    for (let wi = 1; wi < 5; wi++) {
+      const b = bridgeImage(wi, PW, PH, GAP, (k) => this.patchX(k), (k) => this.patchY(k));
+      if (b.x + b.img.width < cx - 20 || b.x > cx + w + 20) continue;
+      if (!this.worldOpen(wi + 1)) ctx.globalAlpha = 0.55;
+      ctx.drawImage(b.img, b.x, b.y);
+      ctx.globalAlpha = 1;
+      const a = this.chain[wi * 6 - 1], c = this.chain[wi * 6];
+      this.drawRoad(ctx, this.linkPts(a, c), wi);
     }
     // linhas entre mundos
     for (let wi = 1; wi < 5; wi++) {
@@ -759,19 +773,24 @@ class WorldMapScene extends Scene {
     if (canR) drawButton(ctx, hx + hw + 2 + bob, 2, 20, 18, '', { icon: 'icon_arrow_r', selected: this.picker });
   }
   drawMenu(ctx, w, h, t) {
-    const bh = 18, gap = h < 215 ? 2 : 4;
-    this.menu.layoutV(4 + 10, TOP + 2, 20, bh, gap);
-    const keep = this.menu.sel;
-    if (this.focus !== 'menu') this.menu.sel = -1;
-    this.menu.draw(ctx, t);
-    this.menu.sel = keep;
-    const i = this.focus === 'menu' ? this.menu.sel : this.hoverMenu;
-    const it = this.menu.vis[i];
-    if (it && it.rect) {
-      const lw = font.measure(it.name) + 10;
-      drawPanel(ctx, it.rect.x + 23, it.rect.y + 2, lw, 14, 'paper');
-      font.draw(ctx, it.name, it.rect.x + 23 + lw / 2, it.rect.y + 5, { align: 'center', color: '#2a1840' });
+    // menu recolhido: um único botão "Menu"; aberto: lista com nomes por cima do mapa
+    const open = this.focus === 'menu';
+    this.rects.menuBtn = { x: 4, y: 4, w: 52, h: 16 };
+    if (!open) {
+      for (const it of this.menu.items) it.rect = null;
+      drawButton(ctx, 4, 4, 52, 16, 'Menu', { icon: 'icon_bag', selected: false });
+      return;
     }
+    for (const it of this.menu.items) it.label = it.name;
+    ctx.fillStyle = 'rgba(11,7,22,0.55)';
+    ctx.fillRect(0, 0, w, h);
+    const bw = 124, bh = 17, gap = 3, n = this.menu.vis.length;
+    const ph = n * (bh + gap) + 18, px = 6, py = 24;
+    drawPanel(ctx, px, py, bw + 12, ph, 'dark');
+    font.draw(ctx, 'Menu', px + (bw + 12) / 2, py + 4, { align: 'center', color: '#ffd23f' });
+    this.menu.layoutV(px + 6 + bw / 2, py + 15, bw, bh, gap);
+    this.menu.draw(ctx, t);
+    drawButton(ctx, 4, 4, 52, 16, 'Fechar', { icon: 'icon_arrow_l', selected: false });
   }
   drawInfo(ctx, w, h, t) {
     const n = this.info;
