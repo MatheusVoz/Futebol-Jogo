@@ -73,9 +73,9 @@ registerSong('w4_chase', {
   instruments: {
     ost: { wave: 'saw', attack: 0.003, decay: 0.1, sustain: 0.3, release: 0.05, vol: 0.08, filter: { freq: 500, env: 1800, envDecay: 0.05, q: 5 }, reverb: 0.1 },
     brass: { wave: 'saw', voices: 2, spread: 10, attack: 0.01, decay: 0.15, sustain: 0.6, release: 0.12, vol: 0.055, filter: { freq: 1600, env: 1500, envDecay: 0.08 }, reverb: 0.3 },
-    lead: { ...INS.lead, vol: 0.09, duty: 0.25 }, str: { ...INS.str, vol: 0.045 }, low,
+    lead: { ...INS.lead, vol: 0.08, duty: 0.25 }, str: { ...INS.str, vol: 0.045 }, low,
     bass: { wave: 'square', attack: 0.004, decay: 0.12, sustain: 0.4, release: 0.05, vol: 0.09, filter: { freq: 600, env: 700, envDecay: 0.05 }, reverb: 0.05 },
-    drums: { kit: 'chase', vol: 0.28, reverb: 0.15 },
+    drums: { kit: 'chase', vol: 0.22, reverb: 0.15 },
   },
   patterns: {
     I: { ost: arp('Bm Bm Bm F#', 16, OST, 47, 3), drums: cat('b', R(63)), drums2: cat(rep('t . . . t . . . t . . . t . t .', 2), 't . t . t . t . T . T . T . T T', FILL) },
