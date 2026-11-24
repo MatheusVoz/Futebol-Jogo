@@ -122,7 +122,7 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   m.put(14, 19, 'm', { on: false });
   m.put(22, 19, 'd');
   m.plat(16, 20, 16); m.line(16, 20, 15, 'o', 2);
-  m.line(24, 30, 18, 'o', 2);
+  m.line(24, 30, 18);
   // --- B: porta de armário e assoalho que range ---------------------------------
   m.sign(31, 19, 'w4_sign_closet');
   closet(m, 34, G);
@@ -137,7 +137,7 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   m.plat(61, 70, 14); m.line(62, 69, 13, 'o', 3);
   m.put(74, 19, 'K'); m.put(76, 19, 'l');
   m.put(84, 19, 'g');
-  m.plat(79, 89, 14); m.line(80, 88, 13, 'o', 4);
+  m.plat(79, 89, 14); m.line(80, 88, 13, 'o', 2);
   m.put(92, 19, 'e');
   // --- D: alavanca acende abajures sobre a poça (★1) ----------------------------
   m.sign(97, 19, 'w4_sign_lever');
@@ -149,7 +149,7 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   m.put(111, 19, 'a');
   // --- E: salão das portas, bonecas e armário secreto (★2) ----------------------
   closet(m, 124, G, { offset: 0 });
-  m.line(127, 131, 18, 'o', 2);
+  m.line(127, 131, 18);
   closet(m, 134, G, { offset: 1.2 });
   m.put(140, 19, 'b');
   m.put(145, 19, 'l', { kind: 'blanket' });
@@ -162,7 +162,7 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   // --- F: corredor que range, sombras, caixa-surpresa (★3) e saída --------------
   m.fill(173, 20, 192, 20, 'q');
   m.put(180, 19, 'l'); m.put(186, 19, 'd'); m.put(196, 19, 'l'); m.put(199, 19, 'd');
-  m.line(175, 191, 17, 'o', 4);
+  m.line(175, 191, 17, 'o', 2);
   m.put(203, 19, 'u', { height: 9 });
   m.plat(206, 209, 15); m.plat(201, 204, 10); m.put(203, 9, '*'); m.put(202, 9, 'o');
   m.put(212, 19, 'a');

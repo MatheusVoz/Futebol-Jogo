@@ -1066,7 +1066,7 @@ function setupLevel(L) {
 }
 
 registerLevel({
-  id: 'w2_6', world: 2, index: 6, name: 'O Ventre do Oceano', subtitle: 'Mundo 2-6 · Chefe',
+  id: 'w2_6', world: 2, index: 6, name: 'O Ventre do Oceano', subtitle: 'Mundo 2-6 - Chefe',
   music: 'boss_whale', tileset: 'w2', background: 'w2', timeOfDay: 'night', boss: true,
   parTime: 240, darkness: 0.15, ambient: 'w2_bubbles', oxygen: true, oxygenTime: 22,
   map: buildMap(),

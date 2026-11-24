@@ -55,9 +55,9 @@ const solidLike = (t) => t === T.SOLID || t === T.ALT || t === T.FAKE;
 const OUT = '#12050f';
 const WEAVE = [ // [profundidade] -> [luz, meio, sombra]
   ['#6e3070', '#57245c', '#421a48'],
-  ['#4a1c50', '#3c1642', '#2e1034'],
-  ['#2e1034', '#260c2c', '#1e0824'],
-  ['#1c0820', '#18061c', '#130416'],
+  ['#54205c', '#3e1646', '#2a0c30'],
+  ['#3c1442', '#2c0e32', '#1c0820'],
+  ['#2c0e30', '#200824', '#140416'],
 ];
 const RIM = { u: '#b46aa8', l: '#8e4c8c', r: '#2a0c2c', d: '#1a0618' };
 const GOLD = { hi: '#fff6c0', md: '#ffd23f', lo: '#d08a1a', dim: '#7a4e22', glow: '#ffb020', hole: '#14040e' };
@@ -112,6 +112,15 @@ function drawFabric(pc, x, y, n0, rng, info) {
       const k = ((cx + cy) & 1) === 0 ? iy : ix;
       let c = k === 0 ? W[0] : k === 3 ? W[2] : W[1];
       if (k === 1 && h2(cx, cy, 3) < 0.12) c = mix(c, '#7a2a5a', 0.5); // fio avermelhado na trama
+      // colcha: blocos de retalhos com tons diferentes e pesponto apagado entre eles
+      if (lev >= 1) {
+        const pby = Math.floor((wy + 8) / 40), pbx = Math.floor((wx + (pby & 1) * 24) / 48);
+        const hv = h2(pbx, pby, 4);
+        if (hv < 0.33) c = mix(c, '#2a1a5a', 0.3); else if (hv > 0.7) c = mix(c, '#5a1030', 0.3);
+        const sx = (wx + (pby & 1) * 24) % 48, sy = (wy + 8) % 40;
+        if ((sx === 0 && (wy & 3) < 2) || (sy === 0 && (wx & 3) < 2)) c = lev === 1 ? '#8a5a2a' : '#5e3a1e';
+        else if (sx === 1 || sy === 1) c = mix(c, '#000000', 0.3);
+      }
       // costura dourada correndo junto da borda (d≈5)
       if (e !== 'i' && di >= 4 && di <= 6) {
         const dash = ((s % 6) + 6) % 6;
@@ -125,7 +134,7 @@ function drawFabric(pc, x, y, n0, rng, info) {
     }
   }
   // cruz de ponto antiga (dourado apagado) no miolo do tecido
-  if (ku >= 1 && kd >= 1 && kl >= 1 && kr >= 1 && h2(tx, ty, 21) < 0.16) {
+  if (ku >= 1 && kd >= 1 && kl >= 1 && kr >= 1 && h2(tx, ty, 21) < 0.07) {
     const ox = x + 4 + rng.int(0, 6), oy = y + 4 + rng.int(0, 6);
     for (let i = 0; i < 5; i++) { pc.px(ox + i, oy + i, GOLD.dim); pc.px(ox + 4 - i, oy + i, GOLD.dim); }
     pc.px(ox + 2, oy + 2, '#b07a2a'); pc.px(ox, oy, '#a06a2a');
@@ -204,16 +213,22 @@ function drawLoom(pc, x, y, n0, rng, info) {
   const beam = (ty % 7) === 0;
   for (let ly = 0; ly < 16; ly++) for (let lx = 0; lx < 16; lx++) {
     const wx = tx * 16 + lx, wy = ty * 16 + ly;
-    // urdidura: fios verticais esticados
-    const k = wx % 4;
-    let c = k === 0 ? '#1a0a1c' : k === 1 ? '#3a1838' : k === 2 ? '#2e1230' : '#24102a';
-    if (k === 2 && h2(wx >> 2, 1, 2) < 0.18) c = '#4a2a20'; // fio dourado apagado
-    // trama parcial (faixas horizontais tecidas pela metade)
-    const band = wy % 24;
-    if (band > 17 && h2(wx >> 3, wy / 24 | 0, 3) < 0.55) c = (band & 1) ? '#3e1a3c' : ((wx + wy) & 1 ? '#5a2a4e' : '#2a0e2a');
-    // liços (hastes finas) e viga de madeira
-    if (wx % 32 === 13 && band < 17) c = '#4e3a3a';
-    if (beam) { if (ly < 5) c = ly === 0 ? '#120608' : ly === 1 ? '#6a3e2a' : ly === 4 ? '#1e0e0c' : '#4a2a1e'; if (ly > 1 && ly < 4 && wx % 16 === 3) c = '#8a6040'; }
+    // urdidura: fios verticais esticados (com brilho dourado ocasional)
+    const k = wx % 4, gw = h2(wx >> 2, 1, 2) < 0.2;
+    let c = k === 0 ? '#14060f' : k === 1 ? (gw ? '#8a5a2a' : '#4a1e48') : k === 2 ? (gw ? '#5e3a1e' : '#341438') : '#24102a';
+    // tecido sendo tecido: faixa com losangos (vermelho/magenta/dourado) e fio de trama
+    const band = ((wy % 48) + 48) % 48, row = Math.floor(wy / 48);
+    if (band >= 26 && band < 44) {
+      const pal = [['#7a1a4a', '#c0305a', '#ffb84a'], ['#4a1a6a', '#8a3a9a', '#ffd23f'], ['#6a1030', '#a8284a', '#ff8ab0']][((h2(row, wx >> 6, 3) * 3) | 0)];
+      const dx = Math.abs(((wx % 16) + 16) % 16 - 8), dy = Math.abs(band - 35);
+      const dd = dx + dy;
+      c = dd === 6 || dd === 7 ? pal[2] : dd < 4 ? pal[1] : pal[0];
+      c = mix(c, '#14060f', (wy & 1) ? 0.55 : 0.42); // apagado: é fundo
+      if (band === 26) c = '#a8742a'; else if (band === 43) c = '#1a0614';
+    } else if (band === 25) c = (wx & 1) ? '#c0305a' : '#14060f'; // última passada da lançadeira
+    // liços: arames finos com olhal
+    if (wx % 24 === 11 && band < 25) c = band % 8 === 4 ? '#ffd23f' : '#8a7a8a';
+    if (beam) { if (ly < 5) c = ly === 0 ? '#120608' : ly === 1 ? '#8a5a3a' : ly === 4 ? '#1e0e0c' : ((wx >> 1) % 5 === 0 ? '#3a2014' : '#5a3424'); if (ly === 2 && wx % 16 === 3) c = '#ffd23f'; }
     // sombra perto das bordas da área (vinheta)
     let ed = 99;
     if (!b(0, -1)) ed = Math.min(ed, ly); if (!b(0, 1)) ed = Math.min(ed, 15 - ly);

@@ -35,6 +35,7 @@ import { save } from '../../engine/save.js';
 import { game } from '../../engine/game.js';
 import { R, registerEntity, registerLevel, registerCutscene, makeScene } from '../registry.js';
 import { getStats } from '../stats.js';
+import font from '../../engine/font.js';
 import { Enemy, EnemyProjectile } from '../enemies/base.js';
 import { spawnShockwave, spawnFloatingText, drawGlow } from '../art/vfx.js';
 
@@ -272,7 +273,7 @@ registerEntity('king_pendulum', KingPendulum);
 // =============================================================================
 const FIGHT = new Set(['idle', 'walk', 'swingwind', 'swing', 'panting', 'throwwind', 'teach', 'stunned',
   'freezewind', 'frozen', 'selfrewind']);
-const WEAK = { panting: 1, stunned: 1 };
+const WEAK = { panting: 0.6, stunned: 1 };
 const PATTERNS = {
   1: ['swing', 'throw', 'swing', 'throw', 'walk'],
   2: ['freeze', 'swing', 'throw', 'swing'],
@@ -286,7 +287,7 @@ class KingBoss extends Enemy {
     this.bindable = false; this.flying = true; this.alwaysUpdate = true; this.alwaysDraw = true;
     this.z = 30; this.w = KW; this.h = KH;
     this.place(ACX + 120);
-    this.maxHp = this.hp = Math.max(18, Math.round(28 * (getStats().power || 1)));
+    this.maxHp = this.hp = Math.max(18, Math.round(32 * (getStats().power || 1)));
     this.drops = { buttons: 0 };
     this.phase = 1; this.state = 'dormant'; this.st = 0; this.qi = 0; this.pending = 0;
     this.facing = -1; this.alpha = 1; this.pendAng = 0.25; this.handA = 0;
@@ -329,17 +330,17 @@ class KingBoss extends Enemy {
     this.hurt(2 * (p.stats?.power || 1), p, { raw: true });
   }
   onHit(dmg, src, info = {}) {
-    if (info.kind === 'reflect') return this.hurt(3.5, src, { raw: true, reflect: true });
+    if (info.kind === 'reflect') return this.hurt(this.state === 'stunned' ? 1 : 3, src, { raw: true, reflect: true });
     return this.hurt(dmg, src);
   }
   hurt(amount = 1, src = null, opts = {}) {
     if (!this.fighting || this.invuln > 0 || this.state === 'teach') return false;
-    const mul = opts.raw ? 1 : this.weak ? 1 : 0.35;
+    const mul = opts.raw ? 1 : this.weak ? WEAK[this.state] : 0.35;
     const floor = this.phase === 1 ? this.maxHp * (2 / 3) : this.phase === 2 ? this.maxHp / 3 : 0;
     this.hp = Math.max(floor, this.hp - amount * mul);
     this.flash = 0.1; this.invuln = 0.08;
     const L = this.level;
-    if (mul >= 1) {
+    if (mul >= 0.6) {
       audio.sfx('boss_hit', { randomPitch: 0.08 });
       L.particles.emit('hit', this.cx, this.cy, 6, { colors: [AMBER, '#ffffff', GOLD[2]] });
       L.shake(0.12);
@@ -385,7 +386,7 @@ class KingBoss extends Enemy {
   next() {
     const pat = PATTERNS[this.phase];
     const k = pat[this.qi++ % pat.length];
-    if (k === 'swing') this.go('walk'), (this.after = 'swingwind');
+    if (k === 'swing') { this.go('walk'); this.after = 'swingwind'; }
     else if (k === 'throw') this.go('throwwind');
     else if (k === 'freeze') this.go('freezewind');
     else { this.go('walk'); this.after = null; }
@@ -424,7 +425,7 @@ class KingBoss extends Enemy {
     const L = this.level;
     this.clearHazards(); this.unfreeze();
     this.phase = this.pending; this.pending = 0; this.qi = 0;
-    this.loopBroken = false; this.loopOpen = false; this.loopT = 6;
+    this.loopBroken = false; this.loopOpen = false; this.loopT = 3.5;
     this.go('transition'); this.contact = this.enemy = false; this.hittable = false;
     audio.sfx('clock_chime'); audio.sfx('boss_roar', { pitch: 1.3, vol: 0.6 });
     L.shake(0.4); L.flash(AMBER, 0.2);
@@ -467,7 +468,7 @@ class KingBoss extends Enemy {
       }
       case 'panting':
         this.pendAng = damp(this.pendAng, 0.3, 3, dt);
-        if (this.st >= [0, 1.3, 1.0, 0.8][this.phase]) this.go('idle');
+        if (this.st >= [0, 1.1, 0.9, 0.75][this.phase]) this.go('idle');
         break;
       case 'throwwind':
         faceT();
@@ -541,11 +542,11 @@ class KingBoss extends Enemy {
     const lines = kind === 'throw'
       ? [{ who: 'tico', expr: 'determined', text: 'Ponteiros voando! Se eu usar o Remendo Temporal quando chegarem perto... eles voltam pra ele!' }]
       : [{ who: 'tico', expr: 'surprised', text: 'O pêndulo está brilhando... ele vai voltar o tempo! Remendo Temporal no pêndulo, rápido!' }];
-    const prev = this.state;
-    if (kind === 'loop') { this.loopWin = 3.2; }
+    if (kind === 'loop') { this.unfreeze(); this.clearHazards(); this.loopWin = 3.2; this.go('teach'); }
     L.say(lines).then(() => {
-      if (this.state === 'teach') { this.throwHands(); this.idleDelay = 0.9; this.go('idle'); }
-      else if (prev === 'teach') this.go('idle');
+      if (this.state !== 'teach') return;
+      if (kind === 'throw') { this.throwHands(); this.idleDelay = 0.9; }
+      this.go('idle');
     });
   }
 
@@ -677,8 +678,10 @@ function drawOverlay(ctx, L) {
   if (!k) return;
   const { w, h } = game.view;
   if (k.timeFrozen) {
-    ctx.fillStyle = 'rgba(200,160,90,0.28)'; ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = 'rgba(255,230,170,0.6)';
+    ctx.fillStyle = 'rgba(70,90,140,0.32)'; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = 'rgba(20,24,48,0.35)'; ctx.fillRect(0, 0, w, 8); ctx.fillRect(0, h - 8, w, 8);
+    font.draw(ctx, 'PARE!', Rn(w / 2), 30, { color: '#bff6ff', align: 'center', outline: '#14182e' });
+    ctx.fillStyle = 'rgba(200,240,255,0.8)';
     for (let i = 0; i < 60; i++) { const a = (i / 60) * Math.PI * 2; ctx.fillRect(Rn(w / 2 + Math.cos(a) * (h * 0.45)), Rn(h / 2 + Math.sin(a) * (h * 0.45)), i % 5 ? 1 : 3, i % 5 ? 1 : 3); }
   } else if (k.phase >= 3 && k.fighting) {
     ctx.fillStyle = 'rgba(255,120,60,0.06)'; ctx.fillRect(0, 0, w, h);
@@ -807,7 +810,7 @@ function setupLevel(L) {
 }
 
 registerLevel({
-  id: 'w3_6', world: 3, index: 6, name: 'A Sala do Último Segundo', subtitle: 'Mundo 3-6 · Chefe',
+  id: 'w3_6', world: 3, index: 6, name: 'A Sala do Último Segundo', subtitle: 'Mundo 3-6 - Chefe',
   music: 'boss_king', tileset: 'w3', background: 'w3', timeOfDay: 'dusk', boss: true,
   parTime: 240, darkness: 0.1,
   map: buildMap(),
