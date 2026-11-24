@@ -221,7 +221,7 @@ registerSong('revelation', {
 
 // ============================================================ FINAL (76 bpm, 3/4: Ninar + Tema do Tico -> Ré maior)
 const WZ = 'k . h? . s? . h? . s? . h? .';
-const PE4 = tr(PL, 0) && 'D Bm G A D Bm Em7:6 A7:6 D';
+const PE4 = 'D Bm G A D Bm Em7:6 A7:6 D'; // PL em Ré (clímax, um tom acima)
 registerSong('ending', {
   bpm: 76, reverb: 0.6, echoSteps: 3, echoFeedback: 0.3,
   instruments: { box: { ...INS.box, vol: 0.14 }, flute: INS.flute, lead: { ...INS.lead, vol: 0.11 }, bell: { ...INS.bell, octave: 1, vol: 0.07 },

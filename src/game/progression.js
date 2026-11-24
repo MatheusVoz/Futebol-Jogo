@@ -72,6 +72,15 @@ icon('icon_sk_combo', [
   '..W...W...',
   '...Y...Y..',
 ], { W: '#fff4dc', Y: '#ffd23f' });
+icon('icon_sk_jump', [ // pulo duplo: duas setas para cima
+  '...W...',
+  '..WLW..',
+  '.W...W.',
+  '...Y...',
+  '..YLY..',
+  '.Y...Y.',
+  'Y.....Y',
+], { W: '#fff4dc', L: '#ffffff', Y: '#ffd23f' });
 icon('icon_sk_magnet', [
   '.RRRRR.',
   'RRDDDRR',

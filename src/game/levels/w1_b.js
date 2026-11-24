@@ -162,7 +162,7 @@ import { grid } from './w1_a.js';
   m.put(148, 31, 'f');
   m.put(155, 31, 'h');
   // poço F (junta as duas rotas)
-  cave(159, 15, 163, 31);
+  cave(159, 5, 163, 31);
   m.plat(162, 163, 29); m.plat(159, 160, 26); m.plat(162, 163, 23); m.plat(159, 160, 20); m.plat(162, 163, 17);
   m.plat(159, 163, 15);
   m.put(161, 27, 'o'); m.put(161, 21, 'o');
