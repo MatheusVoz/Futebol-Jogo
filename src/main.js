@@ -79,6 +79,15 @@ window.__SW = {
   },
   errors: [],
   ready: false,
+  /** Botão voltar do Android: pausa/fecha menus; na tela de título retorna 'exit'. */
+  androidBack() {
+    const top = game.scenes.top;
+    const title = R.scenes.get('title');
+    if (title && top instanceof title && game.scenes.stack.length === 1) return 'exit';
+    input.pressedLatch.pause = true;
+    input.pressedLatch.back = true;
+    return 'ok';
+  },
   pause() { game.running = false; },
   resume() { if (!game.running) game.start(); },
 };

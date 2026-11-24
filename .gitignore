@@ -7,3 +7,5 @@ android/build/
 !release/*.apk
 android/local.properties
 .shots/
+android/keystore/
+android/build/
