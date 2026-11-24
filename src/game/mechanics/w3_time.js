@@ -385,14 +385,14 @@ class ClockPlatform extends Entity {
     if (!m) { this.dead = true; return; }
     this.w = (p.w || m.w) * TILE; this.h = 10;
     this.phase = p.phase ? 1 : 0; this.period = Math.max(0.6, p.period ?? 3);
-    this.lt = p.offset ?? 0; this.on = null; this.left = 0; this.pop = 0;
+    this.lt = p.offset ?? 0; this.on = null; this.remain = 0; this.pop = 0;
     this.useSolid = !!p.solid; this.z = 8; this.alwaysUpdate = true;
     this.sync(true);
   }
   sync(init) {
     const k = (((this.lt / this.period) % 1) + 1) % 1;
     const on = (k < 0.5) === (this.phase === 0);
-    this.left = (0.5 - (k % 0.5)) * this.period;
+    this.remain = (0.5 - (k % 0.5)) * this.period;
     if (on === this.on) return;
     this.on = on;
     if (this.useSolid) this.solid = on; else this.oneway = on;
@@ -408,18 +408,18 @@ class ClockPlatform extends Entity {
   update(dt) {
     this.tickTimers(dt);
     if (this.pop > 0) this.pop -= dt;
-    const prev = this.left;
+    const prev = this.remain;
     this.lt += dt * timeScaleAt(this.level, this.cx, this.cy);
     this.sync(false);
-    if (this.on && this.left < 0.75 && Math.floor(this.left / 0.25) !== Math.floor(prev / 0.25) && nearPlayer(this, 160, 110)) audio.sfx('clock_tick', { vol: 0.22, pitch: 1.6, cooldown: 0.05 });
+    if (this.on && this.remain < 0.75 && Math.floor(this.remain / 0.25) !== Math.floor(prev / 0.25) && nearPlayer(this, 160, 110)) audio.sfx('clock_tick', { vol: 0.22, pitch: 1.6, cooldown: 0.05 });
   }
   draw(ctx) {
     const c = PH[this.phase], x = Rn(this.x), y = Rn(this.y), W = this.w;
-    const half = this.period / 2, frac = 1 - this.left / half;
+    const half = this.period / 2, frac = 1 - this.remain / half;
     if (this.on) {
-      const warn = this.left < 0.6;
+      const warn = this.remain < 0.6;
       const sh = warn ? Rn(Math.sin(this.t * 80) * 0.8) : 0;
-      ctx.globalAlpha = warn && Math.floor(this.left * 12) % 2 === 0 ? 0.4 : 1;
+      ctx.globalAlpha = warn && Math.floor(this.remain * 12) % 2 === 0 ? 0.4 : 1;
       for (let i = 0; i < W; i += 16) {
         const k = W <= 16 ? 's' : i === 0 ? 'l' : i + 16 >= W ? 'r' : 'm';
         drawImage(ctx, `w3_cp${this.phase}_${k}`, x + i + sh, y - 1);
@@ -428,7 +428,7 @@ class ClockPlatform extends Entity {
       ctx.globalAlpha = 1;
       this.drawDial(ctx, x + (W >> 1) + sh, y + 3, frac, 1);
     } else {
-      ctx.globalAlpha = 0.45; ctx.fillStyle = c.lt;
+      ctx.globalAlpha = 0.7; ctx.fillStyle = c.hi;
       for (let i = 0; i < W; i += 4) { ctx.fillRect(x + i, y, 2, 1); ctx.fillRect(x + i, y + 8, 2, 1); }
       ctx.fillRect(x, y, 1, 9); ctx.fillRect(x + W - 1, y, 1, 9);
       ctx.globalAlpha = 1;
@@ -643,7 +643,7 @@ class TimeGate extends Entity {
     const ht = m.h > 1 ? m.h : Math.max(1, p.h ?? 3);
     this.x = x + 3; this.w = 10; this.y = m.h > 1 ? y : y + TILE - ht * TILE; this.h = ht * TILE;
     this.openT = Math.max(0.3, p.open ?? 1.6); this.closedT = Math.max(0.3, p.closed ?? 2.4); this.cyc = this.openT + this.closedT;
-    this.lt = p.offset ?? 0; this.k = 0; this.isOpen = null; this.left = 0;
+    this.lt = p.offset ?? 0; this.k = 0; this.isOpen = null; this.remain = 0;
     this.solid = true; this.z = 12; this.alwaysUpdate = true;
     this.dial = gateDial(Math.round((this.openT / this.cyc) * 24));
     this.sync(true);
@@ -651,7 +651,7 @@ class TimeGate extends Entity {
   sync(init) {
     const ph = ((this.lt % this.cyc) + this.cyc) % this.cyc;
     const open = ph < this.openT;
-    this.ph = ph; this.left = open ? this.openT - ph : this.cyc - ph;
+    this.ph = ph; this.remain = open ? this.openT - ph : this.cyc - ph;
     if (open === this.isOpen) return;
     this.isOpen = open;
     if (init) { this.k = open ? 1 : 0; this.solid = !open; return; }
@@ -659,7 +659,7 @@ class TimeGate extends Entity {
   }
   update(dt) {
     this.tickTimers(dt);
-    const prev = this.left;
+    const prev = this.remain;
     this.lt += dt * timeScaleAt(this.level, this.cx, this.cy);
     this.sync(false);
     this.k = approach(this.k, this.isOpen ? 1 : 0, 7 * dt);
@@ -675,7 +675,7 @@ class TimeGate extends Entity {
         }
       }
     }
-    if (this.isOpen && this.left < 0.8 && Math.floor(this.left / 0.2) !== Math.floor(prev / 0.2) && nearPlayer(this, 160, 120)) audio.sfx('clock_tick', { vol: 0.3, pitch: 1.4, cooldown: 0.05 });
+    if (this.isOpen && this.remain < 0.8 && Math.floor(this.remain / 0.2) !== Math.floor(prev / 0.2) && nearPlayer(this, 160, 120)) audio.sfx('clock_tick', { vol: 0.3, pitch: 1.4, cooldown: 0.05 });
   }
   draw(ctx) {
     const x = Rn(this.x), y = Rn(this.y), H = this.h;
@@ -702,7 +702,7 @@ class TimeGate extends Entity {
     const a = (this.ph / this.cyc) * TAU - Math.PI / 2;
     ctx.fillStyle = OUT;
     for (let s = 0; s <= 4; s++) ctx.fillRect(Rn(x + 5 + Math.cos(a) * s), Rn(y - 9 + Math.sin(a) * s), 1, 1);
-    const blink = this.isOpen && this.left < 0.8 && Math.floor(this.t * 10) % 2;
+    const blink = this.isOpen && this.remain < 0.8 && Math.floor(this.t * 10) % 2;
     ctx.fillStyle = this.isOpen ? (blink ? '#fff4a0' : '#6ad88a') : '#e04848';
     ctx.fillRect(x + 4, y - 20, 2, 2);
   }
