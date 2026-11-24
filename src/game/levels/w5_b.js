@@ -92,9 +92,10 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.put(118, 31, 'f'); m.put(125, 25, 'g'); m.put(140, 25, 'g');
   // segredo: sala sob o piso, só por portal
   m.put(132, 31, 'j', { pair: 'w54s' });
-  m.put(138, 33, 'j', { pair: 'w54s' });
+  m.clear(129, 33, 140, 34);
   m.put(131, 34, 'X'); m.put(133, 34, 'r'); m.line(134, 136, 34); m.put(130, 34, 'e');
-  m.clear(129, 33, 140, 34); hide(m, 129, 33, 140, 34); m.put(138, 33, 'j', { pair: 'w54s' }); m.put(138, 34, 'H');
+  m.put(138, 34, 'j', { pair: 'w54s' });
+  hide(m, 129, 33, 140, 34);
   m.put(149, 26, 'q', { dx: 9, dy: 3 }); pit(m, 150, 155, 32);
   m.put(165, 31, 'a'); m.line(160, 186, 29, 'o', 4); m.put(178, 26, 'b');
   m.put(190, 31, 'h');

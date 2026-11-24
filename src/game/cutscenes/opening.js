@@ -752,14 +752,14 @@ function roomScreen(ctx, cs) {
 }
 
 function* slipAndFall(cs, a) {
-  yield* tws(cs, a, { x: a.x + 8, y: a.y + 2, rot: 0.22 }, 0.55, 'inQuad');
-  yield* tws(cs, a, { x: a.x + 18, y: a.y + 26, rot: 0.55 }, 0.3, 'inQuad');
-  yield* tws(cs, a, { x: TF.x, y: TF.y, rot: 0.1 }, 0.32, 'inQuad');
+  yield* tws(cs, a, { x: a.x + 8, y: a.y + 2 }, 0.55, 'inQuad');
+  yield* tws(cs, a, { x: a.x + 18, y: a.y + 26 }, 0.3, 'inQuad');
+  yield* tws(cs, a, { x: TF.x, y: TF.y }, 0.32, 'inQuad');
   cs.sfx('land'); cs.sfx('stomp'); cs.shake(0.45);
   cs.particles('dust', a.x, a.y, 12); cs.particles('fluff', a.x, a.y - 6, 5);
   a.sy = 0.78; a.sx = 1.18;
-  yield* tws(cs, a, { y: TF.y - 7, sy: 1, sx: 1, rot: -0.12 }, 0.15, 'outQuad');
-  yield* tws(cs, a, { y: TF.y, rot: 0 }, 0.17, 'inQuad');
+  yield* tws(cs, a, { y: TF.y - 7, sy: 1, sx: 1 }, 0.15, 'outQuad');
+  yield* tws(cs, a, { y: TF.y }, 0.17, 'inQuad');
   cs.sfx('land', { vol: 0.4 });
 }
 function* spinInto(cs, a, PT, dur) {
@@ -910,7 +910,7 @@ function* fallTo(cs, a, x, y, dur) {
   const x0 = a.x, y0 = a.y, t0 = cs.time;
   for (;;) {
     const k = cs.skipping ? 1 : Math.min(1, (cs.time - t0) / dur);
-    a.x = x0 + (x - x0) * k; a.y = y0 + (y - y0) * k * k; a.rot = k * 9.4;
+    a.x = x0 + (x - x0) * k; a.y = y0 + (y - y0) * k * k;
     if (k >= 1) return;
     yield;
   }
@@ -919,7 +919,7 @@ function* faceplant(cs, a, gy) {
   // cai de cara no chão: pose deitada de verdade (sem girar o sprite para dentro do chão)
   a.anim = 'lying'; a.frame = null; a.t = 0; a.rot = 0; a.y = gy; a.sx = 1.25; a.sy = 0.75;
   cs.sfx('land'); cs.sfx('en_bonk'); cs.shake(0.4);
-  cs.particles('dust', a.x + 12, gy, 12); cs.particles('fluff', a.x + 10, gy - 4, 6);
+  cs.particles('dust', a.x - 12, gy, 12); cs.particles('fluff', a.x - 10, gy - 4, 6);
   yield* tws(cs, a, { sx: 1, sy: 1 }, 0.2, 'outQuad');
 }
 registerCutscene('arrival', {
@@ -959,7 +959,7 @@ registerCutscene('arrival', {
     tico.rot = 0; tico.y = gy; yield* faceplant(cs, tico, gy);
     yield 0.5;
     yield* cs.say([{ who: 'tico', expr: 'confused', text: 'Tá. Andar é mais difícil do que parece.', at: tico }]);
-    tico.rot = 0; tico.y = gy; tico.anim = 'land'; tico.t = 0; cs.particles('dust', tico.x, gy, 5);
+    tico.y = gy; tico.anim = 'land'; tico.t = 0; cs.particles('dust', tico.x, gy, 5);
     yield 0.3;
     tico.anim = 'surprise'; tico.t = 0;
     yield* cs.say([{ who: 'tico', expr: 'surprised', text: 'Eu tenho DENTES? ...Ah, não. São costuras.', at: tico }]);

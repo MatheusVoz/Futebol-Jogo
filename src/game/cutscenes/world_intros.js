@@ -222,8 +222,8 @@ function* fall(cs, a, x, y, dur) {
   const x0 = a.x, y0 = a.y, t0 = cs.time;
   for (;;) {
     const k = cs.skipping ? 1 : Math.min(1, (cs.time - t0) / dur);
-    a.x = x0 + (x - x0) * k; a.y = y0 + (y - y0) * k * k; a.rot = k * 6.3;
-    if (k >= 1) { a.rot = 0; return; }
+    a.x = x0 + (x - x0) * k; a.y = y0 + (y - y0) * k * k;
+    if (k >= 1) return;
     yield;
   }
 }
