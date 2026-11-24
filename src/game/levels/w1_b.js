@@ -24,7 +24,6 @@ import { grid } from './w1_a.js';
   m.sign(7, 21, 'w1_sign_toys');
   m.fill(12, 20, 13, 21, '%'); m.put(14, 21, '%'); m.line(12, 14, 18);
   m.plat(18, 20, 18); m.line(18, 20, 17);
-  m.line(23, 27, 20);
   m.sign(28, 21, 'w1_sign_pip');
   m.put(33, 21, 'n', { npc: 'pip', dialog: 'w1_pip_1', flee: true });
   m.arc(38, 19, 3, 1);                                         // vão 3
@@ -85,7 +84,6 @@ import { grid } from './w1_a.js';
   m.ground(230, 235, 13); m.line(231, 234, 12);
   m.ground(236, 241, 17); m.put(239, 16, 'b');
   m.ground(242, 259, G);
-  m.line(244, 250, 20);
   m.put(255, 21, 'E');
 
   registerLevel({

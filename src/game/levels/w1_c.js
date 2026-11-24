@@ -26,7 +26,6 @@ import { grid, burrow } from './w1_a.js';
   m.sign(30, 21, 'w1_sign_faceless1');
   m.plat(33, 36, 18); m.line(33, 36, 17);
   m.put(42, 21, 'n', { npc: 'botao', dialog: 'w1_botao_3' });
-  m.line(45, 50, 20);
   // --- B: vãos com ilhós, abismo de verdade com toca por baixo -----------------
   m.put(52, 21, '@', { group: 'b1' }); m.put(58, 21, '@', { group: 'b1' });
   m.put(54, 20, '*');                                           // ★1 (fácil)
@@ -76,7 +75,6 @@ import { grid, burrow } from './w1_a.js';
   m.fill(227, 6, 234, 11, '#'); m.fill(227, 9, 228, 10, 'H'); m.clear(229, 8, 233, 10);
   m.put(229, 10, 'X'); m.put(230, 10, '*'); m.put(232, 10, 'M', { memory: 'mem_1' }); m.line(230, 232, 8);
   m.put(216, 5, 'g');
-  m.line(204, 214, 20, 'o', 2);
   // --- E: reta final ------------------------------------------------------------
   m.put(240, 21, 'K');
   m.put(244, 21, 'B'); m.put(245, 21, 'B'); m.put(244, 20, 'B'); m.put(245, 20, 'B', { contents: 'patch' });
@@ -122,7 +120,7 @@ import { grid, burrow } from './w1_a.js';
   m.ground(91, 104, 27); m.fill(91, 26, 104, 26, '^');
   m.put(96, 26, 'J'); m.put(102, 26, 'J');
   m.put(90, 21, '@'); m.fill(99, 20, 100, 20, '%'); m.put(99, 19, '@'); m.put(108, 21, '@');
-  m.arc(91, 19, 8, 1); m.arc(101, 18, 7, 1);
+  m.arc(91, 19, 8, 1);
   m.ground(105, 123, 22);
   // --- sala 4: torre de molas -----------------------------------------------------
   m.put(111, 21, 'J'); m.fill(112, 21, 115, 21, '^');
