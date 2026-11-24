@@ -106,7 +106,7 @@ function lightmap(w, h) {
   return LM;
 }
 let VIG = null;
-function vignette(w, h) {
+export function vignette(w, h) {
   if (VIG && VIG.width === w && VIG.height === h) return VIG;
   const pc = new PixelCanvas(w, h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -119,6 +119,8 @@ function vignette(w, h) {
 }
 
 // ============================================================ Tico-marionete
+/** Posição do olho do Tico-marionete (eyeX/eyeY relativos aos pés, sem espelhar). */
+function ticoEye(a) { return [a.x + (a.eyeX ?? 15) * (a.flip ? -1 : 1), a.y + (a.eyeY ?? -32)]; }
 function drawTicoPuppet(ctx, a) {
   const fr = a.frame != null ? a.frame : animFrame('tico', a.anim, a.t);
   const k = a.scale ?? 1, sx = (a.sx ?? 1) * k, sy = (a.sy ?? 1) * k, cy = 16 * sy;
@@ -131,11 +133,12 @@ function drawTicoPuppet(ctx, a) {
   if (a.tint > 0.01) drawSprite(ctx, 'tico', a.anim, fr, 0, RN(cy), { ...o, variant: a.tintColor, alpha: Math.min(1, a.tint) });
   ctx.restore();
   if (a.eyeGlow > 0.01) {
-    const ex = a.x + (a.eyeX ?? 6) * (a.flip ? -1 : 1), ey = a.y + (a.eyeY ?? -27);
-    drawGlow(ctx, ex, ey, 9, a.glowColor || '#c060ff', 0.9 * a.eyeGlow);
+    const [ex, ey] = ticoEye(a);
+    drawGlow(ctx, ex, ey, 10, a.glowColor || '#c060ff', 0.9 * a.eyeGlow);
     ctx.globalAlpha *= Math.min(1, a.eyeGlow);
-    ctx.fillStyle = '#f4d0ff'; ctx.fillRect(RN(ex) - 1, RN(ey), 2, 1);
-    ctx.fillStyle = '#b040ff'; ctx.fillRect(RN(ex) - 2, RN(ey) + 1, 4, 1);
+    ctx.fillStyle = '#d890ff'; ctx.fillRect(RN(ex) - 7, RN(ey), 15, 1);
+    ctx.fillStyle = '#b040ff'; ctx.fillRect(RN(ex) - 1, RN(ey) - 1, 3, 3);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(RN(ex), RN(ey), 1, 1);
   }
 }
 /** Ator do Tico (anim do sprite 'tico' + rot, sx/sy, scale, frame fixo, tint, eyeGlow). */
@@ -175,7 +178,7 @@ function stitchLine(pc, x0, y0, x1, y1, c) {
 }
 function bakeHead(open) {
   const pc = new PixelCanvas(30, 36);
-  const B = '#3c3152', D = '#2a2240', L = '#55487a';
+  const B = '#4a3e66', D = '#342a52', L = '#6a5c96';
   pc.ellipse(15, 22, 12, 12.5, B);
   pc.poly([[4, 18], [26, 15], [22, 7], [18, 1], [13, 3], [8, 9]], B);
   pc.poly([[17, 1], [22, 0], [24, 3], [21, 6]], D);
@@ -184,8 +187,8 @@ function bakeHead(open) {
     if (x > 20 + ((y >> 1) & 1) && hash2(x, y, 2) < 0.8) pc.px(x, y, D);
     else if (x < 6 + (y & 1) && y > 12) pc.px(x, y, L);
   }
-  pc.rect(4, 19, 7, 8, '#2c2a4c'); stitchLine(pc, 4, 19, 10, 19, '#9a88c0'); stitchLine(pc, 10, 19, 10, 26, '#9a88c0');
-  pc.rect(17, 8, 6, 5, '#4c3a48'); stitchLine(pc, 17, 13, 22, 13, '#9a88c0');
+  pc.rect(4, 19, 7, 8, '#3a3862'); stitchLine(pc, 4, 19, 10, 19, '#9a88c0'); stitchLine(pc, 10, 19, 10, 26, '#9a88c0');
+  pc.rect(17, 8, 6, 5, '#5c4858'); stitchLine(pc, 17, 13, 22, 13, '#9a88c0');
   // olhos de botão desparelhados: um grande e claro, um pequeno e vermelho
   pc.circle(10, 22, 4.2, '#bdb3a0'); pc.circle(10, 22, 3.2, '#ece4d2');
   for (const [hx, hy] of [[9, 21], [11, 21], [9, 23], [11, 23]]) pc.px(hx, hy, '#2a2034');
@@ -205,7 +208,7 @@ function bakeHead(open) {
 }
 function bakeTorso() {
   const pc = new PixelCanvas(36, 58);
-  const B = '#2e2844', D = '#201a34', L = '#463c66';
+  const B = '#3e3660', D = '#2c2648', L = '#5a5290';
   pc.poly([[3, 8], [33, 8], [27, 58], [9, 58]], B);
   pc.ellipse(7, 10, 6, 5, B); pc.ellipse(29, 10, 6, 5, B); pc.rect(13, 2, 10, 8, D);
   for (let y = 0; y < 58; y++) for (let x = 0; x < 36; x++) {
@@ -213,9 +216,9 @@ function bakeTorso() {
     if (x > 25 - (y > 30 ? 2 : 0) && hash2(x, y, 5) < 0.85) pc.px(x, y, D);
     else if (x < 8 && y < 20 && ((x + y) & 1)) pc.px(x, y, L);
   }
-  pc.poly([[5, 14], [14, 13], [13, 26], [6, 27]], '#3a2c40'); stitchLine(pc, 5, 14, 14, 13, '#8a78b0'); stitchLine(pc, 13, 13, 13, 26, '#8a78b0');
-  pc.poly([[22, 32], [30, 31], [28, 45], [21, 45]], '#263050'); stitchLine(pc, 22, 32, 21, 45, '#8a78b0');
-  pc.rect(12, 47, 11, 8, '#36283c'); stitchLine(pc, 12, 47, 22, 47, '#8a78b0');
+  pc.poly([[5, 14], [14, 13], [13, 26], [6, 27]], '#4c3a54'); stitchLine(pc, 5, 14, 14, 13, '#8a78b0'); stitchLine(pc, 13, 13, 13, 26, '#8a78b0');
+  pc.poly([[22, 32], [30, 31], [28, 45], [21, 45]], '#323e66'); stitchLine(pc, 22, 32, 21, 45, '#8a78b0');
+  pc.rect(12, 47, 11, 8, '#46364e'); stitchLine(pc, 12, 47, 22, 47, '#8a78b0');
   for (let y = 31; y < 58; y += 3) pc.px(18, y, '#6a5a90');
   // rasgo no peito com o brilho roxo
   pc.poly([[15, 15], [20, 16], [22, 23], [19, 31], [16, 30], [14, 22]], '#12061e');
@@ -284,7 +287,7 @@ export function drawCostureiro(ctx, C, t) {
   const ex = sx + Math.cos(C.arm) * L1, ey = sy + Math.sin(C.arm) * L1;
   const a2 = C.arm + (C.bend || 0), hx = ex + Math.cos(a2) * L2, hy = ey + Math.sin(a2) * L2;
   seg(ctx, sx, sy, ex, ey, 6, COUT); seg(ctx, ex, ey, hx, hy, 5, COUT);
-  seg(ctx, sx, sy, ex, ey, 4, '#2e2844'); seg(ctx, ex, ey, hx, hy, 3, '#3c3458');
+  seg(ctx, sx, sy, ex, ey, 4, '#3e3660'); seg(ctx, ex, ey, hx, hy, 3, '#4c4470');
   ctx.fillStyle = '#8a78b0'; ctx.fillRect(RN(ex) - 1, RN(ey) - 1, 2, 2);
   needles(ctx, hx, hy, a2, C.spread ?? 0.25, t);
   C.hand = [hx + Math.cos(a2) * 14, hy + Math.sin(a2) * 14];
@@ -292,7 +295,7 @@ export function drawCostureiro(ctx, C, t) {
 }
 
 // ============================================================ quarto da Lia (palco)
-const RX0 = -288, RY0 = -176, RW = 576, RH = 312;   // área pré-desenhada (coords do palco)
+const RX0 = -340, RY0 = -176, RW = 680, RH = 312;   // área pré-desenhada (coords do palco)
 const GX = -231, GY = -117, GW = 86, GH = 86;       // vidro da janela (transparente no quarto)
 const QX0 = 34, QY0 = -22;                          // colcha (canvas separado: cobre a Lia)
 const LX = 9, LY = -36;                             // canto do sprite da Lia
@@ -318,11 +321,11 @@ function bakeRoom() {
   const X1 = RX0 + RW, Y1 = RY0 + RH;
   // parede: listras + estrelinhas e luas
   for (let y = RY0; y < 30; y++) for (let x = RX0; x < X1; x++) {
-    let c = ((x + 288) / 12 | 0) % 2 ? '#7470b8' : '#7c78c2';
+    let c = ((x + 340) / 12 | 0) % 2 ? '#7470b8' : '#7c78c2';
     if (y > 12 && hash2(x, y, 3) < (y - 12) / 26) c = '#66629f';
     pc.px(x, y, c);
   }
-  for (let gy = 0; gy < 8; gy++) for (let gx = 0; gx < 25; gx++) {
+  for (let gy = 0; gy < 8; gy++) for (let gx = 0; gx < 29; gx++) {
     const x = RX0 + 8 + gx * 24 + (gy % 2) * 12, y = -158 + gy * 24, c = '#9c98dc';
     if (y > 20) continue;
     if ((gx + gy) % 3 === 0) { pc.vline(x, y - 2, 4, c); pc.px(x + 1, y - 2, c); pc.px(x + 1, y + 1, c); pc.px(x + 2, y - 3, c); pc.px(x + 2, y + 2, c); }
@@ -330,7 +333,7 @@ function bakeRoom() {
   }
   pc.rect(RX0, RY0, RW, 6, '#5c58a0'); pc.hline(RX0, RY0 + 6, RW, '#9a96d8'); pc.hline(RX0, RY0 + 7, RW, '#4a4688');
   pc.rect(RX0, 30, RW, 10, '#d4cae6'); pc.hline(RX0, 30, RW, '#f2eafa'); pc.rect(RX0, 38, RW, 2, '#9a8eb4');
-  pc.rect(282, RY0, 6, 216, '#5a5694');
+  pc.rect(282, RY0, 2, 206, '#4a4688'); pc.rect(284, RY0, X1 - 284, 206, '#00000028');
   // assoalho de tábuas
   let yy = 40, row = 0;
   while (yy < Y1) {
@@ -699,7 +702,8 @@ function roomLight(ctx, cs) {
     if (PT.a > 0) { light(l, PT.x, PT.y, PT.r * 3.4, '#b050ff', PT.a); light(l, PT.x, PT.y, PT.r * 1.4, '#ffd0ff', 0.7 * PT.a); }
     if (C.vis > 0 && C.eyes && C.eye > 0) for (const [ex, ey] of C.eyes) light(l, ex, ey, 18, '#c070ff', 0.7 * C.eye * C.vis);
     if (C.vis > 0 && C.hand) light(l, C.hand[0], C.hand[1], 26, '#8a50c0', 0.5 * C.vis);
-    if (tico && tico.eyeGlow > 0) light(l, tico.x + (tico.eyeX ?? 0), tico.y + (tico.eyeY ?? 0), 30, '#c070ff', tico.eyeGlow);
+    if (tico && tico.eyeGlow > 0) { const [ex, ey] = ticoEye(tico); light(l, ex, ey, 30, '#c070ff', tico.eyeGlow); }
+    if (C.vis > 0 && C.face) light(l, C.face[0], C.face[1] + 8, 40, '#8a50c0', 0.6 * C.vis * C.eye);
     if (tico && (S.flow > 0 || tico.tint > 0)) light(l, tico.x, tico.y - 8, 44, tico.tintColor || '#b050ff', Math.max(S.flow, tico.tint) * 0.7);
     ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalCompositeOperation = 'multiply'; ctx.drawImage(lm, 0, 0, W, H, 0, 0, W, H); ctx.restore();
     // brilhos (bloom)
@@ -707,7 +711,7 @@ function roomLight(ctx, cs) {
     if (rg > 0) drawGlow(ctx, R.x, R.y, 16 + 28 * R.open, '#c060ff', 0.5 * rg);
     if (PT.a > 0) drawGlow(ctx, PT.x, PT.y, PT.r * 1.3, '#ff80ff', 0.4 * PT.a);
     if (C.vis > 0 && C.eyes && C.eye > 0) for (const [ex, ey] of C.eyes) { drawGlow(ctx, ex, ey, 5, '#e0a0ff', C.eye * C.vis); ctx.fillStyle = '#ffffff'; ctx.fillRect(RN(ex), RN(ey), 1, 1); }
-    if (tico && tico.eyeGlow > 0) drawGlow(ctx, tico.x + (tico.eyeX ?? 0), tico.y + (tico.eyeY ?? 0), 8, '#d080ff', tico.eyeGlow);
+    if (tico && tico.eyeGlow > 0) { const [ex, ey] = ticoEye(tico); drawGlow(ctx, ex, ey, 8, '#d080ff', tico.eyeGlow); }
   } catch (e) { if (!S.err) { S.err = 1; console.error('[opening light]', e); } }
 }
 function roomScreen(ctx, cs) {
@@ -768,7 +772,7 @@ registerCutscene('opening', {
     const R = S.rift, PT = S.portal, C = S.cost;
     Object.assign(cs.cam, { x: -186, y: -76, zoom: 1.8 });
     spawnTask(cs, (function* () { for (;;) { yield 4.5 + Math.random() * 3.5; if (S.auto) strike(cs, S, 0.3 + Math.random() * 0.3, false); } })());
-    const tico = S.tico = ticoActor(cs, { anim: 'lying', x: TB.x, y: TB.y, z: 6, eyeX: -15, eyeY: -9 });
+    const tico = S.tico = ticoActor(cs, { anim: 'lying', x: TB.x, y: TB.y, z: 6, eyeX: -21, eyeY: -11 });
     const arm = cs.actor({ sprite: 'cs_lia', anim: 'arm_hug', x: LX, y: LY, z: 7 });
     cs.actor({ z: 4, draw: (ctx) => {
       if (C.vis <= 0.01) return;
@@ -823,7 +827,7 @@ registerCutscene('opening', {
     yield* tws(cs, C, { spread: 0.36 }, 0.4);
     cs.music('revelation'); cs.sfx('heartbeat');
     yield* cs.parallel(
-      tws(cs, C, { x: R.x - 2, y: R.y + 14, lean: -1.1, arm: 2.2, bend: 0.2, spread: 0.2, eye: 1 }, 2.8, 'inOutCubic'),
+      tws(cs, C, { x: R.x - 2, y: R.y + 14, lean: -1.1, head: 0.72, arm: 2.2, bend: 0.2, spread: 0.2, eye: 1 }, 2.8, 'inOutCubic'),
       cs.pan(150, 10, 2.8), cs.zoom(2.0, 2.8));
     cs.shake(0.12);
     const fx = C.face ? C.face[0] : 146, fy = C.face ? C.face[1] : -12;
@@ -832,7 +836,7 @@ registerCutscene('opening', {
     yield* cs.say([{ who: 'costureiro', expr: 'neutral', text: 'Fio... antigo.', wait: 1.5 }]);
     C.mouth = 0;
     yield 0.5;
-    C.mouth = 1; C.head = 0.15;
+    C.mouth = 1; C.head = 0.88;
     yield* cs.say([{ who: 'costureiro', expr: 'happy', text: 'Finalmente.', wait: 1.3 }]);
     C.mouth = 0;
     // examina o brinquedo: as costuras brilham dourado
@@ -843,14 +847,17 @@ registerCutscene('opening', {
     cs.sfx('bind'); tico.tintColor = '#b45cff';
     yield* cs.parallel(tws(cs, S, { flow: 1 }, 1.2), tws(cs, tico, { tint: 0.5 }, 1.6),
       (function* () { for (let i = 0; i < 7; i++) { cs.particles('portal', tico.x - 6 + i * 2, tico.y - 8, 3); cs.shake(0.05); yield 0.22; } })());
-    tico.anim = 'wake'; tico.frame = 2; tico.eyeGlow = 1; tico.tint = 0.15;
+    // os fios somem dentro das costuras; a mão se afasta... e os olhos se abrem, roxos
+    yield* cs.parallel(tws(cs, S, { flow: 0 }, 0.35), tws(cs, tico, { tint: 0.12 }, 0.4), tws(cs, C, { arm: 1.95, bend: 0.05, spread: 0.3 }, 0.5));
+    yield 0.6;
+    tico.anim = 'wake'; tico.frame = 2; tico.eyeGlow = 1;
     cs.flash('#b45cff', 0.3); cs.sfx('secret'); cs.shake(0.25);
-    yield* cs.parallel(cs.zoom(3.0, 0.25, 'outQuad'), cs.pan(tico.x - 10, tico.y - 8, 0.25));
-    yield 0.85;
+    yield* cs.parallel(cs.zoom(3.2, 0.25, 'outQuad'), cs.pan(tico.x - 16, tico.y - 14, 0.25));
+    yield 0.9;
     tico.eyeGlow = 0; tico.frame = null; tico.anim = 'lying';
-    yield* cs.parallel(tws(cs, S, { flow: 0 }, 0.5), tws(cs, tico, { tint: 0 }, 0.6));
+    yield* tws(cs, tico, { tint: 0 }, 0.5);
     // 7) o portal enorme — e o Tico é arremessado
-    yield* cs.parallel(cs.pan(140, 8, 1.2), cs.zoom(1.55, 1.2), tws(cs, C, { lean: -0.55, arm: -2.0, bend: -0.5, spread: 0.45, head: -0.1 }, 1.2, 'inOutCubic'));
+    yield* cs.parallel(cs.pan(140, 8, 1.2), cs.zoom(1.55, 1.2), tws(cs, C, { lean: -0.55, arm: -2.0, bend: -0.5, spread: 0.45, head: 0.3 }, 1.2, 'inOutCubic'));
     cs.sfx('portal'); cs.sfx('rumble'); cs.shake(0.3);
     yield* cs.parallel(tws(cs, PT, { r: 38, a: 1 }, 1.4, 'outBack'), tws(cs, S, { wind: 1 }, 1.4));
     yield 0.5;

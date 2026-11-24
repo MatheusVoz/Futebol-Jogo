@@ -13,7 +13,7 @@
 //                      Tema do Tico e Canção de Ninar tocados JUNTOS.
 // =============================================================================
 import { registerSong } from '../../engine/audio.js';
-import { INS, mel, cat, rep, tr, dia, minor, pad, arp, bass, TICO, NINAR } from './music_story.js';
+import { INS, vs, mel, cat, rep, tr, dia, minor, pad, arp, bass, TICO, NINAR } from './music_story.js';
 
 const bars = (a) => a.map((b) => mel(b));
 const R = (n) => rep('.', n);
@@ -31,7 +31,7 @@ const I = {
   box: { wave: 'fm', ratio: 4.11, index: 1.6, indexDecay: 0.35, attack: 0.002, decay: 1.1, sustain: 0, release: 0.7, vol: 0.11, vibrato: { rate: 3, depth: 0.3, delay: 0.05 }, reverb: 0.6, echo: 0.35 },
   ghost: { wave: 'sine', voices: 2, spread: 40, detune: -25, attack: 0.003, decay: 1, sustain: 0, release: 0.6, vol: 0.05, reverb: 0.6, echo: 0.4 },
   low: { wave: 'saw', voices: 3, spread: 18, attack: 1.2, decay: 1, sustain: 0.9, release: 2, vol: 0.055, filter: { freq: 380, q: 3 }, reverb: 0.5 },
-  wh: { wave: 'noise', attack: 0.4, decay: 0.6, sustain: 0.3, release: 0.8, vol: 0.06, filter: { type: 'bandpass', freq: 1500, q: 8 }, reverb: 0.6, pan: 0.4 },
+  wh: { wave: 'noise', attack: 0.4, decay: 0.6, sustain: 0.3, release: 0.8, vol: 0.45, filter: { type: 'bandpass', freq: 1500, q: 5 }, reverb: 0.6, pan: 0.4 },
   drums: { kit: 'boss', vol: 0.28, reverb: 0.2 },
 };
 
@@ -47,8 +47,8 @@ const TK = 'T . . t . . T . t . T . t t T .', TK2 = 'T . t t T . t . T . t t T T
 const rab = (fid, p, tk, extra = {}) => ({ fid: cat(fid), pluck: arp(p, 16, OSTR, 64, 3), bass: bass(p, 16, GAL), drums: cat(rep(DR, 7), FR), drums2: rep(tk, 8), ...extra });
 registerSong('boss_rabbit', {
   bpm: 150, reverb: 0.35, echoSteps: 3, echoFeedback: 0.25, loopFrom: 2,
-  instruments: { ...I, fid: { wave: 'saw', attack: 0.02, decay: 0.1, sustain: 0.8, release: 0.08, vol: 0.06, filter: { freq: 2600, q: 1.5 }, vibrato: { rate: 6, depth: 0.18, delay: 0.12 }, reverb: 0.25, echo: 0.1 },
-    pluck: { ...INS.pluck, vol: 0.1 }, bass: { ...INS.bass, vol: 0.25 } },
+  instruments: vs({ ...I, fid: { wave: 'saw', attack: 0.02, decay: 0.1, sustain: 0.8, release: 0.08, vol: 0.06, filter: { freq: 2600, q: 1.5 }, vibrato: { rate: 6, depth: 0.18, delay: 0.12 }, reverb: 0.25, echo: 0.1 },
+    pluck: { ...INS.pluck, vol: 0.1 }, bass: { ...INS.bass, vol: 0.25 }, drums: { kit: 'boss', vol: 0.21, reverb: 0.2 } }, 0.85),
   patterns: {
     I: { pluck: arp('Em Em Em B', 16, OSTR, 64, 3), low: mel('E2+B2:64'), drums: cat('b', R(63)),
       drums2: cat(rep('T . . . . . . . T . . . . . . .', 2), 'T . . T . . T . T . . T . . T .', 'T . T . T . T . t t t t T T T T!') },
@@ -114,22 +114,22 @@ registerSong('boss_king', {
 
 // ============================================================ SOMBRA (100 bpm, horror)
 const CL = mel('B3+C4+F4:32 Bb3+B3+E4:32 C4+Db4+G4:32 A3+Bb3+Eb4:32');
-const STABS = mel('.:24 B4+C5+F5!:4 .:36 Bb4+B4+E5!:4 .:28 C5+Db5+G5!:4 .:28'), BOOMS = cat(R(24), 'b', R(39), 'b', R(31), 'b', R(31));
+const STABS = mel('.:24 B4+C5+F5:4 .:36 Bb4+B4+E5:4 .:28 C5+Db5+G5:4 .:28'), BOOMS = cat(R(24), 'b', R(39), 'b', R(31), 'b', R(31));
 const HB1 = 'k . k? . . . . . . . . . . . . .', HB2 = 'k . k? . . . . . k . k? . . . . .';
 const SCREECH = rep('F6? E6? F6? E6?', 16);
 const shadowA = (hb, extra = {}) => ({ low: mel('B1+F2:128'), choir: CL, brass: STABS, drums: rep(hb, 8), drums2: BOOMS, wh: rep(mel('.:8 C4:6 .:18'), 4), ...extra });
 registerSong('boss_shadow', {
   bpm: 100, reverb: 0.65, echoSteps: 3, echoFeedback: 0.4, loopFrom: 1,
-  instruments: { ...I, choir: { ...I.choir, filter: { freq: 900, q: 3 } },
+  instruments: vs({ ...I, choir: { ...I.choir, filter: { freq: 900, q: 3 } },
     str: { wave: 'saw', voices: 2, spread: 25, attack: 0.01, decay: 0.1, sustain: 0.7, release: 0.1, vol: 0.035, filter: { freq: 3000 }, vibrato: { rate: 7, depth: 0.4, delay: 0.05 }, reverb: 0.5 },
-    brass: { wave: 'saw', voices: 3, spread: 15, attack: 0.005, decay: 0.3, sustain: 0.3, release: 0.4, vol: 0.055, filter: { freq: 1200, env: 2500, envDecay: 0.1 }, reverb: 0.5 },
-    ost: { ...I.ost, vol: 0.085, filter: { freq: 400, env: 1200, envDecay: 0.06, q: 4 } }, drums: { kit: 'horror', vol: 0.28, reverb: 0.4 } },
+    brass: { wave: 'saw', voices: 3, spread: 15, attack: 0.005, decay: 0.3, sustain: 0.3, release: 0.4, vol: 0.04, filter: { freq: 1200, env: 2500, envDecay: 0.1 }, reverb: 0.5 },
+    ost: { ...I.ost, vol: 0.085, filter: { freq: 400, env: 1200, envDecay: 0.06, q: 4 } }, drums: { kit: 'horror', vol: 0.2, reverb: 0.4 } }, 0.82),
   patterns: {
     I: { low: mel('B1+F2:64'), wh: rep(mel('.:8 C4:6 .:18'), 2), drums: rep(HB1, 4) },
     A: shadowA(HB1),
-    B: { ost: rep(mel('B1:2 C2:2'), 32), str: cat(R(64), SCREECH), choir: tr(CL, 1), brass: rep(mel('B4+C5+F5!:2 .:30'), 4), drums: rep(HB2, 8), drums2: rep(cat('b', R(31)), 4) },
+    B: { ost: rep(mel('B1:2 C2:2'), 32), str: cat(R(64), SCREECH), choir: tr(CL, 1), brass: rep(mel('B4+C5+F5:2 .:30'), 4), drums: rep(HB2, 8), drums2: rep(cat('b', R(31)), 4) },
     C: { box: TICO, ghost: TICO, low: mel('C2+G2:128'), choir: pad('Cm Ab Fm G Cm Ab Fm:8 G:8 Cm', 16, 55, 3), wh: rep(mel('.:8 C4:6 .:18'), 4),
-      brass: cat(R(112), mel('B4+C5+F5!:16')), drums: cat(rep('k? . . . . . . . . . . . . . . .', 7), 'k . k . k . k . k k k k k! k! k! k!'), drums2: cat(R(112), 'b!', R(15)) },
+      brass: cat(R(112), mel('B4+C5+F5:16')), drums: cat(rep('k? . . . . . . . . . . . . . . .', 7), 'k . k . k . k . k k k k k! k! k! k!'), drums2: cat(R(112), 'b', R(15)) },
     A2: shadowA(HB2, { ost: rep(mel('B1:2 C2:2'), 32), str: rep(SCREECH, 2) }),
   },
   order: ['I', 'A', 'B', 'C', 'A2'],

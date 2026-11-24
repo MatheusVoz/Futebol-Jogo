@@ -46,7 +46,7 @@ registerSong('w3_level', {
     I: { harp: arp(PI, 16, OST, 60, 3), bass: cat(R(32), bass('F E', 16, OCT)), drums: cat(rep(TT, 2), 'k+p . r . p . r . k+p . r . p . r .', DF) },
     A: { lead: A, harp: arp(PA, 16, OST, 60, 3), bass: bass(PA, 16, OCT), pad: pad(PA, 16, 57, 3), drums: cat(rep(DA, 7), DF) },
     B: { bell: cat(CHIME, R(64)), lead: cat(R(64), ANSW), harp: arp(PB, 16, OST, 60, 3), bass: bass(PB, 16, 'r:4 o:4 r:4 o:4'), pad: pad(PB, 16, 57, 3),
-      drums: cat(rep('k+p . r . x+p? . r . k+p . r . x+p? . r .', 7), DF) },
+      drums: cat(rep('k+p . r . s+p? . r . k+p . r . s+p? . r .', 7), DF) },
     A2: { lead: A, bell: dia(A, -7), harp: arp(PA, 16, OST2, 60, 3), bass: bass(PA, 16, OCT), pad: pad(PA, 16, 60, 3), drums: cat('k+p+c . r p s+p . r . k+p k r p s+p . r+o .', rep(DA2, 6), DF) },
     BRK: { harp: cat(wind(GAPS, (i) => nm(midi(['E5', 'C5', 'A4', 'C5'][i % 4]) - Math.floor(i / 8))), mel('A3 A#3 B3 C4 C#4 D4 D#4 E4 F4 F#4 G4 G#4 A4 A#4 B4 C5')),
       bass: cat(bass('Am Am', 16, OCT), mel('A2:16'), R(64), mel('.:12 E2:4')), pad: cat(pad('Am:48', 48, 57, 3), R(80)), bell: cat(R(96), mel('A4:16'), R(16)),

@@ -18,7 +18,7 @@ const ND = tr(NINAR, 2), PLD = 'D Bm G A D Bm Em7:6 A7:6 D';
 
 const box = { wave: 'fm', ratio: 4.07, index: 1.6, indexDecay: 0.4, attack: 0.002, decay: 1.2, sustain: 0, release: 0.8, vol: 0.11, vibrato: { rate: 3.2, depth: 0.3, delay: 0.05 }, reverb: 0.6, echo: 0.4 };
 const ghost = { wave: 'sine', voices: 2, spread: 40, detune: -25, attack: 0.003, decay: 1, sustain: 0, release: 0.6, vol: 0.05, reverb: 0.6, echo: 0.4 };
-const wh = { wave: 'noise', attack: 0.4, decay: 0.6, sustain: 0.3, release: 0.8, vol: 0.07, filter: { type: 'bandpass', freq: 1100, q: 8 }, reverb: 0.6, pan: -0.5 };
+const wh = { wave: 'noise', attack: 0.4, decay: 0.6, sustain: 0.3, release: 0.8, vol: 0.45, filter: { type: 'bandpass', freq: 1100, q: 5 }, reverb: 0.6, pan: -0.5 };
 const low = { wave: 'saw', voices: 2, spread: 12, attack: 0.3, decay: 0.5, sustain: 0.9, release: 0.8, vol: 0.08, filter: { freq: 700, q: 2 }, reverb: 0.45 };
 
 const PA = 'Bm Bm G F# Bm Bdim Em F#';
@@ -29,9 +29,9 @@ registerSong('w4_level', {
   bpm: 70, reverb: 0.65, echoSteps: 3, echoFeedback: 0.45, loopFrom: 1,
   instruments: {
     drone: { wave: 'saw', voices: 3, spread: 18, attack: 2, decay: 1, sustain: 0.9, release: 2.5, vol: 0.055, filter: { freq: 320, q: 3 }, reverb: 0.5 },
-    low, box, ghost, wh, wh2: { ...wh, filter: { type: 'bandpass', freq: 2300, q: 9 }, pan: 0.5 },
+    low, box, ghost, wh, wh2: { ...wh, filter: { type: 'bandpass', freq: 2300, q: 6 }, pan: 0.5 },
     pad: { ...INS.pad, vol: 0.035, filter: { freq: 600 } }, bell: { ...INS.bell, ratio: 3.7, vol: 0.05 },
-    drums: { kit: 'heart', vol: 0.32, reverb: 0.3 },
+    drums: { kit: 'heart', vol: 0.27, reverb: 0.3 },
   },
   patterns: {
     I: { drone: mel('B1+F2:64'), wh: rep(mel('.:8 C4:6 .:18'), 2), wh2: mel('.:40 C4:8 .:16'), bell: mel('B4+F5?:32 .:32'), drums: rep(HB, 4) },
@@ -71,11 +71,11 @@ const beat = { drums: cat(rep(D1, 7), FILL), drums2: rep(TOMS, 8) };
 registerSong('w4_chase', {
   bpm: 156, reverb: 0.3, echoSteps: 3, echoFeedback: 0.2, loopFrom: 1,
   instruments: {
-    ost: { wave: 'saw', attack: 0.003, decay: 0.1, sustain: 0.3, release: 0.05, vol: 0.08, filter: { freq: 500, env: 1800, envDecay: 0.05, q: 5 }, reverb: 0.1 },
-    brass: { wave: 'saw', voices: 2, spread: 10, attack: 0.01, decay: 0.15, sustain: 0.6, release: 0.12, vol: 0.055, filter: { freq: 1600, env: 1500, envDecay: 0.08 }, reverb: 0.3 },
+    ost: { wave: 'saw', attack: 0.003, decay: 0.1, sustain: 0.3, release: 0.05, vol: 0.07, filter: { freq: 500, env: 1800, envDecay: 0.05, q: 5 }, reverb: 0.1 },
+    brass: { wave: 'saw', voices: 2, spread: 10, attack: 0.01, decay: 0.15, sustain: 0.6, release: 0.12, vol: 0.045, filter: { freq: 1600, env: 1500, envDecay: 0.08 }, reverb: 0.3 },
     lead: { ...INS.lead, vol: 0.08, duty: 0.25 }, str: { ...INS.str, vol: 0.045 }, low,
     bass: { wave: 'square', attack: 0.004, decay: 0.12, sustain: 0.4, release: 0.05, vol: 0.09, filter: { freq: 600, env: 700, envDecay: 0.05 }, reverb: 0.05 },
-    drums: { kit: 'chase', vol: 0.22, reverb: 0.15 },
+    drums: { kit: 'chase', vol: 0.19, reverb: 0.15 },
   },
   patterns: {
     I: { ost: arp('Bm Bm Bm F#', 16, OST, 47, 3), drums: cat('b', R(63)), drums2: cat(rep('t . . . t . . . t . . . t . t .', 2), 't . t . t . t . T . T . T . T T', FILL) },
