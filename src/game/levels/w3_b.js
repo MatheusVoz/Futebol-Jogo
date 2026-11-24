@@ -50,7 +50,7 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   // --- D: novelo na esteira → placa → portão ---------------------------------
   m.sign(103, 23, 'w3_sign_conveyor');
   m.obj({ type: 'boulder', x: 106, y: 23 });
-  m.fill(108, 23, 116, 23, 'w'); m.props['108,23'] = { dir: 'r', speed: 40 };
+  m.fill(108, 24, 116, 24, 'w'); m.props['108,24'] = { dir: 'r', speed: 40 };
   m.fill(118, 20, 118, 23, 'B'); m.line(108, 116, 20, 'o', 2);
   m.clear(121, G, 123, G); m.put(122, G, 'D', { signal: 'w33_gate' });
   m.fill(127, 4, 129, 19, '%'); m.put(128, 23, 'G', { signal: 'w33_gate' });
@@ -72,10 +72,10 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.line(162, 186, 21, 'o', 4);
   m.put(170, 15, 'g'); m.put(184, 15, 'g');
   // --- G: abismo com blocos que desmoronam ------------------------------------
-  pit(m, 193, 214, G);
+  pit(m, 194, 214, G);
   m.fill(200, 22, 201, 29, '%'); m.fill(208, 21, 209, 29, '%');
-  m.fill(194, 22, 198, 22, 'C'); m.fill(202, 20, 206, 20, 'C'); m.fill(210, 21, 213, 21, 'C');
-  m.line(194, 198, 20); m.line(202, 206, 18); m.line(210, 213, 19, 'o', 3);
+  m.fill(195, 22, 198, 22, 'C'); m.fill(202, 20, 206, 20, 'C'); m.fill(210, 21, 213, 21, 'C');
+  m.line(195, 198, 20); m.line(202, 206, 18); m.line(210, 213, 19, 'o', 3);
   m.put(204, 13, 'f');
   // --- H: robôs, relógio que despenca (★3) e saída ---------------------------
   m.put(217, 23, 'K');

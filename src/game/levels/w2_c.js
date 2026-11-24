@@ -43,7 +43,8 @@ import { grid, current, marujo } from './w2_a.js';
   m.put(65, 17, 'K'); m.put(68, 17, 'U'); m.put(71, 17, 'h');
   m.sign(73, 17, 'w2_sign_lurker');
   for (const x of [76, 82, 88]) { m.plat(x, x + 2, 17); m.put(x + 1, 15, 'o'); }
-  m.put(79, 14, 'o'); m.put(85, 14, 'o'); m.put(91, 14, 'o');
+  m.plat(84, 86, 12); m.put(85, 11, '*');                      // ★1 sobre a lagoa
+  m.put(79, 14, 'o'); m.put(91, 14, 'o');
   m.put(78, 23, 'f'); m.put(88, 23, 'f');
   m.fill(93, 18, 100, 21, '#'); m.put(96, 17, 'e'); m.put(98, 17, 'o');
   m.line(75, 99, 31, 'o', 6);
@@ -84,7 +85,7 @@ import { grid, current, marujo } from './w2_a.js';
   m.fill(213, 10, 215, 26, '#');
   cavern(216, 239);
   m.put(218, 22, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_3', quest: 'bolha_crew', dialogDone: 'w2_bolha_3_done', reward: 30 });
-  m.plat(220, 221, 19);
+  m.plat(219, 221, 20);
   m.ground(222, 239, 18);
   m.put(224, 17, 'K'); m.line(227, 233, 16, 'o', 2);
   m.put(236, 17, 'E');
