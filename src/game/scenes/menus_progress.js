@@ -147,6 +147,14 @@ class InventoryScene extends ProgressMenu {
       return { id, name: d.name, icon: d.icon, desc: d.desc || '', has: save.hasAbility(id) };
     });
     list.push({ id: 'doubleJump', name: 'Pulo Duplo', icon: 'icon_sk_jump', desc: 'Aperte pular no ar para pular de novo.', has: save.hasAbility('doubleJump') });
+    // melhorias compradas na loja da Agulheta (efeitos já aplicados ao Tico)
+    for (const id of save.data.shop || []) {
+      const d = R.shopItems.get(id);
+      if (!d) continue;
+      list.push({ id: 'shop:' + id, name: d.name, icon: d.icon || 'icon_bag', desc: (d.desc || '') + ' (comprado na loja da Agulheta)', has: true, upgrade: true });
+    }
+    const sk = (save.data.skills || []).map((id) => R.skills.get(id)?.name).filter(Boolean);
+    if (sk.length) list.push({ id: 'skills', name: `Árvore: ${sk.length} melhoria${sk.length > 1 ? 's' : ''}`, icon: 'icon_patch', desc: sk.join(', ') + '.', has: true, upgrade: true });
     return list;
   }
   update(dt) {
@@ -196,7 +204,7 @@ class InventoryScene extends ProgressMenu {
     drawPanel(ctx, ax - 3, r.y - 3, aw + 3, r.h + 2, 'glass');
     font.draw(ctx, 'Habilidades', ax + 4, r.y + 1, { color: MUTED });
     const list = this.abilities();
-    const ih = r.h < 160 ? 14 : 16;
+    const ih = list.length > 7 ? 12 : r.h < 160 ? 14 : 16;
     let yy = r.y + 12;
     list.forEach((a, i) => {
       const rr = { x: ax + 1, y: yy, w: aw - 5, h: ih - 1 };

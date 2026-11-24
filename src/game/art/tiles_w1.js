@@ -754,6 +754,34 @@ function decorate(map, rng, data) {
     }
   }
   flush();
+  // ---- árvores de fundo (sensação de floresta): troncos altos e copas em tons apagados
+  {
+    const open = (tx, ty) => { const t = map.get(tx, ty); return t === T.EMPTY || t === T.BG; };
+    const headroom = (tx, ty, n) => { for (let k = 1; k <= n; k++) if (!open(tx, ty - k)) return false; return true; };
+    let tx = rng.int(2, 6);
+    while (tx < map.cols - 2) {
+      let gy = -1;
+      for (let ty = 2; ty < map.rows; ty++) if (map.get(tx, ty) === T.SOLID && open(tx, ty - 1) && headroom(tx, ty, 4)) { gy = ty; break; }
+      if (gy > 0) {
+        const bx = tx * 16 + 8, by = gy * 16 + 2;
+        const h = rng.int(44, 78), r = rng.int(15, 22), tone = rng() < 0.5 ? 0 : 1;
+        const C = tone ? ['#1f3f30', '#2a5440', '#36684c', '#4a7e5a'] : ['#24402e', '#2f5a38', '#3c6e44', '#548a52'];
+        const trunk = tone ? ['#3a2c26', '#4a3a30'] : ['#3e2e22', '#52402e'];
+        const blobs = [];
+        for (let i = 0; i < 4; i++) blobs.push([bx + rng.int(-r, r) * 0.7, by - h + rng.int(-6, 8), r * rng.range(0.6, 0.95)]);
+        blobs.push([bx, by - h - 4, r]);
+        out.push({ x: bx - r * 2, y: by - h - r * 2, w: r * 4, h: h + r * 2, layer: 'back', paint(pc) {
+          pc.rect(bx - 3, by - h + 4, 7, h - 4, trunk[0]); pc.rect(bx - 3, by - h + 4, 2, h - 4, trunk[1]);
+          pc.line(bx, by - h * 0.55, bx + 9, by - h * 0.72, trunk[0]); pc.line(bx, by - h * 0.45, bx - 8, by - h * 0.6, trunk[0]);
+          for (const [x, y, rr] of blobs) pc.circle(x + 1, y + 2, rr, C[0]);
+          for (const [x, y, rr] of blobs) pc.circle(x, y, rr - 1, C[1]);
+          for (const [x, y, rr] of blobs) pc.circle(x - rr * 0.25, y - rr * 0.25, rr * 0.6, C[2]);
+          for (const [x, y, rr] of blobs) { pc.px(Math.round(x - rr * 0.4), Math.round(y - rr * 0.5), C[3]); pc.px(Math.round(x - rr * 0.2), Math.round(y - rr * 0.6), C[3]); }
+        } });
+      }
+      tx += rng.int(4, 9);
+    }
+  }
   return out;
 }
 

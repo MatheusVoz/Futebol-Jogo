@@ -38,6 +38,9 @@ const restKnob = { x: 0, y: 0 };
 
 /** true se o overlay de toque está visível neste quadro (a HUD usa para abrir espaço). */
 export function touchControlsVisible() { return visibleNow; }
+let pauseInset = 34;
+/** Espaço (px lógicos) ocupado pelo botão de pausa no canto superior direito. */
+export function touchRightInset() { return pauseInset; }
 
 function activeLevel() {
   const L = hasWin ? window.__SW?.level : null;
@@ -82,6 +85,7 @@ function computeLayout(L) {
     B.push({ id: 'interact', action: 'interact', x: Math.round((bx + dx) / 2) + S(2), y: Math.min(by, dy) - rb - ri - S(6), r: ri, color: '#fff4dc', glyph: 'ctl_interact' });
   }
   B.push({ id: 'pause', action: 'pause', x: W - S(5) - rp, y: S(5) + rp, r: rp, color: '#3b2d63', glyph: 'ctl_pause' });
+  pauseInset = S(5) + rp * 2 + 5;
   const stickR = S(27);
   restKnob.x = stickR + S(14); restKnob.y = H - stickR - S(12);
   return { B, s, W, H, stickR, knobR: S(12), zoneW: Math.round(W * 0.4), slack: S(7) };

@@ -15,7 +15,7 @@ import { input } from '../../engine/input.js';
 import { getImage, defineImage } from '../../engine/sprites.js';
 import { R } from '../registry.js';
 import { drawPanel, drawBar, drawDisc, INK } from '../art/ui_kit.js';
-import { touchControlsVisible } from './touch.js';
+import { touchControlsVisible, touchRightInset } from './touch.js';
 
 defineImage('hud_bubble', 9, 9, (pc) => {
   pc.circle(4.5, 4.5, 3.6, '#55d0ff88');
@@ -171,7 +171,7 @@ export class Hud {
     if (!p) return;
     const W = game.view.w, H = game.view.h;
     const touch = touchControlsVisible();
-    const rIn = touch ? 30 : 5;
+    const rIn = touch ? touchRightInset() : 5;
     const a0 = ctx.globalAlpha;
     if (this.alpha > 0.01) {
       ctx.globalAlpha = a0 * this.alpha;

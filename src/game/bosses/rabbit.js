@@ -565,9 +565,16 @@ class RabbitChaser extends Entity {
   chase(dt, p) {
     const L = this.level;
     const gap = p.cx - this.cx;
-    let v = clamp(100 + (gap - 150) * 0.9, 62, 172);
-    if (p.state === 'hurt' || p.state === 'dead' || (p.hurtInv || 0) > 0.3) v = Math.min(v, 40);
-    if (L.inputLocked || gap < 20) v = 0;
+    // perseguição de verdade: quase tão rápido quanto o Tico correndo e acelera se ficar longe
+    let v = clamp(138 + (gap - 110) * 0.8, 122, 215);
+    if (p.state === 'hurt' || p.state === 'dead' || (p.hurtInv || 0) > 0.3) v = Math.min(v, 85);
+    // ninguém passa por trás do coelho: quem tentar é arremessado para a frente (evita travar a fase)
+    if (gap < 14 && p.state !== 'dead' && !L.inputLocked) {
+      p.x = this.x + this.w + 4; p.vx = 190; p.vy = Math.min(p.vy, -160);
+      if (!(p.hurtInv > 0)) p.hurt(1, this, { noKnock: true });
+      v = 0;
+    }
+    if (L.inputLocked) v = 0;
     this.x = Math.min(this.x + v * dt, WALL_X - 6 - this.w);   // não atravessa a parede da arena
     // altura dos pés: chão sob o centro; sobre um vão, salta em arco
     const g = this.groundAt(this.cx);
@@ -694,7 +701,17 @@ class RabbitBoss extends Enemy {
   // ---------------------------------------------------------------- dano
   die() {}
   unstitch() { return false; }
-  onStomp(p) { if (this.hittable) this.hurt((this.weak ? 2 : 1) * (p.stats?.power || 1), p, { stomp: true }); }
+  onStomp(p) {
+    // só dá para pisar quando ele está vulnerável; fora disso, pular na cabeça machuca o Tico
+    if (!this.hittable) return;
+    if (!this.weak || (this.stompCd || 0) > 0) {
+      p.vy = -280; p.vx = (p.cx < this.cx ? -1 : 1) * 170;
+      p.hurt(1, this);
+      return;
+    }
+    this.stompCd = 0.9;
+    this.hurt(2 * (p.stats?.power || 1), p, { stomp: true });
+  }
   hurt(amount = 1, src = null, opts = {}) {
     if (!this.fighting || this.invuln > 0) return false;
     const mul = opts.raw ? 1 : (this.weak ? WEAK[this.state] : 0.25);
@@ -879,6 +896,7 @@ class RabbitBoss extends Enemy {
   update(dt) {
     this.tickTimers(dt);
     this.animT += dt; this.st += dt;
+    if (this.stompCd > 0) this.stompCd -= dt;
     if (this.state === 'dormant') return;
     this.think(dt);
     this.contactDamage = (this.weak || NOHARM.has(this.state)) ? 0 : 1;

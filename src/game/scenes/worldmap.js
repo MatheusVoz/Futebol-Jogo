@@ -36,8 +36,15 @@ const PW = 232, PH = 124, GAP = 100;
 const YOFF = [0, 12, -8, 10, -4];
 const MENU_W = 28, TOP = 22, INFO_H = 42;
 // layout base dos botões (local ao retalho); mundos pares são espelhados na vertical
-const LAYOUT = [[24, 90], [60, 64], [100, 86], [138, 56], [172, 82], [205, 46]];
-const BONUS = { at: [86, 30], parent: 2 };
+// Cada mundo tem um traçado próprio (onda, enseada, escadaria de ruas, espiral, zigue-zague).
+const LAYOUTS = {
+  1: { n: [[22, 96], [58, 70], [96, 94], [132, 62], [170, 86], [206, 52]], b: { at: [88, 30], parent: 2 } },
+  2: { n: [[22, 44], [56, 88], [102, 102], [146, 74], [112, 34], [204, 58]], b: { at: [172, 104], parent: 3 } },
+  3: { n: [[22, 100], [62, 100], [62, 62], [112, 62], [152, 30], [206, 72]], b: { at: [154, 98], parent: 3 } },
+  4: { n: [[22, 66], [70, 102], [150, 102], [194, 62], [146, 26], [104, 64]], b: { at: [56, 28], parent: 4 } },
+  5: { n: [[22, 104], [72, 82], [42, 48], [112, 30], [162, 72], [208, 32]], b: { at: [204, 104], parent: 4 } },
+};
+const LAYOUT = LAYOUTS[1].n, BONUS = LAYOUTS[1].b; // (compat)
 const PAL = {
   1: { t: ['#2f7a3a', '#3f9a48', '#5fbf5a', '#8fe07a'], edge: '#1d4a2a', st: '#f4e8b0' },
   2: { t: ['#1f5a9a', '#2f78c0', '#4f9fe0', '#8fd0ff'], edge: '#0f2a4a', st: '#ffe0f0' },
@@ -95,10 +102,11 @@ function patchImage(world, locked) {
   }
   // motivos bordados, longe dos botões e das linhas
   const flip = world % 2 === 0;
-  const nodes = LAYOUT.map(([x, y]) => [x, flip ? PH - y : y]).concat([[BONUS.at[0], flip ? PH - BONUS.at[1] : BONUS.at[1]]]);
+  const L0 = LAYOUTS[world];
+  const nodes = L0.n.map(([x, y]) => [x, y]).concat([[L0.b.at[0], L0.b.at[1]]]);
   const segs = [];
   for (let i = 0; i < 5; i++) segs.push([nodes[i], nodes[i + 1]]);
-  segs.push([nodes[BONUS.parent], nodes[6]]);
+  segs.push([nodes[LAYOUTS[world].b.parent], nodes[6]]);
   const far = (x, y) => {
     for (const [a, b] of segs) {
       const dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy;
@@ -254,14 +262,14 @@ class WorldMapScene extends Scene {
   buildNodes() {
     this.nodes = []; this.chain = []; this.byId = new Map(); this.bonus = {};
     WORLDS.forEach((wd, wi) => {
-      const ox = wi * (PW + GAP), oy = YOFF[wi], flip = wi % 2 === 1;
-      const pos = ([x, y]) => ({ x: ox + x, y: oy + (flip ? PH - y : y) });
+      const ox = wi * (PW + GAP), oy = YOFF[wi], LW = LAYOUTS[wd.id];
+      const pos = ([x, y]) => ({ x: ox + x, y: oy + y });
       wd.levels.forEach((id, i) => {
-        const n = { id, world: wd.id, idx: i + 1, boss: i === 5, ...pos(LAYOUT[i]) };
+        const n = { id, world: wd.id, idx: i + 1, boss: i === 5, ...pos(LW.n[i]) };
         this.nodes.push(n); this.chain.push(n); this.byId.set(id, n);
       });
-      const b = { id: wd.bonus, world: wd.id, idx: 0, bonus: true, ...pos(BONUS.at) };
-      b.parent = this.byId.get(wd.levels[BONUS.parent]);
+      const b = { id: wd.bonus, world: wd.id, idx: 0, bonus: true, ...pos(LW.b.at) };
+      b.parent = this.byId.get(wd.levels[LW.b.parent]);
       b.parent.bonusNode = b;
       this.nodes.push(b); this.byId.set(b.id, b); this.bonus[wd.id] = b;
     });
@@ -589,7 +597,7 @@ class WorldMapScene extends Scene {
       ctx.drawImage(islandImage(wd.id, !open, PW, PH, ...this.isleGeom(wd.id)), x - ISLE_M, y - ISLE_M);
       // etiqueta com o nome curto
       const label = wd.id + ' - ' + wd.short, lw = font.measure(label) + 10;
-      const ly = wd.id % 2 === 0 ? y + PH - 8 : y - 8; // mundos espelhados: etiqueta embaixo
+      const ly = y - 8;
       drawPanel(ctx, x + 10, ly, lw, 16, open ? 'paper' : 'dark');
       font.draw(ctx, label, x + 10 + lw / 2, ly + 4, { align: 'center', color: open ? '#2a1840' : '#8a80a0' });
     }
@@ -639,11 +647,11 @@ class WorldMapScene extends Scene {
   }
   /** Pontos/segmentos dos caminhos em coordenadas locais da ilha (para não pôr decoração em cima). */
   isleGeom(world) {
-    const flip = world % 2 === 0;
-    const nodes = LAYOUT.map(([x, y]) => [x, flip ? PH - y : y]).concat([[BONUS.at[0], flip ? PH - BONUS.at[1] : BONUS.at[1]]]);
+    const L0 = LAYOUTS[world];
+    const nodes = L0.n.map(([x, y]) => [x, y]).concat([[L0.b.at[0], L0.b.at[1]]]);
     const segs = [];
     for (let i = 0; i < 5; i++) segs.push([nodes[i], nodes[i + 1]]);
-    segs.push([nodes[BONUS.parent], nodes[6]]);
+    segs.push([nodes[L0.b.parent], nodes[6]]);
     return [nodes, segs];
   }
   /** Estrada de terra sob o fio (como nos mapas clássicos). */
@@ -656,19 +664,18 @@ class WorldMapScene extends Scene {
     for (const p of pts) ctx.fillRect(R0(p.x) - 2, R0(p.y) - 1, 4, 3);
   }
   drawThread(ctx, pts, active, frac, t) {
-    const col = active ? threadColor() : 'rgba(27,16,48,0.55)';
-    let acc = 0;
+    // trilha pontilhada centralizada na estrada (como nos mapas clássicos)
     const total = pts.length - 1, upto = frac * total;
+    let acc = 0, next = 3;
     for (let i = 0; i < total && i < upto; i++) {
       const a = pts[i], b = pts[i + 1];
-      const seg = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.ceil(seg));
-      for (let j = 0; j < n; j++) {
-        const d = acc + j;
-        if (d % 6 >= 3.5) continue;
-        const x = R0(a.x + (b.x - a.x) * j / n), y = R0(a.y + (b.y - a.y) * j / n);
-        if (active) { ctx.fillStyle = 'rgba(11,7,22,0.45)'; ctx.fillRect(x, y + 1, 2, 1); ctx.fillStyle = col; }
-        else ctx.fillStyle = col;
-        ctx.fillRect(x, y, 2, 1);
+      const seg = Math.hypot(b.x - a.x, b.y - a.y);
+      while (next <= acc + seg) {
+        const k = (next - acc) / (seg || 1);
+        const x = R0(a.x + (b.x - a.x) * k), y = R0(a.y + (b.y - a.y) * k);
+        if (active) { ctx.fillStyle = 'rgba(11,7,22,0.45)'; ctx.fillRect(x - 1, y, 2, 2); ctx.fillStyle = '#fff6dc'; ctx.fillRect(x - 1, y - 1, 2, 2); }
+        else { ctx.fillStyle = 'rgba(27,16,48,0.45)'; ctx.fillRect(x - 1, y - 1, 2, 2); }
+        next += 6;
       }
       acc += seg;
     }
@@ -746,9 +753,9 @@ class WorldMapScene extends Scene {
     if (this.sew && this.sew.t > 0 && this.sew.t < this.sew.dur) { /* Tico assiste */ }
     const anim = T.path.length ? 'walk' : 'idle';
     const fr = animFrame('tico', anim, T.t);
-    const x = R0(T.x), y = R0(T.y) - 3;
+    const x = R0(T.x), y = R0(T.y) + 4;   // pés no centro do botão da fase
     ctx.fillStyle = 'rgba(11,7,22,0.35)';
-    ctx.fillRect(x - 6, y - 1, 12, 2);
+    ctx.fillRect(x - 7, y - 1, 14, 2);
     drawSprite(ctx, 'tico', anim, fr, x, y, { flip: T.flip });
     drawCosmetics(ctx, null, anim, fr, x, y, T.flip);
     if (this.poof) {
@@ -759,7 +766,8 @@ class WorldMapScene extends Scene {
   }
   drawHeader(ctx, w, t) {
     const wd = WORLDS[this.viewWorld - 1];
-    const hw = Math.min(w - MENU_W - 52, 300), hx = R0(MENU_W + (w - MENU_W) / 2 - hw / 2);
+    const L = 62 + 22, Rr = w - 26;   // depois do botão Menu + seta esquerda; antes da seta direita
+    const hw = Math.min(Rr - L - 4, 300), hx = R0(L + (Rr - L - hw) / 2);
     drawPanel(ctx, hx, 2, hw, 18, 'dark');
     let name = `Mundo ${wd.id} - ${wd.name}`;
     if (font.measure(name) > hw - 12) name = `Mundo ${wd.id} - ${wd.short}`;

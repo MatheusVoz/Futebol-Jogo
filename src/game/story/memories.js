@@ -56,7 +56,7 @@ function face(pc, cx, cy, expr, r, o = {}) {
     cry: ['closed', 'cry'], scared: ['scared', 'o'], sleep: ['closed', 'dot'], sing: ['closed', 'o'], listen: ['open', 'dot'],
   }[expr] || ['open', 'smile'];
   for (const x of [cx - dx - 1, cx + dx]) {
-    if (eyes === 'open' || eyes === 'sad') { pc.rect(x, ey - 1, 2, 2, ec); if (r >= 6) pc.px(x, ey - 1, '#ffffff'); }
+    if (eyes === 'open' || eyes === 'sad') { const eh = r >= 7 ? 3 : 2; pc.rect(x, ey - eh + 1, 2, eh, ec); if (r >= 6) pc.px(x, ey - eh + 1, '#ffffff'); if (r >= 7) pc.px(x + (x < cx ? -1 : 2), ey - eh + 1, ec); }
     else if (eyes === 'scared') { pc.rect(x, ey - 2, 2, 3, ec); pc.px(x, ey - 2, '#ffffff'); }
     else if (eyes === 'happy') { if (o.small) pc.hline(x, ey, 2, ec); else { pc.px(x - 1, ey, ec); pc.hline(x, ey - 1, 2, ec); pc.px(x + 2, ey, ec); } }
     else { pc.px(x - 1, ey - 1, ec); pc.hline(x, ey, 2, ec); pc.px(x + 2, ey - 1, ec); }
@@ -76,34 +76,67 @@ function face(pc, cx, cy, expr, r, o = {}) {
 function bow(pc, x, y, c = ['#a8306a', '#e85a9a', '#ff8ac0']) {
   pc.poly([[x, y], [x - 3, y - 2], [x - 3, y + 2]], c[1]); pc.poly([[x, y], [x + 3, y - 2], [x + 3, y + 2]], c[2]); pc.px(x, y, c[0]);
 }
-/** Cabeça da Lia (ou de outra menina com o.hair / o.bows=false). */
+/** Cabeça da Lia (ou de outra menina com o.hair / o.bows=false). Estilo chibi detalhado. */
 function liaHead(pc, cx, cy, expr = 'smile', o = {}) {
-  const r = o.r || 6, H = o.hair || LH;
-  if (o.tails !== false) { ball(pc, cx - r - 1, cy + 1, 2.6, 3.4, H); ball(pc, cx + r + 1, cy + 1, 2.6, 3.4, H); }
-  ball(pc, cx, cy - 0.5, r + 0.6, r + 0.2, H);
-  pc.ellipse(cx, cy + r * 0.3, r * 0.86, r * 0.72, SK[1]);
-  pc.ellipse(cx - r * 0.2, cy + r * 0.15, r * 0.5, r * 0.42, SK[2]);
-  const top = R(cy - r * 0.75);
-  for (let x = Math.ceil(cx - r * 0.85); x < cx + r * 0.85; x++) pc.vline(x, top, R(cy - r * 0.25) + ((x & 1) ? 0 : 1) - top, H[1]);
-  pc.hline(R(cx - r * 0.5), top, 3, H[3]);
+  const r = o.r || 7.5, H = o.hair || LH;
+  // marias-chiquinhas atrás
+  if (o.tails !== false) for (const s of [-1, 1]) { ball(pc, cx + s * (r + 2), cy + 2, 3, 4.4, H); pc.px(R(cx + s * (r + 2)), R(cy + 6), H[3]); }
+  // massa de cabelo
+  pc.ellipse(cx, cy - 0.5, r + 1.4, r + 1, H[0]);
+  pc.ellipse(cx - 0.3, cy - 0.8, r + 0.8, r + 0.5, H[1]);
+  // rosto (luz vindo da esquerda)
+  pc.ellipse(cx, cy + r * 0.32, r * 0.92, r * 0.8, SK[0]);
+  pc.ellipse(cx - 0.4, cy + r * 0.27, r * 0.86, r * 0.74, SK[1]);
+  pc.ellipse(cx - r * 0.3, cy + r * 0.12, r * 0.42, r * 0.36, SK[2]);
+  // franja em ondinhas + mechas laterais
+  for (let i = -2; i <= 2; i++) pc.ellipse(cx + i * r * 0.36, cy - r * 0.3 + Math.abs(i) * 0.6, r * 0.26, r * 0.36, H[1]);
+  for (let i = -2; i <= 2; i++) pc.px(R(cx + i * r * 0.36), R(cy - r * 0.3 + Math.abs(i) * 0.6 + r * 0.3), H[0]);
+  for (const s of [-1, 1]) { pc.ellipse(cx + s * r * 0.86, cy + r * 0.2, r * 0.22, r * 0.55, H[1]); pc.px(R(cx + s * r * 0.86), R(cy + r * 0.7), H[0]); }
+  // brilho do cabelo
+  for (let a = -2.6; a < -1.2; a += 0.12) pc.px(R(cx + Math.cos(a) * r * 0.75), R(cy - 1 + Math.sin(a) * r * 0.75), H[3]);
   if (o.bows !== false && o.tails !== false) { bow(pc, R(cx - r - 1), R(cy - 3)); bow(pc, R(cx + r + 1), R(cy - 3)); }
-  face(pc, cx, cy + 1, expr, r);
+  face(pc, cx, cy + 1.5, expr, r);
 }
+/** Cabeça da Vó Celeste: cachinhos brancos, coque com agulha, óculos redondos. */
 function voHead(pc, cx, cy, expr = 'smile', o = {}) {
-  const r = o.r || 6;
-  pc.line(R(cx + r * 0.9), R(cy - r - 4), R(cx - r * 0.2), R(cy - r), '#c8ccd8');          // agulha no coque
-  ball(pc, cx + r * 0.15, cy - r - 1, r * 0.55, r * 0.45, VH);                              // coque
-  pc.px(R(cx + r * 0.9) + 1, R(cy - r - 4), '#ffd23f'); pc.px(R(cx + r * 0.9) + 2, R(cy - r - 3), '#ffd23f');
-  ball(pc, cx, cy - 0.5, r + 0.5, r + 0.1, VH);
-  pc.ellipse(cx, cy + r * 0.32, r * 0.84, r * 0.72, SK[1]);
-  pc.ellipse(cx - r * 0.2, cy + r * 0.15, r * 0.5, r * 0.42, SK[2]);
-  pc.hline(R(cx - r * 0.7), R(cy - r * 0.3), R(r * 1.4), VH[1]);
-  face(pc, cx, cy + 1, expr, r, { eye: '#3a2438', small: true, noBlush: r < 7 });
-  const dx = Math.max(2, R(r * 0.42)), ey = R(cy + 1 + r * 0.05);
-  for (const x of [cx - dx - 1, cx + dx]) pc.strokeRect(x - 1, ey - 2, 4, 4, '#b8862a');
-  pc.hline(cx - dx + 1, ey - 1, 2 * dx - 2, '#b8862a');
-  pc.px(cx - dx - 2, ey - 2, '#f0c860');
-  pc.px(R(cx - r * 0.85), R(cy + r * 0.6), '#ffffff');                                        // brinco de pérola
+  const r = o.r || 7.5;
+  pc.line(R(cx + r * 0.9), R(cy - r - 5), R(cx - r * 0.2), R(cy - r), '#c8ccd8');          // agulha no coque
+  pc.px(R(cx + r * 0.9) + 1, R(cy - r - 5), '#ffd23f'); pc.px(R(cx + r * 0.9) + 2, R(cy - r - 4), '#ffd23f');
+  ball(pc, cx + r * 0.1, cy - r - 1.5, r * 0.6, r * 0.5, VH);                              // coque
+  // cabelo fofinho em cachos
+  for (let a = Math.PI * 0.9; a < Math.PI * 2.1; a += 0.42) ball(pc, cx + Math.cos(a) * r * 0.95, cy - 0.5 + Math.sin(a) * r * 0.9, r * 0.36, r * 0.34, VH);
+  pc.ellipse(cx, cy - 0.5, r * 0.95, r * 0.85, VH[1]);
+  // rosto
+  pc.ellipse(cx, cy + r * 0.34, r * 0.88, r * 0.76, SK[0]);
+  pc.ellipse(cx - 0.4, cy + r * 0.3, r * 0.82, r * 0.7, SK[1]);
+  pc.ellipse(cx - r * 0.3, cy + r * 0.15, r * 0.4, r * 0.34, SK[2]);
+  for (let i = -2; i <= 2; i++) pc.ellipse(cx + i * r * 0.34, cy - r * 0.32, r * 0.24, r * 0.22, VH[2]);
+  face(pc, cx, cy + 1.5, expr, r, { eye: '#3a2438', small: true });
+  // óculos redondos dourados
+  const dx = Math.max(2, R(r * 0.42)), ey = R(cy + 1.5 + r * 0.05);
+  for (const x of [cx - dx - 1, cx + dx]) pc.ellipseOutline(x + 1, ey, 2.6, 2.4, '#b8862a');
+  pc.hline(cx - dx + 2, ey - 1, Math.max(1, 2 * dx - 3), '#b8862a');
+  pc.px(cx - dx - 1, ey - 2, '#fff0b0');
+  pc.px(R(cx - r * 0.85), R(cy + r * 0.62), '#ffffff');                                       // brinco de pérola
+}
+/** Corpo da Lia em pé (vestido, gola, mangas bufantes, meias e sapatinhos). (cx, fy) = pés. */
+function liaBody(pc, cx, fy, dress = ['#c8306a', '#ff8ac0', '#ffb0d4', '#ffe0ee']) {
+  // pernas, meias e sapatos
+  pc.rect(cx - 5, fy - 10, 3, 8, SK[1]); pc.rect(cx + 2, fy - 10, 3, 8, SK[0]);
+  pc.rect(cx - 5, fy - 5, 3, 3, '#ffffff'); pc.rect(cx + 2, fy - 5, 3, 3, '#f0eef6');
+  pc.ellipse(cx - 4, fy - 1, 3, 1.6, '#c8306a'); pc.ellipse(cx + 4, fy - 1, 3, 1.6, '#a02050');
+  // saia em A com barra ondulada
+  pc.poly([[cx - 6, fy - 27], [cx + 6, fy - 27], [cx + 12, fy - 10], [cx - 12, fy - 10]], dress[1]);
+  pc.poly([[cx - 6, fy - 27], [cx - 2, fy - 27], [cx - 7, fy - 10], [cx - 12, fy - 10]], dress[2]);
+  pc.poly([[cx + 3, fy - 27], [cx + 6, fy - 27], [cx + 12, fy - 10], [cx + 7, fy - 10]], dress[0] + '99');
+  for (let x = cx - 11; x <= cx + 11; x += 3) pc.circle(x, fy - 10, 1.4, dress[1]);
+  pc.hline(cx - 11, fy - 9, 23, dress[3]);
+  // corpete, gola branca e mangas bufantes
+  pc.rect(cx - 6, fy - 31, 12, 6, dress[1]);
+  pc.ellipse(cx - 2, fy - 31, 2.5, 1.6, '#ffffff'); pc.ellipse(cx + 2, fy - 31, 2.5, 1.6, '#f4f0fa');
+  ball(pc, cx - 7, fy - 29, 3, 2.6, [dress[0], dress[1], dress[2], dress[3]]);
+  ball(pc, cx + 7, fy - 29, 3, 2.6, [dress[0], dress[1], dress[2], dress[3]]);
+  for (const [x, y] of [[cx - 4, fy - 20], [cx + 3, fy - 16], [cx - 1, fy - 13]]) pc.px(x, y, '#ffffff');
 }
 /** Tico pequenino (24×20), olhando à direita. o: roar, closed, glow. */
 function ticoPC(o = {}) {
@@ -339,15 +372,23 @@ registerMemory('mem_1', {
       pc.curve(40, 100, 70, 105, 100, 98, WOOD[1], 1);
       pc.rect(46, 44, 4, 54, WOOD[1]); pc.vline(46, 44, 54, WOOD[3]); pc.rect(54, 48, 3, 40, WOOD[2]);
       pc.rect(84, 82, 3, 18, WOOD[0]); pc.rect(50, 80, 38, 4, WOOD[2]);
-      ball(pc, 66, 74, 13, 13, CARD);
-      pc.ellipse(80, 86, 15, 6, '#7a5a8a'); pc.ellipse(78, 85, 12, 4, '#9a78a8');
-      pc.rect(88, 88, 4, 9, '#5a4a6a'); pc.ellipse(92, 98, 4, 2, '#3a2a30');
-      pc.rect(59, 62, 3, 8, '#ffd84a'); pc.rect(70, 62, 3, 8, '#ffd84a');
-      pc.thickLine(70, 72, 94, 68, 1.8, CARD[2]); pc.thickLine(62, 76, 90, 74, 1.8, CARD[1]);
-      ball(pc, 96, 68, 2.4, 2.2, SK); ball(pc, 92, 74, 2.4, 2.2, SK);
+      // saia no colo, pernas e sapatinhos
+      pc.ellipse(78, 84, 15, 6, '#5a4a7a'); pc.ellipse(77, 83, 13, 4.5, '#7a68a0'); pc.hline(66, 82, 20, '#9a8ac0');
+      pc.rect(86, 86, 4, 11, '#e8d8c8'); pc.rect(86, 92, 4, 5, '#c8b8a8');
+      pc.ellipse(90, 98, 4.5, 2, '#5a2a2a'); pc.px(88, 97, '#8a4a4a');
+      // tronco de cardigã com botões e xale
+      pc.poly([[57, 62], [75, 62], [79, 82], [55, 82]], CARD[1]);
+      pc.poly([[57, 62], [63, 62], [60, 82], [55, 82]], CARD[2]);
+      pc.poly([[71, 62], [75, 62], [79, 82], [74, 82]], CARD[0]);
+      pc.vline(66, 66, 15, CARD[0]); for (let y = 67; y < 81; y += 4) pc.px(67, y, '#ffd84a');
+      pc.poly([[56, 60], [76, 60], [72, 68], [66, 64], [60, 68]], '#f0e2c8'); pc.hline(57, 60, 19, '#fff4e0');
+      // braços estendidos segurando o Tico (mangas com punho)
+      pc.thickLine(72, 66, 93, 67, 2.2, CARD[1]); pc.thickLine(62, 70, 89, 73, 2.2, CARD[2]);
+      pc.rect(90, 65, 3, 4, CARD[3]); pc.rect(86, 71, 3, 4, CARD[3]);
+      ball(pc, 96, 67, 2.6, 2.4, SK); ball(pc, 91, 73, 2.6, 2.4, SK);
     });
     bg.blit(st.base); bg.blit(st.chair);
-    st.vo = canvasOf(layer((pc) => voHead(pc, 66, 53, 'smile', { r: 7 })));
+    st.vo = canvasOf(layer((pc) => voHead(pc, 66, 52, 'smile', { r: 8 })));
     st.tico = canvasOf(ticoPC());
     st.arms = [0, 1].map((k) => canvasOf(layer((pc) => {
       ball(pc, 134, 76 - k * 2, 1.8, 2.4, SK); ball(pc, 148, 74 - (1 - k) * 2, 1.8, 2.4, SK);
@@ -383,13 +424,9 @@ registerMemory('mem_2', {
     }
     bg.rect(176, 104, 18, 4, '#7a52b0'); bg.rect(177, 103, 16, 2, '#fff6e6');
     st.lia = canvasOf(layer((pc) => {
-      pc.rect(88, 96, 4, 10, SK[1]); pc.rect(98, 96, 4, 10, SK[0]);
-      pc.ellipse(90, 107, 3.5, 2, '#e85a9a'); pc.ellipse(100, 107, 3.5, 2, '#c8306a');
-      pc.poly([[86, 78], [104, 78], [109, 98], [81, 98]], '#ff8ac0'); pc.poly([[86, 78], [92, 78], [87, 98], [81, 98]], '#ffb0d4');
-      pc.hline(81, 97, 28, '#e85a9a');
-      for (const [x, y] of [[90, 86], [100, 90], [95, 94]]) pc.px(x, y, '#ffffff');
-      liaHead(pc, 95, 70, 'roar');
-      pc.thickLine(103, 80, 112, 74, 1.5, SK[1]); pc.thickLine(87, 80, 108, 78, 1.5, SK[0]);
+      liaBody(pc, 95, 108);
+      liaHead(pc, 95, 69, 'roar');
+      pc.thickLine(102, 79, 110, 73, 1.6, SK[1]); pc.thickLine(88, 80, 106, 78, 1.6, SK[0]);
     }));
     st.tico = canvasOf(ticoPC({ roar: true }));
     st.hands = canvasOf(layer((pc) => { ball(pc, 112, 74, 2.2, 2.2, SK); ball(pc, 109, 79, 2.2, 2.2, SK); }));
