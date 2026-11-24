@@ -15,7 +15,7 @@ import { grid, W3, back, clk, hide, isle } from './w3_a.js';
 // =============================================================================
 {
   const m = grid(280, 30);
-  const R = (x0, x1, top) => isle(m, x0, x1, top, 30 - top, '%');
+  const R = (x0, x1, top) => isle(m, x0, x1, top, 30 - top, '#');
   // --- R1: largada + Agulheta ------------------------------------------------
   R(0, 22, 20);
   m.put(3, 19, 'P'); m.sign(7, 19, 'w3_sign_roofs'); m.put(14, 19, 'U'); m.line(17, 21, 17);
@@ -51,7 +51,7 @@ import { grid, W3, back, clk, hide, isle } from './w3_a.js';
   m.put(129, 17, 'b');
   m.plat(131, 133, 14);
   m.fill(135, 10, 142, 17, '%'); m.fill(135, 15, 135, 17, 'H');
-  m.put(137, 17, 'X'); m.put(139, 17, 'M', { memory: 'mem_5' }); m.line(140, 141, 17); m.put(138, 15, 'e');
+  m.put(137, 17, 'X'); m.put(139, 17, 'M', { memory: 'mem_5' }); m.put(140, 17, 'o'); m.put(141, 17, 'r'); m.put(138, 15, 'e');
   hide(m, 136, 14, 141, 17);
   m.line(136, 141, 9, 'o', 2);
   m.put(146, 9, 'l', { len: 3, speed: 40 });
