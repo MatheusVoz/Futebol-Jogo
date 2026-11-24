@@ -567,7 +567,7 @@ class RabbitChaser extends Entity {
     const gap = p.cx - this.cx;
     let v = clamp(100 + (gap - 150) * 0.9, 62, 172);
     if (p.state === 'hurt' || p.state === 'dead' || (p.hurtInv || 0) > 0.3) v = Math.min(v, 40);
-    if (L.inputLocked) v = 0;
+    if (L.inputLocked || gap < 20) v = 0;
     this.x = Math.min(this.x + v * dt, WALL_X - 6 - this.w);   // não atravessa a parede da arena
     // altura dos pés: chão sob o centro; sobre um vão, salta em arco
     const g = this.groundAt(this.cx);
@@ -618,7 +618,7 @@ registerEntity('rabbit_chaser', RabbitChaser);
 const FIGHT = new Set(['idle', 'crouch', 'air', 'stuck', 'unstuck', 'hop2b', 'approach', 'wind', 'swipe', 'recover',
   'throw_wind', 'throw', 'summon', 'charge_tel', 'charge', 'trip', 'down', 'getup', 'bonk', 'tantrum', 'tired', 'crushed']);
 const AIRBORNE = new Set(['air', 'charge', 'trip']);
-const WEAK = { stuck: 1, recover: 1, bonk: 1, tired: 1, down: 0.75, crushed: 0.75 };
+const WEAK = { stuck: 1, recover: 1, bonk: 1, tired: 1, down: 0.5, crushed: 0.75 };
 const NOHARM = new Set(['dormant', 'enter', 'intro_roar', 'idle_ready', 'teach', 'phase2', 'phase3', 'defeated', 'sewing',
   'calm', 'unstuck', 'getup', 'trip']);
 const BOX = { stuck: [58, 38], down: [72, 30], crushed: [72, 30], bonk: [44, 56], charge: [48, 52], trip: [48, 52],
@@ -998,7 +998,7 @@ class RabbitBoss extends Enemy {
         }
         break;
       }
-      case 'down': if (st >= (P3 ? 2.4 : 2.7)) this.go('getup'); break;
+      case 'down': if (st >= (P3 ? 2.6 : 3.0)) this.go('getup'); break;
       case 'crushed': if (st >= 3.0) this.go('getup'); break;
       case 'getup': if (!this.fired) { this.fired = 1; this.pushPlayer(150); } if (st >= 0.45) this.go('idle'); break;
       case 'bonk': if (st >= 1.1) this.go('idle'); break;
@@ -1255,7 +1255,7 @@ class RabbitChandelier extends Entity {
       const pulse = Math.floor(this.t * (under ? 10 : 3)) % 2;
       fillEllipse(ctx, hx, FLOOR_Y - 1, 22, 3, under ? (pulse ? 'rgba(255,58,90,0.55)' : 'rgba(255,210,63,0.5)') : shadowCol(0.3));
       if (under) {
-        const y = CLEAT_Y - 30 - pulse * 2;
+        const y = CLEAT_Y - 48 - pulse * 2;
         font.draw(ctx, '!', CLEAT_X - 2, y, { align: 'center', color: pulse ? '#ff3a5a' : GOLD, outline: '#1b1020' });
       }
     }
@@ -1417,7 +1417,7 @@ registerCutscene('boss1_defeat', {
     const L = cs.level, p = cs.player, b = cs.params.boss || L._rabbitBoss;
     if (!b) { L.complete({ delay: 1 }); return; }
     const fp = b.facePoint(), side = b.facing;
-    yield* cs.walk(p, clamp(fp.x + side * 12, AX0 + 10, AX1 - 10), 80);
+    yield* cs.walk(p, clamp(fp.x + side * 28, AX0 + 10, AX1 - 10), 80);
     cs.face(p, side > 0 ? 'left' : 'right');
     yield 0.25;
     yield* cs.say([{ who: 'tico', expr: 'determined', text: 'Calma, grandão... Eu sei costurar. Mais ou menos.' }]);

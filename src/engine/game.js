@@ -66,22 +66,54 @@ class Game {
     return this;
   }
 
+  /**
+   * Área segura (CSS px) — evita o entalhe/câmera do celular em paisagem.
+   * O APK Android injeta window.__SAFE = {l,t,r,b} (insets reais do recorte da tela);
+   * no navegador usamos env(safe-area-inset-*).
+   */
+  safeArea() {
+    if (window.__SAFE) return window.__SAFE;
+    try {
+      if (!this._safeProbe) {
+        const d = document.createElement('div');
+        d.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;' +
+          'padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);' +
+          'padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom);';
+        document.body.appendChild(d);
+        this._safeProbe = d;
+      }
+      const cs = getComputedStyle(this._safeProbe);
+      return { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, t: parseFloat(cs.paddingTop) || 0, b: parseFloat(cs.paddingBottom) || 0 };
+    } catch (e) { return { l: 0, r: 0, t: 0, b: 0 }; }
+  }
+
   resize() {
     const dpr = window.devicePixelRatio || 1;
-    const sw = Math.max(1, Math.floor(window.innerWidth * dpr));
-    const sh = Math.max(1, Math.floor(window.innerHeight * dpr));
+    const safe = this.safeArea();
+    // in landscape, keep the play area symmetric so the HUD never sits under the notch
+    const side = Math.max(safe.l, safe.r);
+    const aw = Math.max(100, window.innerWidth - side * 2);
+    const ah = Math.max(100, window.innerHeight - safe.t - safe.b);
+    const sw = Math.max(1, Math.floor(aw * dpr));
+    const sh = Math.max(1, Math.floor(ah * dpr));
     const forced = this.params.get('scale');
     let scale = forced ? parseInt(forced, 10) : Math.max(1, Math.round(sh / TARGET_H));
     let vh = Math.floor(sh / scale);
     while (vh < 200 && scale > 1) { scale--; vh = Math.floor(sh / scale); }
     let vw = Math.floor(sw / scale);
+    // very wide screens: enlarge the logical width instead of leaving black bars
     vw = Math.max(320, Math.min(vw, 560));
     vh = Math.max(200, Math.min(vh, 260));
     this.view.w = vw; this.view.h = vh; this.view.scale = scale;
     this.canvas.width = vw;
     this.canvas.height = vh;
-    this.canvas.style.width = (vw * scale) / dpr + 'px';
-    this.canvas.style.height = (vh * scale) / dpr + 'px';
+    const cssW = (vw * scale) / dpr, cssH = (vh * scale) / dpr;
+    this.canvas.style.width = cssW + 'px';
+    this.canvas.style.height = cssH + 'px';
+    // exact centering inside the safe area (whole CSS pixels)
+    this.canvas.style.position = 'absolute';
+    this.canvas.style.left = Math.round((window.innerWidth - cssW) / 2) + 'px';
+    this.canvas.style.top = Math.round(safe.t + (ah - cssH) / 2) + 'px';
     this.ctx.imageSmoothingEnabled = false;
     for (const s of this.scenes.stack) s.resize?.(vw, vh);
     this.events.emit('resize', vw, vh);

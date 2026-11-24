@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowInsets;
@@ -14,6 +15,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import java.util.Locale;
 
 /**
  * Stitched Worlds — O Último Brinquedo.
@@ -22,6 +24,7 @@ import android.webkit.WebViewClient;
  */
 public class MainActivity extends Activity {
     private WebView web;
+    private WindowInsets lastInsets;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -57,7 +60,15 @@ public class MainActivity extends Activity {
         s.setTextZoom(100);
         s.setCacheMode(WebSettings.LOAD_NO_CACHE);
         web.setWebChromeClient(new WebChromeClient());
-        web.setWebViewClient(new WebViewClient());
+        web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) { pushSafeArea(); }
+        });
+        getWindow().getDecorView().setOnApplyWindowInsetsListener((v, insets) -> {
+            lastInsets = insets;
+            pushSafeArea();
+            return v.onApplyWindowInsets(insets);
+        });
         web.setLayerType(View.LAYER_TYPE_HARDWARE, null);
         web.loadUrl("file:///android_asset/index.html");
         setContentView(web);
@@ -82,6 +93,23 @@ public class MainActivity extends Activity {
                 | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                 | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN);
         }
+    }
+
+    /** Envia ao jogo os insets do recorte da tela (entalhe/câmera) em px CSS. */
+    private void pushSafeArea() {
+        if (web == null) return;
+        float l = 0, t = 0, r = 0, b = 0;
+        if (Build.VERSION.SDK_INT >= 28 && lastInsets != null) {
+            DisplayCutout c = lastInsets.getDisplayCutout();
+            if (c != null) {
+                float d = getResources().getDisplayMetrics().density;
+                l = c.getSafeInsetLeft() / d; t = c.getSafeInsetTop() / d;
+                r = c.getSafeInsetRight() / d; b = c.getSafeInsetBottom() / d;
+            }
+        }
+        String js = String.format(Locale.US,
+            "window.__SAFE={l:%.1f,t:%.1f,r:%.1f,b:%.1f};window.dispatchEvent(new Event('resize'));", l, t, r, b);
+        web.evaluateJavascript(js, null);
     }
 
     @Override

@@ -749,21 +749,32 @@ class TimeWarper extends PlushEnemy {
     audio.sfx('w3e_sand');
   }
   drawAura(ctx) {
-    const R = this.auraR, cx = Math.round(this.cx), cy = Math.round(this.cy);
-    const pa = ctx.globalAlpha;
-    ctx.globalAlpha = pa * 0.08;
-    ctx.fillStyle = AURA; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = pa * 0.55;
-    const n = 44, a0 = this.t * 0.6;
-    for (let i = 0; i < n; i++) {
-      const a = a0 + (i / n) * Math.PI * 2, big = i % 11 === 0;
-      ctx.fillStyle = big ? '#ffffff' : AURA;
-      ctx.fillRect(Math.round(cx + Math.cos(a) * R), Math.round(cy + Math.sin(a) * R), big ? 2 : 1, big ? 2 : 1);
+    const R = this.auraR, cx = Math.round(this.cx), cy = Math.round(this.cy), pa = ctx.globalAlpha;
+    const pulse = 0.85 + 0.15 * Math.sin(this.t * 3);
+    ctx.globalAlpha = pa * 0.15 * pulse;
+    ctx.fillStyle = '#9ff0ff'; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    const n = 96, a0 = this.t * 0.6;
+    for (let i = 0; i < n; i++) { // borda tracejada dupla girando (mostrador)
+      if (i % 6 === 5) continue;
+      const a = a0 + (i / n) * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
+      ctx.globalAlpha = pa * 0.9 * pulse;
+      ctx.fillStyle = i % 24 === 0 ? '#ffffff' : '#9ff0ff';
+      ctx.fillRect(Math.round(cx + c * R), Math.round(cy + s * R), 1, 1);
+      ctx.globalAlpha = pa * 0.4 * pulse;
+      ctx.fillRect(Math.round(cx + c * (R - 1)), Math.round(cy + s * (R - 1)), 1, 1);
     }
-    ctx.globalAlpha = pa * 0.35;
-    for (let i = 0; i < 12; i++) {
-      const a = -this.t * 1.1 + (i / 12) * Math.PI * 2;
-      ctx.fillRect(Math.round(cx + Math.cos(a) * R * 0.62), Math.round(cy + Math.sin(a) * R * 0.62), 1, 1);
+    ctx.fillStyle = '#ffffff';
+    for (let i = 0; i < 12; i++) { // marcas das horas apontando para dentro
+      const a = a0 + (i / 12) * Math.PI * 2;
+      for (let k = 2; k < (i % 3 ? 4 : 6); k++) {
+        ctx.globalAlpha = pa * (0.7 - k * 0.1);
+        ctx.fillRect(Math.round(cx + Math.cos(a) * (R - k)), Math.round(cy + Math.sin(a) * (R - k)), 1, 1);
+      }
+    }
+    ctx.globalAlpha = pa * 0.45; ctx.fillStyle = AURA;
+    for (let i = 0; i < 16; i++) {
+      const a = -this.t * 1.1 + (i / 16) * Math.PI * 2;
+      ctx.fillRect(Math.round(cx + Math.cos(a) * R * 0.6), Math.round(cy + Math.sin(a) * R * 0.6), 1, 1);
     }
     ctx.globalAlpha = pa;
   }

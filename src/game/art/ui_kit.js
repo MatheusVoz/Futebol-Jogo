@@ -5,7 +5,7 @@
 //   Ícones (defineImage): icon_* (10–13 px, contorno 1 px) e ctl_* (glifos dos
 //   botões de toque, 16–22 px). Tudo procedural e cacheado.
 // =============================================================================
-import { defineImage, getImage } from '../../engine/sprites.js';
+import { defineImage, getImage, drawSprite, animFrame, hasSprite } from '../../engine/sprites.js';
 import { PixelCanvas, createCanvas } from '../../engine/pixel.js';
 import { lighten, darken } from '../../engine/util.js';
 import font from '../../engine/font.js';
@@ -237,6 +237,7 @@ function buildLogo() {
   let total = 0;
   masks.forEach((m, i) => { total += (i === 1 ? btnD - 2 : m.w * 4) + (i ? gap : 0); });
   let x = Math.round((W - total) / 2);
+  const wStartX = x;
   const wY = stY + 7 * 3 + 6;
   let btn = null;
   masks.forEach((m, i) => {
@@ -314,6 +315,17 @@ function buildLogo() {
     else if (o === 3 && ((xx >> 1) + (y >> 1)) % 2 === 0) pc.px(xx, y, '#fff4dc');
     else pc.px(xx, y, o === 2 ? '#4a3a7a' : '#3b2d63');
   }
+  // --- extrusão 3D das letras (profundidade de 3 px para baixo/direita)
+  const deep = { 1: ['#24548f', '#1a3f70', '#122c52'], 2: ['#a8661a', '#844c10', '#5e340a'], 3: ['#9a6414', '#744a0e', '#50320a'] };
+  for (let k = 3; k >= 1; k--) {
+    for (let y = 0; y < H; y++) for (let xx = 0; xx < W; xx++) {
+      const id = code[y * W + xx];
+      if (!id) continue;
+      const X = xx + (k > 1 ? 1 : 0), Y = y + k;
+      if (X >= W || Y >= H || code[Y * W + X]) continue;
+      pc.px(X, Y, deep[id][k - 1]);
+    }
+  }
   // --- letras
   const pal = {
     1: { g: ['#e6fbff', '#a8e8ff', '#7fd6ff', '#5fbcef', '#3f98d8'], hi: '#ffffff', lo: '#2f6fb0', seam: '#2f78c0' },
@@ -377,12 +389,12 @@ function buildLogo() {
   pc.flush();
   const g = pc.canvas.getContext('2d');
   font.draw(g, label, Math.round(W / 2), ry + 3, { align: 'center', color: '#fff4dc', shadow: '#7a1435' });
-  logoMeta = { btn: { x: bx - 9, y: by - 9 }, s: { x: stX + 4, y: stY + 2 }, w: { x: x - 4, y: wY + 2 } };
+  logoMeta = { btn: { x: bx - 9, y: by - 9 }, s: { x: stX + 4, y: stY + 2 }, w: { x: x - 4, y: wY + 2 }, tico: { x: wStartX - 9, y: ry + 3 } };
   return pc.canvas;
 }
 
 /** Logo do jogo centralizado em cx (y = topo). Tamanho em scale 1: 216×82. */
-export function drawLogo(ctx, cx, y, scale = 1, t = 0) {
+export function drawLogo(ctx, cx, y, scale = 1, t = 0, opts = {}) {
   if (!logoImg) logoImg = buildLogo();
   const w = Math.round(logoImg.width * scale), h = Math.round(logoImg.height * scale);
   const x0 = Math.round(cx - w / 2), y0 = Math.round(y + Math.sin(t * 1.6) * 1.2 * scale);
@@ -401,6 +413,17 @@ export function drawLogo(ctx, cx, y, scale = 1, t = 0) {
     ctx.fillRect(px - k * s, py, (k * 2 + 1) * s, s);
     ctx.fillRect(px, py - k * s, s, (k * 2 + 1) * s);
   });
+  // o Tico de verdade, de pé sobre o "W", segurando o fio rosa do logo
+  if (opts.tico !== false && hasSprite('tico')) {
+    const anim = typeof opts.tico === 'string' ? opts.tico : (Math.floor(t / 4.5) % 3 === 2 ? 'wave' : 'idle');
+    const at = opts.ticoT ?? (anim === 'wave' ? (t % 4.5) : t);
+    const fx = x0 + Math.round(logoMeta.tico.x * scale), fy = y0 + Math.round(logoMeta.tico.y * scale);
+    const sc = scale === 1 ? 1 : scale;
+    // sombra macia nas letras
+    ctx.fillStyle = 'rgba(11,7,22,0.35)';
+    ctx.fillRect(fx - Math.round(9 * sc), fy - 1, Math.round(18 * sc), 2);
+    drawSprite(ctx, 'tico', anim, animFrame('tico', anim, at), fx, fy, sc === 1 ? {} : { scaleX: sc, scaleY: sc });
+  }
 }
 
 // ===================================================================== ÍCONES

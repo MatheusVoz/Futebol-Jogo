@@ -265,23 +265,12 @@ class TitleScene extends Scene {
     const { w, h } = game.view;
     const t = game.time;
     const pos = drawTitleBackdrop(ctx, t);
-    // Tico no morro
-    const tx = clamp(pos.hx, 40, w - 40), ty = pos.hy;
-    ctx.fillStyle = 'rgba(8,20,16,0.5)'; ctx.fillRect(tx - 10, ty, 20, 2);
-    drawSprite(ctx, 'tico', this.tico, animFrame('tico', this.tico, this.ticoT), tx, ty);
-    if (this.tico === 'sleep') {
-      for (let i = 0; i < 3; i++) {
-        const k = (this.ticoT * 0.5 + i / 3) % 1;
-        ctx.globalAlpha = 1 - k;
-        font.draw(ctx, 'z', tx + 8 + k * 10 + i, ty - 34 - k * 18, { color: '#c8d8ff' });
-      }
-      ctx.globalAlpha = 1;
-    }
+    // (o Tico agora fica no próprio logo — veja drawLogo)
     // logo
     const scale = w >= 300 && h >= 190 ? 1 : 0.75;
     const intro = Ease.outBack(clamp(this.time / 0.9, 0, 1));
     const ly = Math.round(4 + (1 - intro) * -100);
-    drawLogo(ctx, w / 2, ly, scale, t);
+    drawLogo(ctx, w / 2, ly, scale, t, { tico: this.tico, ticoT: this.ticoT });
     const logoBottom = ly + Math.round(82 * scale);
     if (this.state === 'press') {
       if (Math.sin(t * 4) > -0.4) font.draw(ctx, 'Toque para começar', w / 2, Math.round(Math.max(logoBottom + 30, h * 0.62)), { align: 'center', color: '#fff4dc', outline: '#1b1030' });
@@ -292,7 +281,7 @@ class TitleScene extends Scene {
       const y0 = Math.round(clamp(logoBottom + 6, 0, h - total - 6));
       const k = Ease.outCubic(clamp(this.stateT / 0.25, 0, 1));
       ctx.globalAlpha = k;
-      this.menu.layoutV(w / 2 + Math.round(w * 0.06), y0 + Math.round((1 - k) * 10), Math.min(132, w * 0.42), bh, gap);
+      this.menu.layoutV(Math.round(w / 2), y0 + Math.round((1 - k) * 10), Math.min(132, w * 0.42), bh, gap);
       this.menu.draw(ctx, t);
       ctx.globalAlpha = 1;
     }
@@ -542,7 +531,7 @@ class CreditsScene extends Scene {
     let y = bot - scroll + 4;
     for (const l of this.lines) {
       if (y > -100 && y < h + 10) {
-        if (l.k === 'logo') drawLogo(ctx, cx, y, cw >= 220 ? 1 : 0.75, t);
+        if (l.k === 'logo') drawLogo(ctx, cx, y, cw >= 220 ? 1 : 0.75, t, { tico: false });
         else if (l.k === 'big') font.draw(ctx, l.s, cx, y, { align: 'center', color: '#ffd23f', shadow: '#3a0820' });
         else if (l.k === 'sub') font.draw(ctx, l.s, cx, y, { align: 'center', color: '#fff4dc' });
         else if (l.k === 'text') font.draw(ctx, l.s, cx, y, { align: 'center', color: '#ffb0c8', maxWidth: cw - 16 });
