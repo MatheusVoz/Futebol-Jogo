@@ -47,6 +47,9 @@ export function grid(W, H) {
  * caminho de volta/bônus e garante uma rota de tiles para o validador.
  * Use floor = top + 9 (degraus a cada 3 linhas).
  */
+/** Sala secreta: preenche com parede falsa 'H' (parece terreno maciço, sem buraco visível). */
+export function hideRoom(m, x0, y0, x1, y1) { return m.fill(x0, y0, x1, y1, 'H'); }
+
 export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.clear(nx, floor - 2, fx + 2, floor - 1);
   for (const sx of [nx, fx]) {
@@ -74,6 +77,8 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.fill(18, 18, 19, 18, '%'); m.line(18, 19, 16);          // toco baixo (1)
   m.fill(23, 17, 25, 18, '%'); m.line(23, 25, 15);          // toco médio (2)
   m.line(28, 31, 17);
+  m.plat(26, 29, 14); m.put(27, 13, 'o'); m.put(28, 13, 'o');                // galhinho opcional
+  m.put(33, 18, 'B', { contents: 'buttons:3' });
   // --- B: Sr. Botão, pulo variável, espinhos -----------------------------------
   m.put(37, 18, 'n', { npc: 'botao', dialog: 'w1_botao_1' });
   m.sign(42, 18, 'w1_sign_varjump');
@@ -86,9 +91,11 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   // --- C: correr, valas (seguras) e árvore opcional ---------------------------
   m.sign(66, 18, 'w1_sign_run');
   m.put(72, 18, 'K');
+  m.plat(64, 67, 15); m.put(65, 14, 'o'); m.put(66, 14, 'o');
   m.ground(78, 80, 22);                                       // vala 1 (3)
   m.put(78, 16, 'o'); m.put(79, 15, 'o'); m.put(80, 16, 'o');
   m.ground(81, 88, G);
+  m.fill(84, 17, 85, 18, '%'); m.put(84, 16, 'h');           // toco com coração
   m.ground(89, 93, 22);                                       // vala 2 (5: correndo)
   m.arc(89, 16, 5, 2);
   m.line(90, 92, 21);
@@ -106,7 +113,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.put(115, 18, 'o'); m.put(116, 18, 'o'); m.put(119, 18, 'o'); m.put(120, 18, 'o');
   m.put(124, 18, 'c', { contents: 'buttons:5' });
   m.sign(126, 18, 'w1_sign_downstrike');
-  m.clear(126, 20, 134, 21);                                  // câmara escondida
+  hideRoom(m, 126, 20, 134, 21);                              // câmara escondida (sob o chão)
   m.put(128, 19, 'B'); m.put(129, 19, 'B');                   // piso quebrável
   m.put(127, 21, 'e'); m.line(128, 130, 21); m.put(132, 21, 'X'); m.put(133, 21, 'r');
   // --- E: dash ----------------------------------------------------------------
@@ -115,19 +122,23 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.clear(147, G, 151, 21);                                   // vala 3 (5)
   m.line(148, 150, 21);
   m.arc(147, 16, 5, 2);
-  m.clear(161, 0, 165, 23);                                   // vão de verdade (5)
-  m.arc(161, 16, 5, 2);
-  m.ground(166, 219, G);
+  m.put(155, 18, 'a');
+  m.plat(153, 156, 15); m.put(154, 14, 'o'); m.put(155, 14, 'o');
+  m.clear(161, 0, 164, 23);                                   // vão de verdade (4)
+  m.arc(161, 16, 4, 2);
+  m.ground(165, 219, G);
   // colina com sala secreta (parede falsa) — ★3
   m.fill(170, 15, 177, 18, '%');
   m.plat(166, 168, 16);
   m.fill(170, 17, 171, 18, 'H');
-  m.clear(172, 17, 176, 18);
+  hideRoom(m, 172, 17, 176, 18);
   m.put(173, 18, 'X'); m.put(172, 17, 'o'); m.put(174, 17, 'o'); m.put(175, 18, '*');
   m.line(171, 176, 14, 'o', 2);
   // --- F: pisão nos inimigos e saída ------------------------------------------
   m.sign(182, 18, 'w1_sign_stomp');
   m.put(185, 17, 'h');
+  m.put(188, 18, 'B'); m.put(188, 17, 'B', { contents: 'buttons:3' });
+  m.put(199, 10, 'g');
   m.put(192, 18, 'a');
   m.plat(195, 197, 16); m.line(195, 197, 15);
   m.put(201, 18, 'a');
@@ -162,6 +173,8 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.line(34, 36, 15); m.put(37, 16, '*'); m.line(38, 40, 15); // ★1 (no meio da ponte)
   m.ground(41, 50, 18);
   m.line(44, 47, 16);
+  m.plat(42, 44, 13); m.put(43, 12, 'h');
+  m.put(48, 17, 'B', { contents: 'buttons:3' });
   m.ground(51, 58, 21); m.fill(51, 18, 58, 20, '~');
   m.put(50, 17, '@', { group: 's2' }); m.put(59, 16, '@', { group: 's2' });
   m.arc(51, 15, 8, 1);
@@ -175,6 +188,8 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.put(87, 16, 'b');
   m.plat(89, 92, 14); m.line(89, 92, 13);
   m.put(95, 16, 'a');
+  m.put(88, 9, 'g');
+  m.put(99, 16, 'h');
   // --- C: abismo de verdade + toca com portão por baixo (segredo 1) -----------
   m.ground(104, 111, 23); m.fill(104, 22, 111, 22, '^');
   m.ground(112, 239, 17);
@@ -186,6 +201,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.sign(101, 25, 'w1_sign_burrow');
   m.put(107, 25, 'X'); m.put(113, 25, 'r');
   // --- D: ilhó com sinal abre o portão do morro -------------------------------
+  m.put(119, 16, 'a'); m.plat(117, 121, 13); m.line(118, 120, 12, 'o', 2);
   m.sign(126, 16, 'w1_sign_gate');
   m.fill(131, 16, 135, 16, '^');
   m.put(130, 16, '@', { group: 'p1' });
@@ -198,6 +214,8 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.plat(161, 165, 12, '#'); m.put(161, 11, '@', { group: 'i1' });
   m.line(162, 163, 11); m.put(164, 11, '*');
   m.put(167, 16, 'K');
+  m.put(171, 16, 'B'); m.put(171, 15, 'B', { contents: 'heart' });
+  m.put(178, 9, 'g');
   // --- E: inimigos, penhasco com sala secreta (★3) e saída --------------------
   m.put(175, 16, 'a');
   m.plat(180, 184, 14); m.put(182, 13, 'b');
@@ -207,10 +225,11 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.put(202, 16, '%'); m.fill(203, 15, 203, 16, '%');
   m.fill(205, 12, 214, 16, '%');
   m.fill(205, 15, 206, 16, 'H');
-  m.clear(207, 13, 212, 16);
+  hideRoom(m, 207, 13, 212, 16);
   m.put(208, 16, 'X'); m.line(209, 210, 14); m.put(211, 15, '*'); m.put(212, 16, 'h');
   m.line(206, 213, 11, 'o', 2);
-  m.line(218, 224, 15);
+  m.line(218, 224, 15, 'o', 2);
+  m.plat(219, 222, 12); m.put(220, 11, 'e');
   m.put(227, 16, 'a');
   m.put(234, 16, 'E');
 

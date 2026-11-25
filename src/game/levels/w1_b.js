@@ -9,7 +9,7 @@
 // Mapas montados com grid() de w1_a.js.
 // =============================================================================
 import { registerLevel } from '../registry.js';
-import { grid } from './w1_a.js';
+import { grid, hideRoom } from './w1_a.js';
 
 // =============================================================================
 // w1_3 — Trilha dos Brinquedos Quebrados. Chão na linha 22 (Tico em pé na 21).
@@ -24,6 +24,8 @@ import { grid } from './w1_a.js';
   m.sign(7, 21, 'w1_sign_toys');
   m.fill(12, 20, 13, 21, '%'); m.put(14, 21, '%'); m.line(12, 14, 18);
   m.plat(18, 20, 18); m.line(18, 20, 17);
+  m.put(23, 21, 'J'); m.plat(22, 26, 13); m.line(22, 26, 12, 'o', 2);     // mola → galho
+  m.put(26, 21, 'a');
   m.sign(28, 21, 'w1_sign_pip');
   m.put(33, 21, 'n', { npc: 'pip', dialog: 'w1_pip_1', flee: true });
   m.arc(38, 19, 3, 1);                                         // vão 3
@@ -49,9 +51,12 @@ import { grid } from './w1_a.js';
   block(134, 136, 19); m.arc(131, 18, 3, 1);
   block(140, 142, 21); m.arc(137, 18, 3, 1);
   m.put(112, 13, 'g'); m.put(132, 12, 'g');
+  m.ground(101, 145, 27);                                       // chão seguro sob a ponte
+  m.fill(141, 25, 145, 26, '%'); m.put(143, 24, 'h');           // degrau de volta
+  m.put(115, 26, 'a'); m.put(130, 26, 'a'); m.line(118, 127, 26, 'o', 3);
   m.ground(146, 187, G);
   // --- D: ravina vertical (chão seguro embaixo) --------------------------------
-  m.put(150, 21, 'K');
+  m.put(150, 21, 'K'); m.put(147, 21, 'h');
   m.sign(153, 21, 'w1_sign_climb');
   m.put(158, 20, 'F', { dy: -8, speed: 34, pause: 1 });       // elevador: linha 20 → 12
   m.fill(162, 12, 165, 12, '%'); m.line(162, 165, 11);        // patamar
@@ -68,22 +73,24 @@ import { grid } from './w1_a.js';
   // penhasco + trilha alta
   m.ground(188, 229, 9);
   // sala secreta 1 na base do penhasco (parede falsa)
-  m.fill(188, 20, 188, 21, 'H'); m.clear(189, 18, 195, 21);
+  m.fill(188, 20, 188, 21, 'H'); hideRoom(m, 189, 18, 195, 21);
   m.put(190, 21, 'X'); m.line(191, 193, 19); m.put(194, 21, 'r'); m.put(195, 21, 'h');
   // --- E: trilha alta, chão falso (segredo 2 / ★3) e descida -------------------
   m.put(192, 8, 'o'); m.put(194, 8, 'o');
   m.put(199, 3, 'g');
   m.fill(205, 9, 206, 10, 'H');                                // chão falso
-  m.clear(201, 11, 210, 14); m.plat(205, 206, 12);
-  m.put(202, 14, '*'); m.put(208, 14, 'X'); m.line(203, 207, 14, 'o', 2);
+  hideRoom(m, 201, 11, 210, 12);                               // sala rasa (sai com 1 pulo)
+  m.put(202, 12, '*'); m.put(209, 12, 'X'); m.line(203, 207, 12, 'o', 2);
   m.line(201, 204, 7); m.line(207, 210, 7);                    // botões "desviam" do buraco
   m.put(210, 8, 'K');
-  m.put(215, 8, 'd');
+  m.put(215, 8, 'd'); m.plat(216, 219, 5); m.put(217, 4, 'o'); m.put(218, 4, 'o');
   m.put(221, 8, 'a');
   m.put(226, 4, 'g');
   m.ground(230, 235, 13); m.line(231, 234, 12);
   m.ground(236, 241, 17); m.put(239, 16, 'b');
   m.ground(242, 259, G);
+  m.put(246, 21, 'a'); m.plat(248, 251, 18); m.put(249, 17, 'h');
+  m.put(252, 21, 'B'); m.put(252, 20, 'B', { contents: 'buttons:3' });
   m.put(255, 21, 'E');
 
   registerLevel({
@@ -119,18 +126,20 @@ import { grid } from './w1_a.js';
   m.put(49, 21, 'K');
   m.sign(52, 21, 'w1_sign_bear');
   m.line(58, 70, 20, 'o', 2);
+  m.put(64, 21, 'a'); m.plat(66, 70, 18);
   m.put(76, 21, 'f');
+  m.put(73, 21, 'B'); m.put(73, 20, 'B', { contents: 'heart' });
   m.sign(83, 21, 'w1_sign_key');
   // poço C (bifurcação: sobe para a caverna D, desce para as raízes fundas E)
   cave(86, 6, 92, 31);
   m.plat(86, 88, 19); m.plat(90, 92, 16);
   m.plat(86, 88, 29); m.plat(90, 92, 26); m.plat(86, 88, 23);
   // segredo 2 (fundo do poço C, parede falsa): retalho
-  m.fill(85, 30, 85, 31, 'H'); cave(78, 28, 84, 31);
+  m.fill(85, 30, 85, 31, 'H'); hideRoom(m, 78, 28, 84, 31);
   m.put(79, 31, 'r'); m.put(81, 31, 'X'); m.line(80, 83, 29, 'o', 1);
   // --- caverna D (rota de cima) ----------------------------------------------
   cave(93, 5, 158, 14);
-  m.put(100, 14, 'a');
+  m.put(100, 14, 'a'); m.put(103, 14, 'h');
   m.put(97, 14, '@', { group: 'd2' });                          // fio em rampa → ★2
   m.fill(103, 9, 107, 9, '%'); m.put(104, 8, '@', { group: 'd2' });
   m.line(105, 106, 8); m.put(107, 8, '*');
@@ -141,8 +150,8 @@ import { grid } from './w1_a.js';
   m.put(121, 14, 'd');
   m.fill(124, 12, 127, 14, '%'); m.line(124, 125, 11); m.put(126, 11, '*'); // ★1
   // chão falso (segredo 1 / ★3)
-  m.fill(131, 15, 132, 15, 'H'); cave(128, 16, 136, 19); m.plat(131, 132, 17);
-  m.put(129, 19, '*'); m.put(135, 19, 'X'); m.put(134, 19, 'e'); m.line(130, 133, 19);
+  hideRoom(m, 128, 15, 136, 18);                               // chão falso (sala rasa)
+  m.put(129, 18, '*'); m.put(135, 18, 'X'); m.put(134, 18, 'e'); m.line(130, 133, 18, 'o', 2);
   m.put(137, 14, 'b');
   m.fill(141, 5, 142, 9, '%'); m.fill(148, 5, 148, 8, '%');    // raízes pendentes
   m.line(144, 154, 13, 'o', 2);
@@ -153,7 +162,8 @@ import { grid } from './w1_a.js';
   m.put(108, 31, 'f');
   m.put(115, 31, 'K');
   m.fill(118, 31, 120, 31, '^'); m.arc(117, 29, 5, 2);
-  m.put(126, 31, 'd');
+  m.put(126, 31, 'd'); m.put(112, 31, 'h');
+  m.plat(128, 131, 28); m.put(129, 27, 'o');
   m.fill(134, 29, 135, 31, '%'); m.plat(138, 142, 28);
   m.put(140, 27, 'q', { quest: 'pip_key', item: 'Chave de corda', sprite: 'key', text: 'Chave de corda do Pip!' });
   m.line(138, 139, 27); m.line(141, 142, 27);
@@ -166,7 +176,7 @@ import { grid } from './w1_a.js';
   m.put(161, 27, 'o'); m.put(161, 21, 'o');
   // --- seção G: fosso com ilhós, nicho costurado, ursinho, Pip e saída ---------
   cave(164, 4, 233, 14);
-  m.put(169, 14, 'K');
+  m.put(169, 14, 'K'); m.put(171, 14, 'h');
   cave(176, 15, 180, 16); m.fill(176, 17, 180, 17, '^');
   m.put(175, 14, '@', { group: 'g1' }); m.put(181, 14, '@', { group: 'g1' });
   m.arc(176, 12, 5, 1);

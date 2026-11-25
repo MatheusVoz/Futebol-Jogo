@@ -9,22 +9,24 @@
 // Mapas montados com grid()/burrow() de w1_a.js.
 // =============================================================================
 import { registerLevel } from '../registry.js';
-import { grid, burrow } from './w1_a.js';
+import { grid, burrow, hideRoom } from './w1_a.js';
 
 // =============================================================================
 // w1_5 — Névoa do Coelho. Chão na linha 22 (Tico em pé na 21).
 // =============================================================================
 {
   const m = grid(280, 32);
-  m.ground(0, 52, 22);
+  m.ground(0, 53, 22);
   // --- A: loja, primeiro brinquedo sem rosto, Sr. Botão ------------------------
   m.put(3, 21, 'P');
   m.sign(7, 21, 'w1_sign_fog');
   m.put(13, 21, 'U');
-  m.line(18, 22, 20);
+  m.line(18, 22, 20, 'o', 2);
+  m.plat(19, 22, 17); m.put(20, 16, 'h');
   m.fill(26, 20, 27, 21, '%'); m.line(26, 27, 18);
   m.sign(30, 21, 'w1_sign_faceless1');
-  m.plat(33, 36, 18); m.line(33, 36, 17);
+  m.plat(33, 36, 18); m.line(33, 36, 17, 'o', 2);
+  m.put(38, 21, 'a');
   m.put(42, 21, 'n', { npc: 'botao', dialog: 'w1_botao_3' });
   // --- B: vãos com ilhós, abismo de verdade com toca por baixo -----------------
   m.put(52, 21, '@', { group: 'b1' }); m.put(58, 21, '@', { group: 'b1' });
@@ -37,18 +39,20 @@ import { grid, burrow } from './w1_a.js';
   m.ground(79, 86, 28); m.fill(79, 27, 86, 27, '^');
   m.ground(87, 279, 22);
   burrow(m, { nx: 73, fx: 91, top: 22, floor: 31, signal: 'toca5' });
-  m.sign(76, 21, 'w1_sign_anchors');
+  m.sign(76, 21, 'w1_sign_anchors'); m.put(74, 21, 'h');
   m.put(78, 21, '@', { group: 'n1', signal: 'toca5', latch: true }); m.put(87, 21, '@', { group: 'n1' });
   m.arc(79, 19, 8, 1);
   m.put(82, 30, 'X'); m.put(85, 30, 'h');                       // segredo 1 (toca)
   m.put(97, 21, 'K');
   m.sign(101, 21, 'w1_sign_faceless2');
-  m.line(104, 108, 20);
+  m.line(104, 108, 20, 'o', 2);
+  m.plat(106, 109, 17); m.put(108, 9, 'g');
   m.put(112, 21, 'f');
   m.fill(118, 20, 119, 21, '%');                                // tora: o ursinho bate e fica tonto
   // --- C: árvore com ilhó alto que abre o portão de espinhos -------------------
   m.plat(124, 126, 19); m.put(125, 18, 'o');
   m.plat(129, 131, 16); m.put(130, 15, 'o');
+  m.plat(130, 132, 12);                                         // degrau extra até o galho
   m.plat(124, 127, 13); m.put(127, 12, '@', { group: 'v1' });
   m.plat(135, 139, 11); m.put(136, 10, '@', { group: 'v1', signal: 'nevoa1', latch: true });
   m.line(137, 139, 9); m.put(138, 10, 'O'); m.put(139, 10, '*');  // ★2 (galho do outro lado)
@@ -58,28 +62,28 @@ import { grid, burrow } from './w1_a.js';
   m.put(150, 21, 'G', { signal: 'nevoa1' });
   m.line(152, 160, 21, 'o', 2);
   // --- D: ilhós + inimigos sobre vãos -----------------------------------------
-  m.put(166, 21, 'K');
+  m.put(166, 21, 'K'); m.put(168, 21, 'h');
   m.clear(172, 22, 176, 31);
   m.put(171, 21, '@', { group: 'd3' }); m.put(177, 21, '@', { group: 'd3' });
   m.arc(172, 19, 5, 2); m.put(174, 14, 'g');
-  m.put(180, 21, 'd');
   m.clear(182, 22, 185, 31);
   m.ground(186, 200, 20);
   m.put(181, 21, '@', { group: 'd4' }); m.put(186, 19, '@', { group: 'd4' });
-  m.put(193, 19, 'b'); m.line(188, 191, 18); m.line(195, 199, 18);
+  m.put(193, 19, 'b'); m.put(197, 19, 'd'); m.line(188, 191, 18); m.line(195, 199, 18);
   // copa morta opcional: fios em rampa → ilha com parede falsa (★3 + memória)
   m.fill(207, 6, 207, 21, ':');
   m.put(203, 21, '@', { group: 't1' });
   m.plat(210, 214, 16); m.put(210, 15, '@', { group: 't1' }); m.put(214, 15, '@', { group: 't2' });
   m.plat(221, 226, 11); m.put(221, 10, '@', { group: 't2' }); m.line(222, 226, 10);
-  m.fill(227, 6, 234, 11, '#'); m.fill(227, 9, 228, 10, 'H'); m.clear(229, 8, 233, 10);
+  m.fill(227, 6, 234, 11, '#'); hideRoom(m, 227, 8, 233, 10);
   m.put(229, 10, 'X'); m.put(230, 10, '*'); m.put(232, 10, 'M', { memory: 'mem_1' }); m.line(230, 232, 8);
   m.put(216, 5, 'g');
   // --- E: reta final ------------------------------------------------------------
+  m.put(236, 21, 'a'); m.plat(214, 218, 18); m.put(232, 21, 'B', { contents: 'buttons:3' });
   m.put(240, 21, 'K');
   m.put(244, 21, 'B'); m.put(245, 21, 'B'); m.put(244, 20, 'B'); m.put(245, 20, 'B', { contents: 'patch' });
   m.put(249, 19, 'e');
-  m.put(253, 21, 'f');
+  m.put(253, 21, 'f'); m.plat(250, 253, 17); m.put(251, 16, 'h');
   m.sign(258, 21, 'w1_sign_faceless3');
   m.fill(262, 19, 263, 21, '%'); m.line(262, 263, 18);
   m.line(266, 271, 20);
