@@ -112,8 +112,8 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.line(81, 91, 17, 'o', 2);
   m.put(70, 15, 'g'); m.put(60, 21, 'a'); m.put(40, 21, 'h');
   m.put(30, 21, 'j', { pair: 'w54b' });                       // portal p/ o nicho do ★1
-  m.fill(200, 2, 212, 8, '%'); m.clear(202, 4, 210, 7);
-  m.put(204, 7, 'j', { pair: 'w54b' }); m.put(208, 7, '*'); m.line(205, 207, 5);   // ★1
+  m.fill(194, 2, 206, 8, '%'); m.clear(196, 4, 204, 7);
+  m.put(198, 7, 'j', { pair: 'w54b' }); m.put(202, 7, '*'); m.line(199, 201, 5);   // ★1
   // poço B (esquerda)
   m.fill(4, 18, 6, 18, '%'); m.fill(10, 15, 12, 15, '%'); rect(m, 1, 4, 2, 21, 'w');
   // ------------------------------------------------------------- F3 (→)
