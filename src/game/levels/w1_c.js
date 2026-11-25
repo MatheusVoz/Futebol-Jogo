@@ -16,6 +16,7 @@ import { grid, burrow, hideRoom } from './w1_a.js';
 // =============================================================================
 {
   const m = grid(280, 32);
+  m.id = 'w1_5';
   m.ground(0, 53, 22);
   // --- A: loja, primeiro brinquedo sem rosto, Sr. Botão ------------------------
   m.put(3, 21, 'P');
@@ -102,6 +103,7 @@ import { grid, burrow, hideRoom } from './w1_a.js';
 // =============================================================================
 {
   const m = grid(180, 30);
+  m.id = 'w1_bonus';
   m.ground(0, 40, 26);
   // --- sala 1: pulinhos entre espinhos + primeira mola ------------------------
   m.put(2, 25, 'P');

@@ -16,6 +16,7 @@ import { grid, hideRoom } from './w1_a.js';
 // =============================================================================
 {
   const m = grid(260, 30);
+  m.id = 'w1_3';
   const G = 22;
   const block = (x0, x1, top) => m.fill(x0, top, x1, top + 1, '%'); // bloco de brinquedo (2 de altura)
   m.ground(0, 37, G);
@@ -106,6 +107,7 @@ import { grid, hideRoom } from './w1_a.js';
 // =============================================================================
 {
   const m = grid(240, 34);
+  m.id = 'w1_4';
   const cave = (x0, y0, x1, y1) => m.fill(x0, y0, x1, y1, ':');
   const PIP = { npc: 'pip', dialog: 'w1_pip_2', quest: 'pip_key', dialogDone: 'w1_pip_3', reward: 15 };
   m.ground(0, 24, 10);

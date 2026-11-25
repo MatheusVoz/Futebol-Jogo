@@ -47,8 +47,38 @@ export function grid(W, H) {
  * caminho de volta/bônus e garante uma rota de tiles para o validador.
  * Use floor = top + 9 (degraus a cada 3 linhas).
  */
-/** Sala secreta: preenche com parede falsa 'H' (parece terreno maciço, sem buraco visível). */
-export function hideRoom(m, x0, y0, x1, y1) { return m.fill(x0, y0, x1, y1, 'H'); }
+/** Itens que podem morar dentro de uma sala secreta (char → tipo de entidade). */
+const HIDDEN_TYPES = { o: 'button', X: 'secret_marker', r: 'patch', h: 'heart', e: 'energy', M: 'memory', c: 'chest' };
+/**
+ * Sala secreta: preenche com parede falsa 'H' (parece terreno maciço). No build(), os
+ * itens colocados dentro dela viram `objects` (célula continua 'H' → nenhum buraco
+ * visível denuncia a sala). Estrelas ficam no mapa (o validador as conta): uma
+ * frestinha brilhando é a única pista.
+ */
+export function hideRoom(m, x0, y0, x1, y1) {
+  m.fill(x0, y0, x1, y1, 'H');
+  if (!m._rooms) {
+    m._rooms = [];
+    const build0 = m.build;
+    m.build = () => {
+      const rows = build0().map((r) => r.split(''));
+      const inRoom = (x, y) => m._rooms.some((r) => x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3]);
+      for (let y = 0; y < rows.length; y++) for (let x = 0; x < rows[y].length; x++) {
+        const ch = rows[y][x];
+        const type = HIDDEN_TYPES[ch];
+        if (!type || !inRoom(x, y)) continue;
+        const k = `${x},${y}`, pr = { ...(m.props[k] || {}) };
+        pr.pid = `${m.id || 'lv'}:${ch}:${k}`;
+        m.objects.push({ type, x, y, ...pr });
+        delete m.props[k];
+        rows[y][x] = 'H';
+      }
+      return rows.map((r) => r.join(''));
+    };
+  }
+  m._rooms.push([x0, y0, x1, y1]);
+  return m;
+}
 
 export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.clear(nx, floor - 2, fx + 2, floor - 1);
@@ -67,6 +97,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
 // =============================================================================
 {
   const m = grid(220, 24);
+  m.id = 'w1_1';
   const G = 19;
   m.ground(0, 77, G);
   // --- A: andar e pular -------------------------------------------------------
@@ -128,7 +159,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.arc(161, 16, 4, 2);
   m.ground(165, 219, G);
   // colina com sala secreta (parede falsa) — ★3
-  m.fill(170, 15, 177, 18, '%');
+  m.fill(170, 15, 177, 18, '#');                              // colina (mesma textura da parede falsa)
   m.plat(166, 168, 16);
   m.fill(170, 17, 171, 18, 'H');
   hideRoom(m, 172, 17, 176, 18);
@@ -159,6 +190,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
 // =============================================================================
 {
   const m = grid(240, 28);
+  m.id = 'w1_2';
   m.ground(0, 32, 18);
   // --- A: altar + Sr. Botão ---------------------------------------------------
   m.put(3, 17, 'P');
@@ -223,7 +255,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.put(192, 16, 'a');
   m.clear(196, 17, 198, 27); m.arc(196, 15, 3, 1);
   m.put(202, 16, '%'); m.fill(203, 15, 203, 16, '%');
-  m.fill(205, 12, 214, 16, '%');
+  m.fill(205, 12, 214, 16, '#');
   m.fill(205, 15, 206, 16, 'H');
   hideRoom(m, 207, 13, 212, 16);
   m.put(208, 16, 'X'); m.line(209, 210, 14); m.put(211, 15, '*'); m.put(212, 16, 'h');
