@@ -188,7 +188,7 @@ registerEntity('tailor_grab', GrabHand);
 class GiantHand extends Entity {
   constructor(level, x, y, props = {}) {
     super(level, x, y, props);
-    this.w = 40; this.h = 30; this.x = x - 20; this.y = ATOP - 40; this.tx = x;
+    this.w = 40; this.h = 30; this.x = x - 20; this.y = ATOP - 40; this.hx = x;
     this.warn = props.warn ?? 1.0; this.z = 47; this.alwaysUpdate = true; this.alwaysDraw = true;
     this.enemy = false; this.contactDamage = 1; this.vy = 0; this.mode = 'warn';
   }
@@ -207,7 +207,7 @@ class GiantHand extends Entity {
   }
   onTouchPlayer() {}
   draw(ctx) {
-    const x = Rn(this.tx);
+    const x = Rn(this.hx);
     if (this.mode === 'warn') {
       const k = this.t / this.warn, blink = Math.floor(this.t * 12) % 2 === 0;
       fillEllipse(ctx, x, FLOOR - 1, Rn(10 + k * 12), 2, `rgba(10,0,20,${0.3 + k * 0.4})`);
@@ -338,7 +338,7 @@ class TailorBoss extends Enemy {
     if (!this.fighting || this.invuln > 0 || this.state === 'giant') return false;
     if (info.kind === 'reflect') {
       if (this.fid !== 'clocks') return this.hurtRaw(dmg * 0.5);
-      const r = this.hurtRaw(2.5);
+      const r = this.hurtRaw(1.5);
       if (!this.stunned && this.state !== 'defeated' && !this.pending) { this.go('stunned'); this.stunDur = 1.6; }
       return r;
     }
@@ -348,8 +348,8 @@ class TailorBoss extends Enemy {
     if (!this.fighting || this.invuln > 0 || this.state === 'giant') return false;
     const f = this.fid;
     let mul;
-    if (this.stunned && this.state !== 'tired') mul = 1;
-    else if (f === 'ocean' && !this.armored) mul = 1;
+    if (this.stunned && this.state !== 'tired') mul = 0.5;
+    else if (f === 'ocean' && !this.armored) mul = 0.5;
     else if (f === 'p1') mul = 0.25;
     else mul = 0;
     if (f === 'ocean' && this.armored) { audio.sfx('armor_clink', { cooldown: 0.1 }); this.hint(FRAGS[1].hint); return false; }
@@ -368,7 +368,7 @@ class TailorBoss extends Enemy {
     return true;
   }
   heartHit(dmg, blast) {
-    const L = this.level, n = blast ? dmg * 0.8 : dmg;
+    const L = this.level, n = (blast ? dmg * 0.8 : dmg) * 0.5;
     this.hp = Math.max(0, this.hp - n);
     audio.sfx('boss_hit'); L.shake(0.2); L.hitstop(0.05);
     L.particles.emit('thread', HEART.x, HEART.y, 8, { colors: [THREAD, THREAD_L, GOLD] });
@@ -571,7 +571,7 @@ class TailorBoss extends Enemy {
   onStomp(p) {
     if (!this.stompable || (this.stompCd || 0) > 0) { p.vy = -280; p.vx = (p.cx < this.cx ? -1 : 1) * 170; p.hurt(1, this); return; }
     this.stompCd = 0.6;
-    this.hurtRaw(2 * (p.stats?.power || 1));
+    this.hurtRaw(1.2 * (p.stats?.power || 1));
   }
   /** Corpo sólido: empurra o Tico (a esquiva não atravessa) e fere ao encostar. */
   solidVsPlayer() {
@@ -596,8 +596,8 @@ class TailorBoss extends Enemy {
   drawGiant(ctx) {
     const k = this.giantK;
     if (k <= 0) return;
-    const t = this.t, cx = ACX, top = ATOP - 10 + Rn((1 - k) * 120), w = 300;
-    ctx.globalAlpha = 0.9 * k;
+    const t = this.t, cx = ACX, top = ATOP + 6 + Rn((1 - k) * 120), w = 300;
+    ctx.globalAlpha = 0.8 * k;
     // tronco e cabeça gigantes atrás da gaiola
     ctx.fillStyle = PATCH[0]; ctx.fillRect(cx - w / 2 + 30, top + 70, w - 60, FLOOR - top - 70);
     for (let i = 0; i < 8; i++) { ctx.fillStyle = PATCH[1 + (i % 3)]; ctx.fillRect(cx - 120 + (i * 37) % 220, top + 80 + ((i * 53) % 120), 28, 22); }
@@ -612,7 +612,6 @@ class TailorBoss extends Enemy {
     ctx.globalAlpha = 1;
   }
   draw(ctx) {
-    this.drawGiant(ctx);
     if (this.state === 'giant' || this.state === 'dormant' && this.alpha <= 0) return;
     const fade = this.stage === 5 && this.state === 'transition' ? Math.max(0, 1 - this.giantK * 1.5) : 1;
     if (fade <= 0) return;
@@ -747,6 +746,7 @@ class TailorArena extends Entity {
     ctx.globalAlpha = 1;
   }
   draw(ctx) {
+    this.level._tailor?.drawGiant(ctx);
     this.drawFrag(ctx);
     if (this.closeK > 0) {   // grade de fios fechando a entrada
       const h = Rn(3 * T * this.closeK);
