@@ -159,7 +159,7 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.put(132, 23, 'K');
   m.put(135, 23, 's', { always: true, h: 10, power: 460 });
   m.put(145, 23, 's', { h: 12, period: 3, burst: 1.4, phase: 1, power: 420 });
-  m.plat(138, 141, 19); m.plat(142, 145, 15); m.plat(147, 150, 11);
+  m.plat(138, 141, 19); m.plat(142, 145, 15); m.plat(147, 152, 11);
   m.line(138, 141, 18, 'o', 3); m.put(143, 14, 'o'); m.put(149, 10, 'o');
   m.plat(141, 144, 5); m.put(142, 4, '*'); m.put(144, 4, 'o');  // ★2 no alto da torre
   m.put(151, 23, 'g');

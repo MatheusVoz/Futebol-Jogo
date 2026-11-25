@@ -171,6 +171,7 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   m.put(230, 19, 'o'); m.put(232, 19, 'o');
   m.put(236, 19, 'E');
 
+  m.put(121, 19, 'K'); m.put(123, 19, 'h');  // QA: checkpoint no meio
   registerLevel({
     id: 'w4_2', world: 4, index: 2, name: 'Corredor dos Armários', subtitle: 'Mundo 4-2',
     music: 'w4_level', tileset: 'w4', background: 'w4', timeOfDay: 'night', parTime: 210,

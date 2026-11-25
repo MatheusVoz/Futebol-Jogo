@@ -37,7 +37,7 @@ export { grid, pit, back, hide, isle, npc };
   m.put(54, 20, 'e');
   // ★1: alto sobre o vão — só com as plataformas da Forma Desfiada
   m.sign(53, 20, 'w5_sign_airplat');
-  pit(m, 56, 62, G); m.arc(56, 18, 7, 2);
+  pit(m, 56, 61, G); m.arc(56, 18, 6, 2);
   m.put(59, 7, '*'); m.line(58, 60, 9);
   m.put(70, 20, 'a'); m.put(78, 16, 'b');
   m.put(84, 20, 'K'); m.put(86, 20, 'h');
@@ -77,7 +77,7 @@ export { grid, pit, back, hide, isle, npc };
   m.put(218, 18, '@', { group: 'w51' }); m.put(225, 12, '@', { group: 'w51' });
   m.fill(224, 13, 229, 13, '%'); m.put(228, 12, '*'); m.line(225, 227, 12);   // ★2
   m.put(222, 19, 'v');
-  m.fill(232, 14, 238, 20, '%'); m.clear(233, 17, 237, 20); m.fill(232, 17, 232, 20, 'Y');
+  m.fill(229, 17, 230, 20, '%'); m.fill(232, 14, 238, 20, '%'); m.clear(233, 17, 237, 20); m.fill(232, 17, 232, 20, 'Y');
   m.put(236, 20, '*'); m.put(234, 20, 'o');                  // ★3
   m.line(232, 238, 13, 'o', 2);
   m.put(242, 20, 'a');
@@ -111,7 +111,7 @@ export { grid, pit, back, hide, isle, npc };
   I(77, 90, 15); m.put(84, 14, 'a'); m.line(78, 82, 13);
   m.put(91, 11, 'q', { dx: 8, dy: 5 }); m.line(92, 98, 10, 'o', 3);
   // ilha 6 com sala escondida (rachadura no topo)
-  I(98, 110, 17, 6); m.put(100, 16, 'h'); m.put(104, 12, 'g');
+  I(97, 110, 17, 6); m.put(100, 16, 'h'); m.put(104, 12, 'g');
   m.put(106, 17, 'H'); m.put(107, 17, 'H');
   m.put(102, 19, 'r'); m.put(104, 19, 'X'); m.line(108, 109, 19); m.line(102, 109, 18, 'o', 3);
   hide(m, 101, 18, 109, 19);

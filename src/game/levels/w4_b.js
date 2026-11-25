@@ -73,6 +73,7 @@ import { grid, gateWall, pit } from './w4_a.js';
   pit(m, 224, 227, G); m.arc(224, 19, 4, 2);
   m.put(236, 21, 'E');
 
+  m.put(55, 21, 'K');  // QA: checkpoint no meio
   registerLevel({
     id: 'w4_3', world: 4, index: 3, name: 'Quarto das Bonecas', subtitle: 'Mundo 4-3',
     music: 'w4_level', tileset: 'w4', background: 'w4', timeOfDay: 'night', parTime: 220,
@@ -157,6 +158,7 @@ import { grid, gateWall, pit } from './w4_a.js';
   m.put(232, 25, 'b');
   m.put(237, 25, 'E');
 
+  m.put(145, 25, 'K'); m.put(147, 25, 'h');  // QA: checkpoint no meio
   registerLevel({
     id: 'w4_4', world: 4, index: 4, name: 'Labirinto de Brinquedos', subtitle: 'Mundo 4-4',
     music: 'w4_level', tileset: 'w4', background: 'w4', timeOfDay: 'night', parTime: 230,
