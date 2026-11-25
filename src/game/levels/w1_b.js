@@ -53,7 +53,7 @@ import { grid, hideRoom } from './w1_a.js';
   m.put(112, 13, 'g'); m.put(132, 12, 'g');
   m.ground(101, 145, 27);                                       // chão seguro sob a ponte
   m.fill(141, 25, 145, 26, '%'); m.put(143, 24, 'h');           // degrau de volta
-  m.put(115, 26, 'a'); m.put(130, 26, 'a'); m.line(118, 127, 26, 'o', 3);
+  m.put(115, 26, 'a'); m.put(130, 26, 'a');
   m.ground(146, 187, G);
   // --- D: ravina vertical (chão seguro embaixo) --------------------------------
   m.put(150, 21, 'K'); m.put(147, 21, 'h');
@@ -150,7 +150,7 @@ import { grid, hideRoom } from './w1_a.js';
   m.put(121, 14, 'd');
   m.fill(124, 12, 127, 14, '%'); m.line(124, 125, 11); m.put(126, 11, '*'); // ★1
   // chão falso (segredo 1 / ★3)
-  hideRoom(m, 128, 15, 136, 18);                               // chão falso (sala rasa)
+  hideRoom(m, 128, 16, 136, 18); m.fill(131, 15, 132, 15, 'H');   // chão falso + sala rasa
   m.put(129, 18, '*'); m.put(135, 18, 'X'); m.put(134, 18, 'e'); m.line(130, 133, 18, 'o', 2);
   m.put(137, 14, 'b');
   m.fill(141, 5, 142, 9, '%'); m.fill(148, 5, 148, 8, '%');    // raízes pendentes
