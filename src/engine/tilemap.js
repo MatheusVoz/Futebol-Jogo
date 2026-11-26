@@ -30,7 +30,10 @@ export class Tilemap {
   inBounds(tx, ty) { return tx >= 0 && ty >= 0 && tx < this.cols && ty < this.rows; }
   get(tx, ty) {
     if (tx < 0 || tx >= this.cols) return ty < this.rows ? T.SOLID : T.EMPTY; // side walls
-    if (ty < 0) return this.get(tx, 0) === T.WATER ? T.WATER : T.EMPTY;
+    if (ty < 0) { // acima do mapa: paredes que tocam o topo continuam (não dá pra andar por cima do teto)
+      const t0 = this.get(tx, 0);
+      return t0 === T.WATER ? T.WATER : isSolidType(t0) ? T.SOLID : T.EMPTY;
+    }
     if (ty >= this.rows) return T.EMPTY; // bottomless pit
     return this.data[ty * this.cols + tx];
   }
