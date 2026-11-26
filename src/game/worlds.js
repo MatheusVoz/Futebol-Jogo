@@ -12,8 +12,12 @@ export const WORLDS = [
   { id: 5, name: 'O Coração da Dimensão', short: 'Coração', color: '#ff4f8a', dark: '#2a0a1a', music: 'w5_level', boss: 'O Costureiro', intro: 'world5_intro' },
 ];
 
+/** Fases dinâmicas (estilo "Cuphead"): entram antes do chefe de cada mundo. */
+export const DYNAMIC = { 1: 'w1_climb', 2: 'w2_ride', 3: 'w3_tower', 4: 'w4_fly', 5: 'w5_rise' };
+
 for (const w of WORLDS) {
-  w.levels = [1, 2, 3, 4, 5, 6].map((i) => `w${w.id}_${i}`);
+  // 5 fases normais + 1 fase "dinâmica" (subida / voo / montaria) + chefe.
+  w.levels = [`w${w.id}_1`, `w${w.id}_2`, `w${w.id}_3`, `w${w.id}_4`, `w${w.id}_5`, ...(DYNAMIC[w.id] ? [DYNAMIC[w.id]] : []), `w${w.id}_6`];
   w.bonus = `w${w.id}_bonus`;
   w.bonusStarsNeeded = 10; // estrelas do mundo para liberar a fase bônus
   registerWorld(w);
@@ -21,9 +25,11 @@ for (const w of WORLDS) {
 
 /** Next level id after `id` in the main progression (or null at the end of a world). */
 export function nextLevelId(id) {
-  const m = /^w(\d)_(\d)$/.exec(id);
-  if (!m) return null;
-  const w = +m[1], i = +m[2];
-  if (i < 6) return `w${w}_${i + 1}`;
-  return w < 5 ? `w${w + 1}_1` : null;
+  for (const w of WORLDS) {
+    const i = w.levels.indexOf(id);
+    if (i < 0) continue;
+    if (i < w.levels.length - 1) return w.levels[i + 1];
+    return w.id < 5 ? WORLDS[w.id].levels[0] : null;
+  }
+  return null;
 }
