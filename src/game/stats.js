@@ -2,7 +2,8 @@
 // stats.js — Atributos do jogador derivados do save (árvore de habilidades,
 // itens da loja, fios antigos). Os nós/itens registrados declaram `effects`:
 //   { maxHp:+1, maxEnergy:+25, power:+0.25, speed:+0.05, duration:+0.15,
-//     regen:+1.5, efficiency:+0.1, dashCooldown:-0.08, magnet:+16, ... }
+//     regen:+1.5, efficiency:+0.1, dashCooldown:-0.08, magnet:+16,
+//     heartRegen:-4 (s por meio coração), ... }
 // =============================================================================
 import { save } from '../engine/save.js';
 import { R } from './registry.js';
@@ -19,6 +20,7 @@ export const BASE_STATS = {
   magnet: 0,         // raio extra de atração de botões
   unravelCharge: 1,  // velocidade de carga da Forma Desfiada
   comboWindow: 0,
+  heartRegen: 20,    // s para recuperar meio coração (vida funciona em meios corações)
 };
 
 let cache = null;
@@ -36,7 +38,8 @@ export function getStats() {
   for (const id of d.skills) apply(R.skills.get(id));
   for (const id of d.shop) apply(R.shopItems.get(id));
   s.efficiency = Math.min(0.6, s.efficiency);
-  s.maxHp = Math.min(10, Math.round(s.maxHp));
+  s.maxHp = Math.min(10, Math.round(s.maxHp * 2) / 2);
+  s.heartRegen = Math.max(5, s.heartRegen);
   cache = s;
   cacheKey = key;
   return s;

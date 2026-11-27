@@ -2,7 +2,9 @@
 // ui/touch.js — Controles de toque multitoque (overlay do jogo).
 //   Esquerda: ANALÓGICO flutuante (surge onde o polegar encosta nos 40% da esquerda).
 //   Direita: PULAR, ATACAR, DASH, HABILIDADE (ícone + recarga), CORRER (toque = trava,
-//   segurar = enquanto segura), TROCAR habilidade, INTERAGIR (contextual) e PAUSA.
+//   segurar = enquanto segura), TROCAR habilidade, TROCAR ARMA (setas laranja, ao
+//   lado do ataque — o botão de ataque mostra a arma atual: luva ou arco),
+//   INTERAGIR (contextual) e PAUSA.
 // Aparece só em aparelho de toque com input.lastDevice === 'touch' e só na LevelScene
 // (fora de diálogo/cutscene). Debug: ?touch=1 força a exibição.
 // Toques capturados aqui NÃO chegam a input.pointer (menus).
@@ -15,8 +17,9 @@ import { PixelCanvas } from '../../engine/pixel.js';
 import font from '../../engine/font.js';
 import { R } from '../registry.js';
 import { drawDisc, INK } from '../art/ui_kit.js';
+import { WEAPONS, currentWeapon } from '../player/weapons.js';
 
-const ACTS = ['left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'ability', 'cycle', 'interact', 'run', 'pause'];
+const ACTS = ['left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'ability', 'cycle', 'interact', 'run', 'pause', 'swap'];
 const SLIDE = new Set(['jump', 'attack', 'dash', 'ability']); // dá pra deslizar o dedo entre estes
 const DEAD = 0.24, VERT = 0.62, RUN_AT = 0.85;
 
@@ -63,11 +66,14 @@ function computeLayout(L) {
   const p = L.player;
   const B = [];
   const m = S(7);
-  const rj = S(20), ra = S(16), rd = S(15), rb = S(15), rr = S(14), rc = S(11), rp = S(11), ri = S(14);
+  const rj = S(20), ra = S(16), rd = S(15), rb = S(15), rr = S(14), rc = S(11), rp = S(11), ri = S(14), rs = S(10);
   const jx = W - m - rj, jy = H - m - rj - 2;
   B.push({ id: 'jump', action: 'jump', x: jx, y: jy, r: rj, color: '#3fc7c0', glyph: 'ctl_jump' });
   const ax = jx - rj - ra - S(6), ay = jy + S(5);
-  B.push({ id: 'attack', action: 'attack', x: ax, y: ay, r: ra, color: '#ff6b8a', glyph: 'ctl_attack' });
+  const wpn = WEAPONS[currentWeapon()];
+  B.push({ id: 'attack', action: 'attack', x: ax, y: ay, r: ra, color: '#ff6b8a', glyph: wpn.glyph });
+  // trocar arma: no vão entre CORRER, ATACAR e HABILIDADE (acima-esquerda do ataque)
+  B.push({ id: 'swap', action: 'swap', x: ax - ra - rs - S(6), y: ay - ra - S(9), r: rs, color: '#ffb347', glyph: 'ctl_swap' });
   const dx = jx + S(3), dy = jy - rj - rd - S(7);
   B.push({ id: 'dash', action: 'dash', x: dx, y: dy, r: rd, color: '#7fd6ff', glyph: 'ctl_dash' });
   const rx = ax - ra - rr - S(9), ry = jy + S(9);

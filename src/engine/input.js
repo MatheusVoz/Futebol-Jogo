@@ -3,7 +3,9 @@
 // ponteiro (menus por toque/mouse).
 //
 // Ações: left right up down jump attack dash ability cycle interact run
-//        pause confirm back  (+ ab1..ab5 para selecionar habilidade direto)
+//        pause confirm back swap (+ ab1..ab5 para selecionar habilidade direto)
+//   swap = trocar de arma (Soco/Arco). Q e Tab disparam 'swap' E 'cycle' (os menus
+//   continuam usando 'cycle'; na fase o jogador ignora 'cycle' quando 'swap' veio junto).
 //
 //   input.down('jump')      // segurando
 //   input.pressed('jump')   // apertou neste quadro (lógico, 60Hz)
@@ -17,7 +19,7 @@
 
 export const ACTIONS = [
   'left', 'right', 'up', 'down', 'jump', 'attack', 'dash', 'ability', 'cycle',
-  'interact', 'run', 'pause', 'confirm', 'back', 'ab1', 'ab2', 'ab3', 'ab4', 'ab5', 'map',
+  'interact', 'run', 'pause', 'confirm', 'back', 'ab1', 'ab2', 'ab3', 'ab4', 'ab5', 'map', 'swap',
 ];
 
 const KEYMAP = {
@@ -29,7 +31,7 @@ const KEYMAP = {
   KeyX: ['attack', 'back'], KeyJ: ['attack'],
   KeyC: ['dash'], KeyL: ['dash'], ShiftRight: ['dash'],
   KeyV: ['ability'], KeyI: ['ability'],
-  KeyQ: ['cycle'], KeyE: ['cycle'], Tab: ['cycle'],
+  KeyQ: ['swap', 'cycle'], KeyE: ['cycle'], Tab: ['swap', 'cycle'],
   ShiftLeft: ['run'],
   Enter: ['confirm', 'pause'], Escape: ['pause', 'back'], KeyP: ['pause'], Backspace: ['back'],
   KeyF: ['interact'],
@@ -40,7 +42,7 @@ const KEYMAP = {
 // Standard gamepad mapping
 const PADMAP = {
   0: ['jump', 'confirm'], 1: ['dash', 'back'], 2: ['attack'], 3: ['ability'],
-  4: ['cycle'], 5: ['run'], 6: ['cycle'], 7: ['ability'],
+  4: ['cycle'], 5: ['run'], 6: ['swap', 'cycle'], 7: ['ability'],
   8: ['map'], 9: ['pause'], 12: ['up', 'interact'], 13: ['down'], 14: ['left'], 15: ['right'],
 };
 

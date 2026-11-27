@@ -3,8 +3,9 @@
 // Interface usada pela LevelScene:
 //   new Hud(level); update(dt); draw(ctx); toast(text, icon); flashEnergy();
 //   pulseAbility(); onCollect(kind, n); showTitle(name, subtitle); drawPrompt(ctx, entity)
-// Layout: canto sup. esquerdo = corações, carretel de energia, anel da Forma Desfiada,
-// bolhas de oxigênio. Canto sup. direito = botões, estrelas, habilidade equipada.
+// Layout: canto sup. esquerdo = corações (em MEIOS corações + indicador sutil de
+// regeneração), carretel de energia, anel da Forma Desfiada, arma atual, bolhas de
+// oxigênio. Ao trocar de arma: plaquinha com ícone + nome ("Soco"/"Arco"). Canto sup. direito = botões, estrelas, habilidade equipada.
 // Topo central = barra do chefe, cronômetro, avisos. Os cantos inferiores ficam
 // livres para os controles de toque.
 // =============================================================================
@@ -16,6 +17,7 @@ import { getImage, defineImage } from '../../engine/sprites.js';
 import { R } from '../registry.js';
 import { drawPanel, drawBar, drawDisc, INK } from '../art/ui_kit.js';
 import { touchControlsVisible, touchRightInset } from './touch.js';
+import { WEAPONS, currentWeapon } from '../player/weapons.js';
 
 defineImage('hud_bubble', 9, 9, (pc) => {
   pc.circle(4.5, 4.5, 3.6, '#55d0ff88');
@@ -91,6 +93,8 @@ export class Hud {
     this.bossTrailWait = 0;
     this.bossOutT = 0;
     this.unravelFullT = 0;
+    this.lastWpn = currentWeapon();
+    this.wpnT = 0;
   }
 
   // -------------------------------------------------------------- eventos
@@ -100,6 +104,7 @@ export class Hud {
   }
   flashEnergy() { this.enFlashT = 0.45; }
   pulseAbility() { this.abPulseT = 0.5; this.abNameT = 1.6; }
+  pulseWeapon() { this.wpnT = 1.6; this.lastWpn = currentWeapon(); }
   onCollect(kind) {
     if (kind === 'button' || kind === 'bigbutton' || kind === 'chest') this.btnBumpT = 0.3;
   }
@@ -118,13 +123,21 @@ export class Hud {
     if (!p) return;
     // vida
     const hp = p.hp;
-    if (hp < this.lastHp) {
-      for (let i = Math.max(0, Math.ceil(hp - 0.5)); i < Math.ceil(this.lastHp); i++) this.heartFx[i] = { k: 'lose', t: 0 };
-      this.shakeT = 0.4;
-    } else if (hp > this.lastHp) {
-      for (let i = Math.floor(this.lastHp); i < Math.ceil(hp); i++) this.heartFx[i] = { k: 'gain', t: 0 };
+    if (hp !== this.lastHp) {
+      // efeitos por coração conforme o preenchimento (0, ½, 1) mudou
+      const n = Math.ceil(Math.max(hp, this.lastHp, p.maxHp));
+      for (let i = 0; i < n; i++) {
+        const a = clamp(this.lastHp - i, 0, 1), b = clamp(hp - i, 0, 1);
+        if (b < a) this.heartFx[i] = { k: 'lose', t: 0, half: b > 0 || a < 1 };
+        else if (b > a) this.heartFx[i] = { k: 'gain', t: 0, half: b < 1 || a > 0 };
+      }
+      if (hp < this.lastHp) this.shakeT = 0.4;
     }
     this.lastHp = hp;
+    // arma
+    const w = currentWeapon();
+    if (w !== this.lastWpn) this.pulseWeapon();
+    if (this.wpnT > 0) this.wpnT -= dt;
     for (const k of Object.keys(this.heartFx)) { const f = this.heartFx[k]; f.t += dt; if (f.t > 0.7) delete this.heartFx[k]; }
     if (this.shakeT > 0) this.shakeT -= dt;
     // energia
@@ -194,6 +207,9 @@ export class Hud {
     const perRow = 10;
     const shake = this.shakeT > 0 ? Math.round(Math.sin(this.t * 70) * 2 * (this.shakeT / 0.4)) : 0;
     const rows = Math.ceil(n / perRow);
+    const regenK = p.regenK || 0;
+    const regenIdx = regenK > 0 ? Math.floor(p.hp) : -1;      // coração que está enchendo
+    const regenRight = p.hp % 1 >= 0.5;                       // metade direita (a esquerda já está cheia)
     for (let i = 0; i < n; i++) {
       const hx = x0 + (i % perRow) * 12 + shake, hy = y0 + Math.floor(i / perRow) * 11;
       const fill = p.hp >= i + 1 ? 'icon_heart' : p.hp >= i + 0.5 ? 'icon_heart_half' : 'icon_heart_empty';
@@ -202,10 +218,15 @@ export class Hud {
       if (fx && fx.k === 'gain' && fx.t < 0.35) dy = -Math.round(Math.sin((fx.t / 0.35) * Math.PI) * 2);
       if (p.hp > 0 && p.hp <= 1 && i === 0 && (this.t % 0.9) < 0.14) dy = -1;
       blit(ctx, fill, hx, hy + dy);
+      if (i === regenIdx) this.drawRegen(ctx, hx, hy + dy, regenRight, regenK);
       if (p.hp > 0 && p.hp <= 1 && i === 0 && (this.t % 0.9) < 0.1) blit(ctx, 'icon_heart_flash', hx, hy + dy, 0.45);
       if (fx && fx.k === 'lose') {
         if (fx.t < 0.1) blit(ctx, 'icon_heart_flash', hx, hy);
-        else if (fx.t < 0.55) { const k = (fx.t - 0.1) / 0.45; blit(ctx, 'icon_heart', hx + Math.round(k * 3), hy - Math.round(k * 9), 1 - k); }
+        else if (fx.t < 0.55) {
+          const k = (fx.t - 0.1) / 0.45;
+          if (fx.half) this.blitHalf(ctx, 'icon_heart', hx + Math.round(k * 3), hy - Math.round(k * 9), p.hp > i, 1 - k);
+          else blit(ctx, 'icon_heart', hx + Math.round(k * 3), hy - Math.round(k * 9), 1 - k);
+        }
       } else if (fx && fx.k === 'gain') {
         const k = Math.round(2 - Math.abs(fx.t - 0.3) * 6);
         sparkle(ctx, hx + 1, hy + 1, k);
@@ -239,7 +260,32 @@ export class Hud {
       this.drawUnravel(ctx, right + 8, y + 5, p.unravelMeter || 0);
       right += 15;
     }
+    // arma atual (teclado/controle; no toque o botão de ataque já mostra)
+    const wdef = WEAPONS[currentWeapon()];
+    if (!touchControlsVisible()) {
+      const im = img(wdef.icon);
+      if (im) {
+        const pop = this.wpnT > 1.3 ? -Math.round(Math.sin(((this.wpnT - 1.3) / 0.3) * Math.PI) * 2) : 0;
+        ctx.drawImage(im, right + 3, Math.round(y + 6 - im.height / 2) + pop);
+        right += im.width + 3;
+      }
+    }
     y += 12;
+    // plaquinha ao trocar de arma
+    if (this.wpnT > 0) {
+      const a = ctx.globalAlpha;
+      const inK = clamp((1.6 - this.wpnT) / 0.18, 0, 1), outK = clamp(this.wpnT / 0.3, 0, 1);
+      ctx.globalAlpha = a * Math.min(inK, outK);
+      const im = img(wdef.icon);
+      const label = wdef.name;
+      const w = font.measure(label) + (im ? im.width + 4 : 0) + 12;
+      const px = x0 - Math.round((1 - easeOutBack(inK)) * 12);
+      drawPanel(ctx, px, y, w, 15, 'dark');
+      if (im) ctx.drawImage(im, px + 5, Math.round(y + 7.5 - im.height / 2));
+      font.draw(ctx, label, px + 6 + (im ? im.width + 3 : 0), y + 4, { color: wdef.color, shadow: '#0b0716' });
+      ctx.globalAlpha = a;
+      y += 17;
+    }
     // oxigênio
     if (this.level.data?.oxygen && p.oxygen < 1) {
       const n2 = 5, ox = Math.max(0, p.oxygen);
@@ -252,6 +298,38 @@ export class Hud {
       y += 10;
     }
     return right;
+  }
+
+  /** Metade (esquerda/direita) de um ícone de coração. */
+  blitHalf(ctx, name, x, y, right, alpha = 1) {
+    const im = getImage(name);
+    if (!im) return;
+    const a = ctx.globalAlpha;
+    ctx.globalAlpha = a * alpha;
+    const hw = 7; // a costura do meio fica na coluna 6
+    if (right) ctx.drawImage(im, hw, 0, im.width - hw, im.height, Math.round(x) + hw, Math.round(y), im.width - hw, im.height);
+    else ctx.drawImage(im, 0, 0, hw, im.height, Math.round(x), Math.round(y), hw, im.height);
+    ctx.globalAlpha = a;
+  }
+  /** Indicador sutil de regeneração: a metade vazia vai "enchendo" de baixo p/ cima e pulsa. */
+  drawRegen(ctx, x, y, right, k) {
+    const im = getImage('icon_heart');
+    if (!im) return;
+    const a = ctx.globalAlpha;
+    const pulse = 0.5 + 0.5 * Math.sin(this.t * (3 + k * 5));
+    const sx = right ? 7 : 1, sw = right ? im.width - 8 : 6;
+    const top = 1, inner = im.height - 3;              // área útil do coração
+    const fh = Math.max(1, Math.round(inner * k));
+    const sy = top + inner - fh;
+    ctx.globalAlpha = a * (0.18 + 0.16 * k + 0.1 * pulse);
+    ctx.drawImage(im, sx, sy, sw, fh, Math.round(x) + sx, Math.round(y) + sy, sw, fh);
+    // linha de "costura" brilhante no topo do que já encheu
+    if (k > 0.05) {
+      ctx.globalAlpha = a * (0.35 + 0.35 * pulse);
+      ctx.fillStyle = '#ffd0dc';
+      for (let i = sx; i < sx + sw; i += 2) ctx.fillRect(Math.round(x) + i, Math.round(y) + sy, 1, 1);
+    }
+    ctx.globalAlpha = a;
   }
 
   drawUnravel(ctx, cx, cy, m) {

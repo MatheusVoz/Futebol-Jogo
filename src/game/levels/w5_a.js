@@ -16,7 +16,34 @@ export const W5 = { world: 5, tileset: 'w5', background: 'w5', ambient: 'w5_thre
 export function rect(m, x0, y0, x1, y1, ch, pr) { m.fill(x0, y0, x1, y1, ch); if (pr) m.props[`${x0},${y0}`] = pr; return m; }
 /** Porta de barreira de fio: parede sólida acima, 'Y' de y0 até y1. */
 export function threadDoor(m, x0, x1, top, y0, y1) { m.fill(x0, top, x1, y0 - 1, '%'); return m.fill(x0, y0, x1, y1, 'Y'); }
+/** Muralha que desce do alto do mapa (linha 0) até y1 — nada de pilar começando no ar. */
+export function hangWall(m, x0, x1, y1, ch = '%') { return m.fill(x0, 0, x1, y1, ch); }
 export { grid, pit, back, hide, isle, npc };
+
+/**
+ * Ilha de tecido FLUTUANTE: topo cheio (`full` linhas) e base afunilando num cone
+ * irregular até uma ponta — lê como ilha com fundo desfiado (o tileset pendura fios
+ * por baixo), não como bloco cortado. Se a ilha encosta no fundo do mapa vira
+ * penhasco reto (continua para baixo, fora da tela).
+ */
+export function isle5(m, x0, x1, top, d = 4, ch = '#', full = 2) {
+  if (top + d >= m.H) return isle(m, x0, x1, top, d, ch);
+  const W = x1 - x0 + 1;
+  if (W <= 2) return m.fill(x0, top, x1, top, ch);           // retalho fininho
+  let a = x0, b = x1;
+  const rowsN = d + 1;
+  for (let r = 0; r < rowsN && top + r < m.H; r++) {
+    if (r >= full) {
+      const k = (r - full + 1) / (rowsN - full);
+      const inset = Math.round(Math.pow(k, 0.85) * (W - 2) / 2);
+      const jl = ((x0 * 7 + r * 13 + top) % 3 === 0) ? 1 : 0, jr = ((x1 * 5 + r * 11 + top) % 3 === 0) ? 1 : 0;
+      a = Math.max(a, x0 + inset + jl); b = Math.min(b, x1 - inset - jr);
+      if (b < a) break;
+    }
+    m.fill(a, top + r, b, top + r, ch);
+  }
+  return m;
+}
 
 // =============================================================================
 // w5_1 — O Tear das Tecelãs. Chão na linha 21 (Tico em pé na 20).
@@ -33,7 +60,7 @@ export { grid, pit, back, hide, isle, npc };
   // --- B: orbes + barreira de fio -------------------------------------------
   m.sign(39, 20, 'w5_sign_unravel');
   m.put(41, 18, 'v'); m.put(44, 18, 'v'); m.put(47, 18, 'v');
-  threadDoor(m, 50, 51, 3, 15, 20);
+  threadDoor(m, 50, 51, 0, 15, 20);
   m.put(54, 20, 'e');
   // ★1: alto sobre o vão — só com as plataformas da Forma Desfiada
   m.sign(53, 20, 'w5_sign_airplat');
@@ -45,11 +72,11 @@ export { grid, pit, back, hide, isle, npc };
   m.sign(88, 20, 'w5_sign_rift');
   m.put(90, 20, 'l');
   rect(m, 93, 14, 94, 20, 'm');                         // muralha vermelha (fase A)
-  m.fill(93, 3, 94, 13, '%');
+  hangWall(m, 93, 94, 13);
   pit(m, 97, 110, G); m.fill(103, 21, 104, 27, '%');
   rect(m, 98, 18, 101, 18, 'p'); rect(m, 106, 17, 109, 17, 'p'); m.line(98, 109, 15, 'o', 2);
   m.put(113, 20, 'l');
-  rect(m, 116, 14, 117, 20, 'p'); m.fill(116, 3, 117, 13, '%');   // muralha azul (fase B)
+  rect(m, 116, 14, 117, 20, 'p'); hangWall(m, 116, 117, 13);   // muralha azul (fase B)
   // --- D: ilhas à deriva ------------------------------------------------------
   pit(m, 120, 140, G);
   m.fill(126, 19, 127, 27, '%'); m.fill(133, 18, 134, 27, '%');
@@ -71,11 +98,11 @@ export { grid, pit, back, hide, isle, npc };
   // --- G: placa segurada pelo Retalho Fantasma --------------------------------
   m.sign(203, 20, 'w5_sign_decoy');
   m.put(206, 20, 'D', { signal: 'w51_gate' });
-  m.fill(211, 3, 213, 16, '%'); m.put(212, 20, 'G', { signal: 'w51_gate' });
+  hangWall(m, 211, 213, 16); m.put(212, 20, 'G', { signal: 'w51_gate' });
   m.put(215, 20, 'K');
   // --- H: ilhós até o mirante (★2), cofre de fios (★3), saída -----------------
   m.put(218, 18, '@', { group: 'w51' }); m.put(225, 12, '@', { group: 'w51' });
-  m.fill(224, 13, 229, 13, '%'); m.put(228, 12, '*'); m.line(225, 227, 12);   // ★2
+  isle5(m, 224, 229, 13, 2, '#', 1); m.put(228, 12, '*'); m.line(225, 227, 12);   // ★2
   m.put(222, 19, 'v');
   m.fill(229, 17, 230, 20, '%'); m.fill(232, 14, 238, 20, '%'); m.clear(233, 17, 237, 20); m.fill(232, 17, 232, 20, 'Y');
   m.put(236, 20, '*'); m.put(234, 20, 'o');                  // ★3
@@ -96,8 +123,8 @@ export { grid, pit, back, hide, isle, npc };
 // =============================================================================
 {
   const m = grid(260, 30);
-  const I = (x0, x1, top, d = 4) => isle(m, x0, x1, top, d);
-  I(0, 14, 18, 12); m.put(3, 17, 'P'); m.sign(7, 17, 'w5_sign_bridge'); m.line(9, 13, 15);
+  const I = (x0, x1, top, d = 4, full = 2) => isle5(m, x0, x1, top, d, '#', full);
+  I(0, 14, 18, 7, 3); m.put(3, 17, 'P'); m.sign(7, 17, 'w5_sign_bridge'); m.line(9, 13, 15);
   I(21, 32, 16); m.put(27, 15, 'a'); m.line(22, 25, 14);
   m.put(33, 12, 'q', { dx: 8, dy: 4 });
   m.put(37, 8, '*');                                         // ★1 (pulo duplo saindo da tirolesa)
@@ -111,7 +138,7 @@ export { grid, pit, back, hide, isle, npc };
   I(77, 90, 15); m.put(84, 14, 'a'); m.line(78, 82, 13);
   m.put(91, 11, 'q', { dx: 8, dy: 5 }); m.line(92, 98, 10, 'o', 3);
   // ilha 6 com sala escondida (rachadura no topo)
-  I(97, 110, 17, 6); m.put(100, 16, 'h'); m.put(104, 12, 'g');
+  I(97, 110, 17, 6, 4); m.put(100, 16, 'h'); m.put(104, 12, 'g');
   m.put(106, 17, 'H'); m.put(107, 17, 'H');
   m.put(102, 19, 'r'); m.put(104, 19, 'X'); m.line(108, 109, 19); m.line(102, 109, 18, 'o', 3);
   hide(m, 101, 18, 109, 19);
@@ -134,7 +161,7 @@ export { grid, pit, back, hide, isle, npc };
   m.fill(228, 11, 234, 16, '#'); m.clear(229, 14, 233, 16); m.fill(228, 14, 228, 16, 'Y');
   m.put(231, 16, '*'); m.line(229, 233, 10);                 // ★3
   m.put(218, 13, 's', { w: 3, ay: 1, period: 3.5 });
-  I(242, 259, 16, 14); m.put(246, 15, 'a'); m.put(250, 11, 'g'); m.put(255, 15, 'E');
+  I(242, 259, 16, 8, 3); m.put(246, 15, 'a'); m.put(250, 11, 'g'); m.put(255, 15, 'E');
   m.put(238, 13, 's', { w: 3, ax: 1, period: 3 });
 
   registerLevel({

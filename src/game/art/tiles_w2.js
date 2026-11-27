@@ -409,10 +409,38 @@ function drawRuinWall(pc, x, y, n, rng, info) {
     }
   }
 }
-function bgBehind(pc, x, y, info) {
+/** Parede interna do navio (tábuas escuras, cavernas/costelas, pregos) — atrás de
+ *  corredores e porões do casco. */
+function drawHullWall(pc, x, y, info) {
   const { tx, ty, map } = info;
-  if (map.get(tx - 1, ty) === T.BG || map.get(tx + 1, ty) === T.BG || map.get(tx, ty - 1) === T.BG || map.get(tx, ty + 1) === T.BG) drawRuinWall(pc, x, y, null, null, info);
+  const sU = solidLike(map.get(tx, ty - 1)), sL = solidLike(map.get(tx - 1, ty));
+  const sR = solidLike(map.get(tx + 1, ty)), sD = solidLike(map.get(tx, ty + 1));
+  const B = ['#3a2618', '#33210f', '#402a1a'];
+  for (let ly = 0; ly < 16; ly++) {
+    for (let lx = 0; lx < 16; lx++) {
+      const wx = tx * 16 + lx, wy = ty * 16 + ly;
+      const row = Math.floor(wy / 6), ry = wy - row * 6;
+      const sx = (wx + ((h2(row, 61) * 40) | 0)) % 40;
+      let c = B[(h2(row, sx > 20 ? 1 : 0, 62) * 3) | 0];
+      if (ry === 5) c = '#1c100a';
+      else if (ry === 0) c = '#4a3220';
+      if (sx === 0) c = '#1c100a';
+      const rib = ((wx % 80) + 80) % 80;
+      if (rib < 6) c = rib === 0 ? '#1a0e08' : rib === 1 ? '#7a5230' : rib === 5 ? '#24160c' : '#5a3a22';
+      if (rib === 3 && wy % 12 === 4) c = '#c8a060';
+      if (h2(wx, wy, 63) < 0.03) c = '#24160c';
+      let sh = 0;
+      if (sU) sh = Math.max(sh, (6 - ly) / 6);
+      if (sL) sh = Math.max(sh, (4 - lx) / 5);
+      if (sR) sh = Math.max(sh, (lx - 11) / 6);
+      if (sD) sh = Math.max(sh, (ly - 12) / 6);
+      if (sh > th(wx, wy)) c = mix(c, '#05030a', 0.5);
+      pc.px(x + lx, y + ly, c);
+    }
+  }
 }
+/** As paredes de fundo agora vêm da camada de paredes de decorate() (atrás de tudo). */
+function bgBehind() {}
 
 // buffer temporário (oneway/espinhos são desenhados nele, contornados e copiados)
 let TMP = null;
@@ -536,6 +564,7 @@ const CAUS_A = [0.6, 0.42, 0.26, 0.14];
 const WS = {};
 let CAUS = null;
 let waterTod = 'day'; // horário da fase atual (lido em decorate(), que recebe os dados da fase)
+let curRows = null;   // linhas ASCII da fase atual (decorate) — para reconhecer células de entidades
 function waterCol(z, x, yy, tod) {
   const L = WSTR[tod];
   const f = clamp(z / 14, 0, L.length - 1);
@@ -614,25 +643,236 @@ function bubbles() {
   ];
 }
 
+// ------------------------------------------------------------------ análise da água
+// Calculada uma vez por mapa (cache): regiões conexas de água, quais são BOLHAS
+// mágicas flutuantes (ar dos lados/embaixo), qual é o MAR (linha d'água principal),
+// profundidade/superfície por célula e quais células ficam "cobertas" (sob rocha,
+// casco ou parede de fundo) e precisam de parede atrás em vez do fundo do mar.
+// bg_w2.js usa isto para desenhar o fundo submarino só atrás da água do mar.
+const ENT_BLOCK = new Set(['S', 'G', 'B', 'H', 'Y']);
+const _winfo = new WeakMap();
+const isThin = (t) => t === T.ONEWAY || t === T.SPIKE;
+export function w2WaterInfo(map, rows) {
+  let I = _winfo.get(map);
+  if (I) return I;
+  const C = map.cols, R = map.rows, N = C * R;
+  const chAt = (x, y) => (rows && rows[y] && rows[y][x]) || '.';
+  const isEntCell = (x, y) => { const c = chAt(x, y); return c !== '.' && c !== '~' && c !== ':' && c !== ' '; };
+  const reg = new Int32Array(N).fill(-1);
+  const depth = new Uint8Array(N), surf = new Uint8Array(N), ceil = new Uint8Array(N), memb = new Uint8Array(N);
+  const cover = new Uint8Array(N); // 1 = parede de ruína atrás, 2 = parede de casco atrás
+  const regions = [];
+  // --- regiões (4-conexas)
+  const st = [];
+  for (let i = 0; i < N; i++) {
+    if (reg[i] >= 0 || map.data[i] !== T.WATER) continue;
+    const id = regions.length;
+    const Rg = { id, x0: 1e9, y0: 1e9, x1: -1, y1: -1, n: 0, leak: 0, per: 0, cells: [] };
+    reg[i] = id; st.push(i);
+    while (st.length) {
+      const k = st.pop(), x = k % C, y = (k / C) | 0;
+      Rg.n++; Rg.cells.push(k);
+      if (x < Rg.x0) Rg.x0 = x; if (x > Rg.x1) Rg.x1 = x; if (y < Rg.y0) Rg.y0 = y; if (y > Rg.y1) Rg.y1 = y;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || nx >= C || ny < 0 || ny >= R) { if (dy >= 0) Rg.per++; continue; }
+        const j = ny * C + nx, t = map.data[j];
+        if (t === T.WATER) { if (reg[j] < 0) { reg[j] = id; st.push(j); } continue; }
+        if (dy < 0) continue; // em cima pode ser ar (superfície)
+        Rg.per++;
+        if ((t === T.EMPTY || t === T.BG) && !isEntCell(nx, ny)) Rg.leak++;
+      }
+    }
+    Rg.bubble = Rg.leak >= 2 && Rg.leak >= Rg.per * 0.3;
+    regions.push(Rg);
+  }
+  // --- profundidade, superfície, teto e membranas por célula
+  const air = (x, y) => { const t = map.get(x, y); return (t === T.EMPTY || t === T.BG) && !isEntCell(x, y); };
+  for (let y = 0; y < R; y++) for (let x = 0; x < C; x++) {
+    const i = y * C + x;
+    if (map.data[i] !== T.WATER) continue;
+    let d = 0, yy = y - 1;
+    while (d < 7) {
+      const t = map.get(x, yy);
+      if (t === T.WATER) { d++; yy--; } else if (isThin(t)) yy--; else break;
+    }
+    depth[i] = d;
+    const above = map.get(x, y - 1);
+    if (above === T.EMPTY || above === T.BG) surf[i] = isEntCell(x, y - 1) && map.get(x, y - 2) === T.WATER ? 0 : 1;
+    else if (d === 0 && !isThin(above) && above !== T.WATER) ceil[i] = 1;
+    memb[i] = (air(x - 1, y) ? 1 : 0) | (air(x + 1, y) ? 2 : 0) | (air(x, y + 1) ? 4 : 0);
+  }
+  // --- linha do mar: linha de superfície mais comum entre regiões grandes não flutuantes
+  const cnt = new Map();
+  for (const Rg of regions) {
+    if (Rg.bubble || Rg.n < 40) continue;
+    for (const k of Rg.cells) if (surf[k]) { const y = (k / C) | 0; cnt.set(y, (cnt.get(y) || 0) + 1); }
+  }
+  let seaRow = null, best = 0;
+  for (const [y, n] of cnt) if (n > best) { best = n; seaRow = y; }
+  for (const Rg of regions) {
+    Rg.kind = Rg.bubble ? 'bubble' : 'pool';
+    if (!Rg.bubble && seaRow !== null) for (const k of Rg.cells) if (surf[k] && ((k / C) | 0) === seaRow) { Rg.kind = 'sea'; break; }
+  }
+  // --- células cobertas (água ou ar sob rocha/casco/parede): ganham parede de fundo
+  const solidish = (t) => t === T.SOLID || t === T.ALT || t === T.FAKE;
+  const styleAt = (x, y) => {
+    let alt = 0, sol = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      for (let k = 1; k < 24; k++) {
+        const t = map.get(x + dx * k, y + dy * k);
+        if (t === T.ALT) { alt++; break; }
+        if (t === T.SOLID || t === T.FAKE) { sol++; break; }
+        if (y + dy * k < 0 || y + dy * k >= R) break;
+      }
+    }
+    return alt > sol ? 2 : 1;
+  };
+  for (let x = 0; x < C; x++) {
+    let covered = false;
+    for (let y = 0; y < R; y++) {
+      const i = y * C + x, t = map.data[i];
+      if (solidish(t)) { covered = true; continue; }
+      if (t === T.BG) { covered = true; cover[i] = styleAt(x, y); continue; }
+      if (t === T.WATER && regions[reg[i]].bubble) { covered = false; continue; }
+      if (isThin(t) && !covered) continue;
+      if (covered && (t === T.WATER || t === T.EMPTY || isThin(t))) cover[i] = styleAt(x, y);
+    }
+  }
+  for (const Rg of regions) if (Rg.kind === 'sea' || Rg.kind === 'pool') { let open = 0; for (const k of Rg.cells) if (!cover[k]) open++; Rg.open = open; }
+  I = { C, R, reg, regions, depth, surf, ceil, memb, cover, seaRow, bubbleCache: new Map() };
+  _winfo.set(map, I);
+  return I;
+}
+
+// ------------------------------------------------------------------ bolha de água mágica
+// Forma arredondada com borda de "vidro" iridescente que ondula, corpo translúcido
+// com brilho especular. Assado uma vez por forma; por quadro só a borda + brilhos.
+const BUB_RIM = ['#e8ffff', '#ffd6f4', '#c8fff0', '#fff6c8'];
+function bakeBubble(bw, bh, inCell) {
+  const W = bw * 16 + 4, H = bh * 16 + 4, O2 = 2, r = 7;
+  const inside = new Uint8Array(W * H);
+  const has = (cx, cy) => cx >= 0 && cy >= 0 && cx < bw && cy < bh && inCell(cx, cy);
+  for (let y = 0; y < bh * 16; y++) for (let x = 0; x < bw * 16; x++) {
+    const cx = x >> 4, cy = y >> 4;
+    if (!has(cx, cy)) continue;
+    const u = x & 15, v = y & 15;
+    const L = !has(cx - 1, cy), Rr = !has(cx + 1, cy), U = !has(cx, cy - 1), D = !has(cx, cy + 1);
+    let out = false;
+    if (L && U && u < r && v < r && Math.hypot(r - u - 0.5, r - v - 0.5) > r) out = true;
+    if (Rr && U && u > 15 - r && v < r && Math.hypot(u - (15 - r) - 0.5, r - v - 0.5) > r) out = true;
+    if (L && D && u < r && v > 15 - r && Math.hypot(r - u - 0.5, v - (15 - r) - 0.5) > r) out = true;
+    if (Rr && D && u > 15 - r && v > 15 - r && Math.hypot(u - (15 - r) - 0.5, v - (15 - r) - 0.5) > r) out = true;
+    if (!out) inside[(y + O2) * W + x + O2] = 1;
+  }
+  // distância até a borda (chamfer simples)
+  const dist = new Uint8Array(W * H).fill(255);
+  for (let i = 0; i < W * H; i++) if (!inside[i]) dist[i] = 0;
+  for (let y = 1; y < H; y++) for (let x = 1; x < W - 1; x++) { const i = y * W + x; if (dist[i]) dist[i] = Math.min(dist[i], dist[i - 1] + 1, dist[i - W] + 1); }
+  for (let y = H - 2; y >= 0; y--) for (let x = W - 2; x > 0; x--) { const i = y * W + x; if (dist[i]) dist[i] = Math.min(dist[i], dist[i + 1] + 1, dist[i + W] + 1); }
+  const pc = new PixelCanvas(W, H);
+  const rim = [];
+  const by0 = O2, bh0 = bh * 16, bxw = bw * 16;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (!inside[i]) continue;
+    const d = dist[i] - 1;
+    if (d === 0) {
+      let nx = 0, ny = 0;
+      if (!inside[i - 1]) nx = -1; else if (!inside[i + 1]) nx = 1;
+      if (!inside[i - W]) ny = -1; else if (!inside[i + W]) ny = 1;
+      rim.push(x, y, nx, ny);
+      continue;
+    }
+    const fy = clamp((y - by0) / bh0, 0, 1), fx = clamp((x - O2) / bxw, 0, 1);
+    let c = fy + (th(x, y) - 0.5) * 0.25 < 0.45 ? '#7fdcf070' : fy + (th(x, y) - 0.5) * 0.25 < 0.8 ? '#4ab0e07c' : '#2a80c88a';
+    if (d === 1) c = '#d8fcff66';
+    else if (d <= 3 && fy > 0.62) c = '#1a5aa070';
+    if (d >= 2 && d <= 3 && fx < 0.42 && fy < 0.42 && (fx + fy) < 0.55) c = '#ffffffc8';
+    pc.px(x, y, c);
+  }
+  // brilhos fixos
+  const sx = O2 + 7, sy = O2 + 9;
+  if (inside[sy * W + sx]) { pc.px(sx, sy, '#ffffff'); pc.px(sx + 1, sy, '#ffffffa0'); }
+  if (bw * bh > 2) { const ex = O2 + bxw - 8, ey = O2 + bh0 - 9; if (inside[ey * W + ex]) { pc.px(ex, ey, '#c8fcffc0'); pc.px(ex - 1, ey + 1, '#c8fcff80'); } }
+  pc.flush();
+  return { canvas: pc.canvas, rim, W, H, bw, bh };
+}
+const _rectBub = new Map();
+function rectBubble(bw, bh) {
+  const k = bw + 'x' + bh;
+  let B = _rectBub.get(k);
+  if (!B) { B = bakeBubble(bw, bh, () => true); _rectBub.set(k, B); }
+  return B;
+}
+function drawBaked(ctx, B, x, y, t, seed) {
+  x -= 2; y -= 2;
+  ctx.drawImage(B.canvas, x, y);
+  const rim = B.rim;
+  // borda ondulante (respira ±1 px ao longo da normal) com reflexos iridescentes
+  for (let c = 0; c < 4; c++) {
+    ctx.fillStyle = BUB_RIM[c];
+    ctx.globalAlpha = c === 0 ? 0.9 : 0.75;
+    for (let i = 0; i < rim.length; i += 4) {
+      const px = rim[i], py = rim[i + 1];
+      const b7 = ((((px + py * 0.7) / 9 + t * 0.9 + seed) | 0) % 7 + 7) % 7;
+      if ((b7 < 4 ? 0 : b7 - 3) !== c) continue;
+      const o = Math.sin(px * 0.21 + py * 0.27 + t * 2.6 + seed) > 0.45 ? 1 : 0;
+      ctx.fillRect(x + px + rim[i + 2] * o, y + py + rim[i + 3] * o, 1, 1);
+    }
+  }
+  // bolhinhas subindo e cintilas
+  const n = Math.max(2, Math.min(6, (B.bw * B.bh) >> 1));
+  const iw = B.bw * 16 - 10, ih = B.bh * 16 - 10;
+  for (let i = 0; i < n; i++) {
+    const hs = h2(i, seed | 0, 17);
+    const k = (t * (0.15 + hs * 0.2) + hs) % 1;
+    ctx.globalAlpha = k > 0.85 ? (1 - k) / 0.15 * 0.8 : 0.8;
+    ctx.fillStyle = '#e8ffff';
+    ctx.fillRect(x + 7 + Math.round(hs * iw + Math.sin(t * 2.3 + i) * 1.5), Math.round(y + 7 + ih - k * ih), 1, 1);
+    const s = (t * 0.7 + hs * 9) % 3;
+    if (s < 0.25) {
+      ctx.globalAlpha = 1 - Math.abs(s - 0.125) / 0.125; ctx.fillStyle = '#ffffff';
+      const qx = x + 6 + Math.round(h2(i, 3, seed | 0) * iw), qy = y + 6 + Math.round(h2(i, 4, seed | 0) * ih);
+      ctx.fillRect(qx - 1, qy, 3, 1); ctx.fillRect(qx, qy - 1, 1, 3);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+/** Bolha de água retangular (w×h tiles) — usada pelos blocos de água móveis (w2_water.js). */
+export function drawWaterBubble(ctx, x, y, wt, ht, t, seed = 0) {
+  drawBaked(ctx, rectBubble(Math.max(1, wt | 0), Math.max(1, ht | 0)), Math.round(x), Math.round(y), t, seed);
+}
+function drawRegionBubble(ctx, I, Rg, t) {
+  if (!Rg.baked) {
+    const set = new Set(Rg.cells);
+    Rg.baked = bakeBubble(Rg.x1 - Rg.x0 + 1, Rg.y1 - Rg.y0 + 1, (cx, cy) => set.has((Rg.y0 + cy) * I.C + Rg.x0 + cx));
+  }
+  drawBaked(ctx, Rg.baked, Rg.x0 * 16, Rg.y0 * 16 + Math.round(Math.sin(t * 1.3 + Rg.id) * 0.6), t, Rg.id * 1.7);
+}
+
 function drawWater(ctx, map, x0, y0, x1, y1, t) {
   const tod = WSTR[waterTod] ? waterTod : 'day';
   const S = WS[tod] || (WS[tod] = buildWater(tod));
+  const I = w2WaterInfo(map, curRows);
   const cm = tod === 'night' ? 0.55 : tod === 'dusk' ? 0.8 : 1;
   const fs = Math.floor(t * 9) % S.NS, fc = Math.floor(t * 6) % S.NC;
   const cox = Math.floor(t * 5), coy = Math.floor(t * 2.5);
-  const W = T.WATER;
-  const air = (v) => v === T.EMPTY || v === T.BG;
+  const W = T.WATER, C = I.C;
+  const bubbles = new Set();
   for (let ty = y0; ty <= y1; ty++) {
     for (let tx = x0; tx <= x1; tx++) {
       if (map.get(tx, ty) !== W) continue;
+      const i = ty * C + tx;
+      const Rg = I.regions[I.reg[i]];
+      if (!Rg) continue;
+      if (Rg.bubble) { bubbles.add(Rg); continue; }
       const px = tx * 16, py = ty * 16;
-      let d = 0;
-      while (d < 7 && map.get(tx, ty - d - 1) === W) d++;
-      const above = map.get(tx, ty - 1);
-      const surface = d === 0 && above !== W && !solidLike(above);
+      const d = I.depth[i];
+      const surface = I.surf[i] === 1;
       if (surface) ctx.drawImage(S.surf[fs], px & 63, 0, 16, 19, px, py - 3, 16, 19);
       else ctx.drawImage(S.body[d], px, py);
-      if (d === 0 && !surface) { ctx.globalAlpha = 0.45; ctx.fillStyle = '#062038'; ctx.fillRect(px, py, 16, 2); }
+      if (I.ceil[i]) { ctx.globalAlpha = 0.45; ctx.fillStyle = '#062038'; ctx.fillRect(px, py, 16, 2); }
       // cáusticas (somem com a profundidade)
       if (d < 4) {
         ctx.globalAlpha = CAUS_A[d] * cm;
@@ -671,33 +911,22 @@ function drawWater(ctx, map, x0, y0, x1, y1, t) {
         ctx.fillRect(Math.round(px + 8 + Math.sin(t * 0.5 + hs * 9) * 6), Math.round(py + 8 + Math.sin(t * 0.37 + hs * 13) * 5), 1, 1);
         ctx.globalAlpha = 1;
       }
-      // membrana dos bolsões flutuantes (laterais e fundo abertos)
-      const lT = map.get(tx - 1, ty), rT = map.get(tx + 1, ty), bT = map.get(tx, ty + 1);
-      if (air(lT) || air(rT) || air(bT)) {
+      // borda vazada (raro depois da revisão: água encostando no ar pelos lados)
+      const mb = I.memb[i];
+      if (mb) {
         ctx.fillStyle = '#c8fcff';
         const y0e = surface ? 3 : 0;
         for (let yy = y0e; yy < 16; yy += 2) {
           const o = Math.round(Math.sin((py + yy) * 0.45 + t * 2.6) * 0.7);
-          if (air(lT)) { ctx.globalAlpha = 0.55; ctx.fillRect(px + Math.max(0, o), py + yy, 1, 2); ctx.globalAlpha = 0.2; ctx.fillRect(px + 1 + Math.max(0, o), py + yy, 1, 2); }
-          if (air(rT)) { ctx.globalAlpha = 0.45; ctx.fillRect(px + 15 + Math.min(0, o), py + yy, 1, 2); }
+          if (mb & 1) { ctx.globalAlpha = 0.55; ctx.fillRect(px + Math.max(0, o), py + yy, 1, 2); }
+          if (mb & 2) { ctx.globalAlpha = 0.45; ctx.fillRect(px + 15 + Math.min(0, o), py + yy, 1, 2); }
         }
-        if (air(bT)) {
-          for (let xx = 0; xx < 16; xx += 2) {
-            const o = Math.round(Math.sin((px + xx) * 0.4 + t * 2.2) * 0.7);
-            ctx.globalAlpha = 0.5; ctx.fillRect(px + xx, py + 15 + Math.min(0, o), 2, 1);
-          }
-          // gota se formando e caindo
-          const k = (t * 0.42 + hs * 7) % 1;
-          const gx = px + 3 + (((hs * 331) | 0) % 10);
-          if (k < 0.55) {
-            const q = k / 0.55;
-            ctx.globalAlpha = 0.85 * (1 - q); ctx.fillRect(gx, Math.round(py + 16 + q * q * 36), 1, 2);
-          } else { ctx.globalAlpha = 0.6; ctx.fillRect(gx, py + 16, 1, (k > 0.8 ? 2 : 1)); }
-        }
+        if (mb & 4) for (let xx = 0; xx < 16; xx += 2) { ctx.globalAlpha = 0.5; ctx.fillRect(px + xx, py + 15, 2, 1); }
         ctx.globalAlpha = 1;
       }
     }
   }
+  for (const Rg of bubbles) drawRegionBubble(ctx, I, Rg, t);
 }
 
 // ------------------------------------------------------------------ sprites de decoração
@@ -1134,8 +1363,28 @@ function paintHang(pc, x, y, seed) {
 function decorate(map, rng, data) {
   if (!SPR) SPR = buildSprites();
   waterTod = data?.timeOfDay || 'day';
+  curRows = data?.map || null;
   const out = [];
   const rows = data?.map || [];
+  // --- camada de paredes de fundo (parede ':' e água/ar cobertos por rocha/casco),
+  // assada em blocos de 16×16 tiles e desenhada ANTES de toda a decoração animada.
+  const WI = w2WaterInfo(map, rows);
+  const BS = 16;
+  for (let by = 0; by < map.rows; by += BS) for (let bx = 0; bx < map.cols; bx += BS) {
+    let pc = null;
+    for (let ty = by; ty < Math.min(map.rows, by + BS); ty++) for (let tx = bx; tx < Math.min(map.cols, bx + BS); tx++) {
+      const st = WI.cover[ty * map.cols + tx];
+      if (!st) continue;
+      if (!pc) pc = new PixelCanvas(BS * 16, BS * 16);
+      const info = { tx, ty, map };
+      if (st === 2) drawHullWall(pc, (tx - bx) * 16, (ty - by) * 16, info);
+      else drawRuinWall(pc, (tx - bx) * 16, (ty - by) * 16, null, null, info);
+    }
+    if (!pc) continue;
+    pc.flush();
+    const cv = pc.canvas, X = bx * 16, Y = by * 16;
+    out.push({ x: X, y: Y, w: BS * 16, h: BS * 16, layer: 'back', anim: (ctx) => ctx.drawImage(cv, X, Y) });
+  }
   const chAt = (tx, ty) => (rows[ty] && rows[ty][tx]) || '.';
   const free = (tx, ty) => {
     const t = map.get(tx, ty), ch = chAt(tx, ty);
@@ -1163,8 +1412,8 @@ function decorate(map, rng, data) {
       const seed = (tx * 92821 + ty * 68917) >>> 0;
       if (surf(tx, ty)) {
         const up = map.get(tx, ty - 1);
-        const wet = up === T.WATER, inside = up === T.BG;
-        const layer = inside ? 'front' : 'back';
+        const wet = up === T.WATER, inside = WI.cover[(ty - 1) * map.cols + tx] > 0;
+        const layer = 'back';
         const rm = room(tx, ty, 6);
         const wide = surf(tx - 1, ty) && surf(tx + 1, ty);
         const isHull = t === T.ALT;
@@ -1176,8 +1425,7 @@ function decorate(map, rng, data) {
           const opts = KELP_H.map((H, i) => i).filter((i) => KELP_H[i] <= maxH);
           const hi = opts[rng.int(0, opts.length - 1)], pi = rng.int(0, KELP_P.length - 1), H = KELP_H[hi];
           const x = wx - 4 + rng.int(-3, 3), y = wy - H;
-          const front = !wet && !inside && H <= 40 && rng() < 0.3;
-          out.push({ x, y, w: 24, h: H + 3, layer: front ? 'front' : 'back', anim: kelpAnim(SPR.kelp[pi][hi], x, y, x * 0.004 + rng() * 0.3) });
+          out.push({ x, y, w: 24, h: H + 3, layer: 'back', anim: kelpAnim(SPR.kelp[pi][hi], x, y, x * 0.004 + rng() * 0.3) });
         } else if (r < pk + 0.055 && tx - lastAnim > 3) { // anêmona luminosa
           lastAnim = tx;
           const A = SPR.anem[rng.int(0, SPR.anem.length - 1)];
@@ -1254,12 +1502,11 @@ function decorate(map, rng, data) {
       // teto: cordas e algas penduradas
       if ((t === T.SOLID || t === T.ALT) && free(tx, ty + 1) && ty + 1 < map.rows) {
         const rr = rng();
-        const inside = map.get(tx, ty + 1) === T.BG;
         if (rr < 0.07 && downRoom(tx, ty, 4) >= 3) {
           const len = rng.int(14, 34);
-          out.push({ x: wx, y: wy + 16, w: 16, h: len + 10, layer: inside ? 'front' : 'back', paint: (pc) => paintRope(pc, wx + 7, wy + 16, len, seed) });
+          out.push({ x: wx, y: wy + 16, w: 16, h: len + 10, layer: 'back', paint: (pc) => paintRope(pc, wx + 7, wy + 16, len, seed) });
         } else if (rr < 0.4) {
-          out.push({ x: wx, y: wy + 16, w: 18, h: 16, layer: inside ? 'front' : 'back', paint: (pc) => paintHang(pc, wx, wy + 16, seed ^ 0x99) });
+          out.push({ x: wx, y: wy + 16, w: 18, h: 16, layer: 'back', paint: (pc) => paintHang(pc, wx, wy + 16, seed ^ 0x99) });
         }
       }
       // glifos que pulsam na parede de fundo
@@ -1268,10 +1515,6 @@ function decorate(map, rng, data) {
         const spr = SPR.glyph[rng.int(0, SPR.glyph.length - 1)];
         const x = wx + rng.int(1, 6), y = wy + rng.int(1, 6);
         out.push({ x, y, w: 9, h: 9, layer: 'back', anim: glyphAnim(spr, x, y, rng() * 6), light: { r: 16, color: '#5ff8f0', i: 0.35, flicker: 0.1 } });
-      }
-      // água dentro de ruínas: parede de fundo atrás da água
-      if (t === T.WATER && bgInside(tx, ty)) {
-        out.push({ x: wx, y: wy, w: 16, h: 16, layer: 'back', paint: (pc) => drawRuinWall(pc, wx, wy, null, null, { tx, ty, map }) });
       }
     }
   }
@@ -1286,7 +1529,7 @@ registerTileset('w2', {
   alt: drawHull,
   oneway: drawShelf,
   spike: drawSpike,
-  bg: drawRuinWall,
+  bg() {}, // paredes de fundo: camada própria em decorate() (permite decoração por cima)
   water: { body: '#2a90c6', top: '#a8f4f4', deep: '#103a72', highlight: '#ffffff', alpha: 0.6 },
   drawWater,
   decorate,

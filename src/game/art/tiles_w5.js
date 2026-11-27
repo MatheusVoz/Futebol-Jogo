@@ -236,6 +236,42 @@ function drawLoom(pc, x, y, n0, rng, info) {
     if (ed === 0) c = OUT; else if (ed < 4 && th(wx, wy) * 4 > ed - 0.5) c = '#0e040e';
     pc.px(x + lx, y + ly, c);
   }
+  if (n0 !== null) loomFrame(pc, x, y, b, tx, ty);
+}
+/** Moldura de madeira do tear nas bordas expostas da área de fundo (viga em cima,
+ *  postes nas laterais, travessa embaixo): o painel lê como um TEAR apoiado no chão
+ *  e não como um retângulo cortado no céu. */
+const WOOD = ['#8a5a3a', '#6a4028', '#4a2a1a', '#1e0e0c'];
+function loomFrame(pc, x, y, b, tx, ty) {
+  const up = !b(0, -1), dn = !b(0, 1), lf = !b(-1, 0), rt = !b(1, 0);
+  if (!up && !dn && !lf && !rt) return;
+  const post = (px) => {
+    for (let ly = 0; ly < 16; ly++) {
+      pc.px(x + px, y + ly, OUT); pc.px(x + px + 1, y + ly, WOOD[0]); pc.px(x + px + 2, y + ly, WOOD[1]);
+      pc.px(x + px + 3, y + ly, WOOD[2]); pc.px(x + px + 4, y + ly, OUT);
+      if (((ty * 16 + ly) % 9) === 0) pc.px(x + px + 2, y + ly, WOOD[3]);  // veio
+    }
+    if (h2(tx, ty, 61) < 0.35) { pc.px(x + px + 2, y + 7, GOLD.md); pc.px(x + px + 2, y + 8, GOLD.lo); } // cravo dourado
+  };
+  const beam = (py, top) => {
+    for (let lx = 0; lx < 16; lx++) {
+      const wx = tx * 16 + lx;
+      pc.px(x + lx, y + py, OUT); pc.px(x + lx, y + py + 1, top ? WOOD[0] : WOOD[1]);
+      pc.px(x + lx, y + py + 2, (wx % 7) === 0 ? WOOD[3] : WOOD[1]); pc.px(x + lx, y + py + 3, WOOD[2]);
+      pc.px(x + lx, y + py + 4, OUT);
+      if (top && (wx % 16) === 6) { pc.px(x + lx, y + py + 2, GOLD.md); pc.px(x + lx + 1, y + py + 2, GOLD.lo); }
+    }
+  };
+  if (lf && rt) post(5);                 // coluna de 1 tile: um poste só, centrado
+  else { if (lf) post(0); if (rt) post(11); }
+  if (up) beam(0, true);
+  if (dn) beam(11, false);
+  // pontas da viga: maçaneta torneada nos cantos de cima
+  if (up && lf && rt) { pc.rect(x + 4, y, 8, 6, WOOD[1]); pc.strokeRect(x + 4, y, 8, 6, OUT); pc.px(x + 7, y + 2, GOLD.md); }
+  else if (up && lf) { pc.rect(x, y, 6, 6, WOOD[1]); pc.strokeRect(x, y, 6, 6, OUT); pc.px(x + 2, y + 2, WOOD[0]); pc.px(x + 3, y + 3, GOLD.md); }
+  else if (up && rt) { pc.rect(x + 10, y, 6, 6, WOOD[1]); pc.strokeRect(x + 10, y, 6, 6, OUT); pc.px(x + 12, y + 2, WOOD[0]); pc.px(x + 12, y + 3, GOLD.md); }
+  // fios da urdidura presos na viga (pendem um pouco abaixo dela)
+  if (up && !lf && !rt) for (let lx = 1; lx < 16; lx += 4) { pc.px(x + lx, y + 5, GOLD.lo); pc.px(x + lx, y + 6, '#8a5a2a'); }
 }
 function behind(pc, x, y, rng, info) {
   const { map, tx, ty } = info;

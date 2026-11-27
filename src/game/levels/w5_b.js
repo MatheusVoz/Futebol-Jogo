@@ -8,7 +8,7 @@
 //         portais para contorná-las, sala secreta só por portal, nichos de estrela.
 // =============================================================================
 import { registerLevel } from '../registry.js';
-import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.js';
+import { grid, pit, back, hide, isle, isle5, hangWall, npc, W5, rect, threadDoor } from './w5_a.js';
 
 // =============================================================================
 // w5_3 — Ruínas dos Mundos. Chão na linha 21.
@@ -28,7 +28,7 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   pit(m, 52, 57, G); m.fill(52, G, 57, G, 'u'); m.line(52, 57, 18);
   m.put(64, 16, 'b');
   m.put(68, 20, 'l');
-  rect(m, 72, 14, 73, 20, 'm'); m.fill(72, 3, 73, 13, '%');
+  rect(m, 72, 14, 73, 20, 'm'); hangWall(m, 72, 73, 13);
   // --- C: Eco da Tecelã, bonecos de pano, poço de fases -------------------------
   npc(m, 80, 20, 'tecela', 'w5_tecela_2');
   m.sign(84, 20, 'w5_ruins_2');
@@ -37,15 +37,15 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.line(90, 101, 17, 'o', 2);
   rect(m, 99, 15, 100, 15, 'm'); m.put(100, 12, '*');        // ★2 (degrau vermelho)
   m.put(110, 20, 'd');
-  m.fill(116, 3, 117, 14, '%'); m.fill(116, 15, 117, 20, 'S');
+  hangWall(m, 116, 117, 14); m.fill(116, 15, 117, 20, 'S');
   m.put(120, 20, 'K'); m.put(122, 20, 'h');
   // --- D: pedaço do Oceano ------------------------------------------------------
   m.fill(128, 21, 160, 25, '~');
   m.plat(140, 144, 17); m.line(140, 144, 16);
   m.line(130, 158, 24, 'o', 4); m.put(136, 14, 'g'); m.put(152, 14, 'g');
-  m.put(166, 20, 'a');
+  m.put(166, 20, 'a'); m.put(163, 20, 'K');
   // --- E: pedaço do Pesadelo (túnel) --------------------------------------------
-  m.fill(168, 3, 205, 16, '%');
+  hangWall(m, 168, 205, 16, '#');
   m.put(170, 19, 'v'); m.put(173, 19, 'v');
   m.fill(180, 17, 180, 20, 'Y');
   m.put(188, 20, 'a'); m.put(192, 17, 'g');
@@ -58,11 +58,11 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.put(212, 20, 'K'); m.put(214, 20, 'h');
   m.sign(217, 20, 'w5_sign_portal');
   m.put(220, 20, 'j', { pair: 'w53a' });
-  m.fill(232, 11, 238, 11, '%'); m.put(234, 10, 'j', { pair: 'w53a' }); m.put(237, 10, '*');   // ★3
+  isle5(m, 232, 238, 11, 2, '#', 1); m.put(234, 10, 'j', { pair: 'w53a' }); m.put(237, 10, '*');   // ★3
   m.line(224, 230, 18, 'o', 2);
   m.put(244, 20, 'a'); m.put(250, 15, 'b');
   m.fill(252, 19, 259, 20, '%'); m.put(256, 18, 'E');
-  back(m, 2, 12, 26, 20); back(m, 42, 10, 66, 20); back(m, 76, 12, 88, 20); back(m, 206, 10, 230, 20);
+  back(m, 2, 12, 26, 20); back(m, 42, 10, 66, 20); back(m, 76, 12, 88, 20); back(m, 206, 10, 230, 20); back(m, 168, 17, 205, 20);
 
   registerLevel({
     ...W5, id: 'w5_3', index: 3, name: 'Ruínas dos Mundos', subtitle: 'Mundo 5-3',
@@ -96,7 +96,7 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.put(131, 34, 'X'); m.put(133, 34, 'r'); m.line(134, 136, 34); m.put(130, 34, 'e');
   m.put(138, 34, 'j', { pair: 'w54s' });
   hide(m, 129, 33, 140, 34);
-  m.put(149, 26, 'q', { dx: 9, dy: 3 }); pit(m, 150, 155, 32);
+  m.put(144, 31, 'K'); m.put(149, 26, 'q', { dx: 9, dy: 3 }); pit(m, 150, 155, 32);
   m.put(165, 31, 'a'); m.line(160, 186, 29, 'o', 4); m.put(178, 26, 'b');
   m.put(190, 31, 'h');
   // poço A (direita)
@@ -105,7 +105,7 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.put(200, 21, 'K'); m.put(198, 21, 'h'); m.put(190, 21, 'a');
   m.fill(180, 14, 181, 21, 'S');
   m.put(170, 15, 'g'); m.put(160, 16, 'b'); m.line(150, 175, 19, 'o', 5);
-  m.put(117, 20, 'v'); m.put(115, 20, 'v'); rect(m, 110, 14, 110, 21, 'Y');
+  m.put(124, 21, 'K'); m.put(117, 20, 'v'); m.put(115, 20, 'v'); rect(m, 110, 14, 110, 21, 'Y');
   m.put(100, 21, 'd');
   m.fill(80, 21, 85, 21, '^'); m.fill(86, 20, 86, 21, '%'); m.fill(87, 21, 92, 21, '^');
   rect(m, 81, 19, 84, 19, 'm'); rect(m, 88, 19, 91, 19, 'p'); m.put(86, 19, 'l');
@@ -123,14 +123,14 @@ import { grid, pit, back, hide, isle, npc, W5, rect, threadDoor } from './w5_a.j
   m.put(60, 11, 'a'); m.put(70, 6, 'b');
   m.put(77, 11, 'l'); rect(m, 80, 4, 81, 11, 'm'); m.put(84, 11, 'l'); rect(m, 87, 4, 88, 11, 'p'); m.put(91, 11, 'l');
   m.put(95, 10, 'v'); m.put(97, 10, 'v'); threadDoor(m, 100, 100, 3, 4, 11);
-  m.put(110, 6, 'g'); m.put(125, 6, 'g');
-  m.put(130, 11, 'j', { pair: 'w54c' }); m.fill(148, 4, 152, 4, '%'); m.put(149, 3, 'j', { pair: 'w54c' }); m.put(151, 3, '*');  // ★2
+  m.put(103, 11, 'K'); m.put(110, 6, 'g'); m.put(125, 6, 'g');
+  m.put(130, 11, 'j', { pair: 'w54c' }); isle5(m, 148, 152, 4, 1, '#', 1); m.put(149, 3, 'j', { pair: 'w54c' }); m.put(151, 3, '*');  // ★2
   m.put(140, 11, 'f'); m.put(160, 11, 'd');
   m.fill(170, 11, 175, 11, '^'); m.fill(170, 10, 175, 10, 'u');
   m.put(186, 7, 's', { w: 3, ay: 2, period: 4 }); m.put(186, 3, '*');   // ★3
   m.put(195, 11, 'a'); m.line(178, 200, 9, 'o', 4);
   m.fill(212, 10, 219, 11, '%'); m.put(216, 9, 'E');
-  back(m, 0, 24, 203, 31); back(m, 16, 14, 199, 21);
+  back(m, 0, 24, 219, 31); back(m, 0, 14, 219, 21);
 
   registerLevel({
     ...W5, id: 'w5_4', index: 4, name: 'Labirinto de Portais', subtitle: 'Mundo 5-4',

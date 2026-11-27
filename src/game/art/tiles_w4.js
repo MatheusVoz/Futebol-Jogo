@@ -242,7 +242,32 @@ const MOT = [
   ['...#...', '...#...', '.#####.', '..###..', '.##.##.', '.#...#.', '.......'], // estrela
   ['.......', '..#.#..', '.#####.', '.#####.', '..###..', '...#...', '.......'], // coração
 ];
+/** Decor estático dos cômodos por mapa (preenchido por decorate, lido por drawWall). */
+const ROOM_OVER = new WeakMap();
+/** Pinta `paint` recortado ao tile (x,y) do canvas do pedaço; coords do decor são de mundo. */
+function paintClipped(pc, x, y, tx, ty, paint) {
+  const X0 = x + pc.ox, Y0 = y + pc.oy;
+  const clip = Object.create(pc);
+  clip.px = (px, py, c) => {
+    const X = Math.floor(px + pc.ox), Y = Math.floor(py + pc.oy);
+    if (X >= X0 && X < X0 + 16 && Y >= Y0 && Y < Y0 + 16) pc.px(px, py, c);
+    return clip;
+  };
+  pc.translate(x - tx * 16, y - ty * 16);
+  try { paint(clip); } catch (e) { /* decor com erro: ignora */ }
+  pc.translate(tx * 16 - x, ty * 16 - y);
+}
 function drawWall(pc, x, y, n, rng, info) {
+  drawWallBase(pc, x, y, n, rng, info);
+  const list = ROOM_OVER.get(info.map);
+  if (!list || !list.length) return;
+  const wx = info.tx * 16, wy = info.ty * 16;
+  for (const dd of list) {
+    if (dd.x + (dd.w || 16) <= wx || dd.x >= wx + 16 || dd.y + (dd.h || 16) <= wy || dd.y >= wy + 16) continue;
+    paintClipped(pc, x, y, info.tx, info.ty, dd.paint);
+  }
+}
+function drawWallBase(pc, x, y, n, rng, info) {
   const { tx, ty, map } = info;
   const sol = (dx, dy) => solidLike(S(map, tx + dx, ty + dy));
   const su = sol(0, -1), sl = sol(-1, 0), sr = sol(1, 0), sd = sol(0, 1);
@@ -467,6 +492,28 @@ function buildSprites() {
     pc.poly([[4, 2], [6, 2], [4, 7], [2, 7]], '#f4c878'); pc.hline(1, 8, 12, '#fff0c0');
   });
   S2.glow = glowHalo(18, '#ffc46a');
+  // brinquedos que brilham no escuro (marcam o caminho): pote de vaga-lumes, estrela
+  // fosforescente de pelúcia, pulseira de neon, cogumelo-luminária
+  S2.jar = mk(10, 13, (pc) => {
+    pc.rect(2, 0, 6, 2, '#8a6a4a'); pc.hline(2, 0, 6, '#b8946a');
+    pc.rect(1, 2, 8, 10, '#2a3a4a'); pc.vline(2, 3, 8, '#6a8aa0'); pc.hline(1, 11, 8, '#1a2430');
+    pc.px(4, 5, '#d8ff9a'); pc.px(6, 8, '#d8ff9a'); pc.px(3, 9, '#b4ff8a');
+  });
+  S2.gstar = mk(12, 11, (pc) => {
+    pc.poly([[6, 0], [8, 4], [12, 4], [9, 7], [10, 11], [6, 9], [2, 11], [3, 7], [0, 4], [4, 4]], '#bfffd0');
+    pc.px(5, 3, '#ffffff'); pc.px(4, 5, '#3a6a4a'); pc.px(7, 5, '#3a6a4a'); pc.hline(5, 7, 2, '#3a6a4a');
+  });
+  S2.gstick = mk(13, 6, (pc) => {
+    pc.line(1, 4, 5, 1, '#ff8ad8'); pc.line(5, 1, 11, 3, '#ff8ad8'); pc.line(2, 4, 6, 2, '#ffd0f0'); pc.px(11, 4, '#c04aa0');
+  });
+  S2.shroom = mk(12, 12, (pc) => {
+    pc.rect(5, 6, 3, 5, '#d8d0e8'); pc.hline(3, 11, 7, '#5e5a74');
+    pc.ellipse(6, 5, 5, 4, '#8ad8ff'); pc.rect(1, 5, 11, 1, '#5aa8d8'); pc.px(4, 3, '#e8f8ff'); pc.px(8, 2, '#e8f8ff'); pc.px(6, 4, '#ffffff');
+  });
+  S2.ghalo = { '#b4ff8a': glowHalo(11, '#b4ff8a'), '#bfffd0': glowHalo(11, '#bfffd0'), '#ff8ad8': glowHalo(11, '#ff8ad8'), '#8ad8ff': glowHalo(11, '#8ad8ff') };
+  // adesivos fosforescentes de estrela/lua na parede do quarto
+  S2.stk = [mk(7, 7, (pc) => { pc.poly([[3, 0], [4, 2], [7, 3], [4, 4], [3, 7], [2, 4], [0, 3], [2, 2]], '#d8ffb8'); }, null),
+            mk(6, 7, (pc) => { for (let y = 0; y < 7; y++) for (let x = 0; x < 6; x++) if ((x - 3) ** 2 + (y - 3) ** 2 <= 9 && (x - 4.5) ** 2 + (y - 2.5) ** 2 > 5) pc.px(x, y, '#d8ffb8'); }, null)];
   S2.halo = {}; for (const c of EYE_COLS) S2.halo[c] = glowHalo(5, c);
   // desenhos de criança em papel (giz de cera)
   S2.draw = [0, 1, 2, 3, 4].map((k) => mk(21, 16, (pc) => {
@@ -560,6 +607,60 @@ function lightDecor(x, y, spr, ph, r = 58) {
     }
     ctx.globalAlpha = 1;
   } };
+}
+
+/** Brinquedo fosforescente no chão: marca o caminho no escuro (luz pequena e fria). */
+function glowToyDecor(x, y, kind, ph) {
+  const spr = [SPR.jar, SPR.gstar, SPR.gstick, SPR.shroom][kind];
+  const col = ['#b4ff8a', '#bfffd0', '#ff8ad8', '#8ad8ff'][kind];
+  const cx = x + (spr.w >> 1), cy = y + (spr.h >> 1);
+  return { x: cx - 16, y: cy - 16, w: 32, h: 32, layer: 'back', light: { r: 40, color: col, i: 0.55, flicker: 0.05 }, anim: (ctx, t) => {
+    const H = SPR.ghalo[col];
+    ctx.globalAlpha = 0.55 + 0.3 * Math.sin(t * 1.3 + ph);
+    ctx.drawImage(H.canvas, cx - (H.w >> 1), cy - (H.h >> 1));
+    ctx.globalAlpha = 1;
+    ctx.drawImage(spr.canvas, x, y);
+    if (kind === 0) { // vaga-lumes no pote
+      ctx.fillStyle = '#e8ffb0';
+      for (let i = 0; i < 3; i++) if (Math.sin(t * 3 + i * 2.1 + ph) > 0.2) ctx.fillRect(x + 3 + Math.round(2 + Math.sin(t * 1.7 + i * 2 + ph) * 2), y + 4 + Math.round(3 + Math.cos(t * 1.3 + i + ph) * 3), 1, 1);
+    }
+  } };
+}
+/** Adesivo fosforescente (estrela/lua) colado no fundo: brilho fraco pulsando. */
+function stickerDecor(x, y, k, ph) {
+  const spr = SPR.stk[k];
+  return { x: x - 4, y: y - 4, w: 15, h: 15, layer: 'back', light: { r: 12, color: '#c8ffb0', i: 0.32, flicker: 0 }, anim: (ctx, t) => {
+    ctx.globalAlpha = 0.55 + 0.35 * Math.sin(t * 0.9 + ph);
+    ctx.drawImage(spr.canvas, x, y);
+    ctx.globalAlpha = 1;
+  } };
+}
+/** Monstro do escuro: silhueta enorme espiando de trás dos móveis (quase invisível no
+ *  breu — só a borda arroxeada e os OLHOS acesos denunciam). */
+function monster(out, rng, bx, by, tod) {
+  const C = SIL[tod] || SIL.night;
+  const h = rng.int(64, 92), w = rng.int(26, 40), kind = rng.int(0, 2), fl = rng() < 0.5 ? -1 : 1;
+  const rim = tod === 'day' ? '#5a4a8a' : '#2e2650';
+  out.push({ x: bx - w - 14, y: by - h - 18, w: w * 2 + 28, h: h + 20, layer: 'back', paint(pc) {
+    const top = by - h;
+    for (let yy = top; yy < by; yy++) {
+      const t = (yy - top) / h;
+      let hw = Math.round(w * (kind === 1 ? 0.55 + 0.45 * Math.sqrt(t) : 0.35 + 0.65 * Math.sin(Math.min(1, t * 1.4) * 1.57)));
+      hw += Math.round(Math.sin(yy * 0.4 + bx) * 1.2);           // pelo irregular
+      pc.hline(bx - hw, yy, hw * 2 + 1, C[0]);
+      pc.px(bx - hw, yy, rim); pc.px(bx + hw, yy, C[1]);
+    }
+    if (kind !== 1) { // chifres / orelhas
+      pc.tri(bx - w * 0.3, top + 6, bx - w * 0.15, top + 6, bx - w * 0.45, top - 12, C[0]);
+      pc.tri(bx + w * 0.15, top + 6, bx + w * 0.3, top + 6, bx + w * 0.45, top - 12, C[0]);
+      pc.line(bx - w * 0.3, top + 6, bx - w * 0.45, top - 12, rim);
+    } else { // tentáculos
+      for (let k = 0; k < 3; k++) pc.curve(bx + fl * (w * 0.5), by - 10 - k * 14, bx + fl * (w + 6), by - 22 - k * 14, bx + fl * (w + 10), by - 34 - k * 10, C[0], 1);
+    }
+    // garras apoiadas no chão
+    for (let k = 0; k < 3; k++) pc.tri(bx + fl * (w * 0.6 + k * 4), by, bx + fl * (w * 0.6 + k * 4 + 3), by, bx + fl * (w * 0.6 + k * 4 + 1), by - 6, C[1]);
+  } });
+  out.push(eyesDecor(bx - 4, by - h + 16 + rng.int(0, 6), rng() * 7, EYE_COLS[rng.int(0, EYE_COLS.length - 1)]));
 }
 
 // ------------------------------------------------------------------ móveis gigantes de fundo (silhuetas por horário)
@@ -708,21 +809,59 @@ function decorate(map, rng, data) {
     while (tx < map.cols - 3) {
       let gy = -1;
       for (let ty = 2; ty < map.rows; ty++) if (solidLike(map.get(tx, ty)) && open(tx, ty - 1) && headroom(tx, ty, 4)) { gy = ty; break; }
-      if (gy > 0) furniture(out, rng, tx * 16 + 8, gy * 16 + 1, tod);
+      if (gy > 0) {
+        if (gy - 7 > 0 && headroom(tx, gy, 7) && rng() < 0.22) monster(out, rng, tx * 16 + 8, gy * 16 + 1, tod);
+        else furniture(out, rng, tx * 16 + 8, gy * 16 + 1, tod);
+      }
       tx += rng.int(7, 13);
+    }
+  }
+  // ---- brinquedos fosforescentes no chão: nenhum trecho de chão fica no breu total
+  //      (o caminho continua legível entre um abajur e outro)
+  {
+    let last = -99;
+    for (let tx = 1; tx < map.cols - 1; tx++) {
+      if (tx - last < 9) continue;
+      for (let ty = 2; ty < map.rows; ty++) {
+        const t = map.get(tx, ty);
+        if (!solidLike(t) || t === T.FAKE || !free(tx, ty - 1) || map.get(tx, ty - 1) === T.BG) continue;
+        if (!free(tx, ty - 2) || !farFrom(lights, tx, ty, 9)) continue;
+        const kind = rng.int(0, 3), spr = [SPR.jar, SPR.gstar, SPR.gstick, SPR.shroom][kind];
+        lights.push([tx, ty]); last = tx;
+        out.push(glowToyDecor(tx * 16 + rng.int(1, 15 - spr.w), ty * 16 - spr.h + 1, kind, rng() * 6));
+        break;
+      }
+    }
+  }
+  // ---- adesivos fosforescentes e olhos soltos na escuridão do fundo (longe do chão)
+  {
+    const openC = (tx, ty) => map.get(tx, ty) === T.EMPTY && chAt(tx, ty) === '.';
+    for (let tx = 3; tx < map.cols - 3; tx += rng.int(4, 8)) {
+      let gy = -1;
+      for (let ty = 2; ty < map.rows; ty++) if (solidLike(map.get(tx, ty)) && openC(tx, ty - 1)) { gy = ty; break; }
+      if (gy < 0) continue;
+      const ty = gy - rng.int(4, 8);
+      if (ty < 2 || !openC(tx, ty) || !openC(tx + 1, ty) || !openC(tx, ty + 1)) continue;
+      if (rng() < 0.45) out.push(stickerDecor(tx * 16 + rng.int(0, 8), ty * 16 + rng.int(0, 8), rng.int(0, 1), rng() * 6));
+      else if (farFrom(eyes, tx, ty, 12) && rng() < 0.45) { eyes.push([tx, ty]); out.push(eyesDecor(tx * 16 + 4, ty * 16 + 6, rng() * 7, EYE_COLS[rng.int(0, EYE_COLS.length - 1)])); }
     }
   }
   // decor dentro de cômodos (célula de parede ':') precisa ir na frente do papel de parede;
   // a luz fica num decor "fantasma" de trás (só o laço de trás acende luzes).
-  const extra = [];
+  // Decor ESTÁTICO de cômodo é pintado dentro do próprio papel de parede (drawWall lê
+  // ROOM_OVER — decorate roda antes dos tiles), assim fica ATRÁS do Tico em vez de
+  // na camada da frente (desenhos de criança não cobrem mais a cabeça dele).
+  const extra = [], room = [];
   for (const dd of out) {
     if (dd.layer === 'front') continue;
     const ctx = Math.floor((dd.x + (dd.w || 16) / 2) / 16), cty = Math.floor((dd.y + (dd.h || 16) / 2) / 16);
     if (map.get(ctx, cty) !== T.BG) continue;
+    if (dd.paint && !dd.anim) { room.push(dd); dd.room = true; continue; }
     dd.layer = 'front';
     if (dd.light) extra.push({ x: dd.x, y: dd.y, w: dd.w, h: dd.h, layer: 'back', light: dd.light, anim: () => {} });
   }
-  return out.concat(extra);
+  ROOM_OVER.set(map, room);
+  return out.filter((dd) => !dd.room).concat(extra);
 }
 
 // ------------------------------------------------------------------ registro

@@ -19,9 +19,10 @@
 // Tudo pré-renderizado: decor animado só faz drawImage + poucos fillRect.
 // Também registra a fase-vitrine 'test_w3v' (?level=test_w3v).
 // =============================================================================
-import { registerTileset, registerLevel } from '../registry.js';
+import { registerTileset, registerLevel, registerEntity } from '../registry.js';
 import { PixelCanvas } from '../../engine/pixel.js';
 import { T } from '../../engine/tilemap.js';
+import { Entity } from '../../engine/entity.js';
 
 const TAU = Math.PI * 2;
 // ------------------------------------------------------------------ utilidades
@@ -157,6 +158,7 @@ function copperPlate(wx, wy, lev) {
 
 function drawStreet(pc, x, y, n0, rng, info) {
   const { tx, ty, map } = info;
+  if (info.type === T.FAKE && altFakeSet(map).has(tx + ',' + ty)) return drawMachine(pc, x, y, n0, rng, info);
   const bottomRow = ty >= map.rows - 1;
   const n = bottomRow ? { ...n0, d: true, dl: true, dr: true } : n0;
   const MAX = 3;
@@ -320,8 +322,143 @@ function smallGear(pc, cx, cy, r, teeth, rot, P) {
     if (c) pc.px(Math.floor(cx + xx), Math.floor(cy + yy), c);
   }
 }
-function drawMachine(pc, x, y, n, rng, info) {
+// ------------------------------------------------------------------ alt (massas grandes): PRÉDIO de tijolos
+// Massas de '%' com 3+ tiles de altura e 2+ de largura viram fachada de prédio:
+// tijolo cor de cobre, cornija de latão no topo, cunhais de pedra nas quinas,
+// faixas entre andares e janelas em arco (acesas à noite, céu refletido de dia),
+// às vezes um óculo-relógio. Blocos pequenos continuam como caixas de maquinário.
+const BRK = { base: ['#8e4c3c', '#844636', '#9a5444'], hi: '#b4664c', dk: '#5e2e28', mortar: '#46242c', soot: '#6a3430' };
+/** Paredes falsas (H) dentro de prédios de '%' se disfarçam de prédio (sem emenda de textura). */
+const FAKE_CTX = new WeakMap();
+function altFakeSet(map) {
+  let set = FAKE_CTX.get(map);
+  if (set) return set;
+  set = new Set();
+  const seen = new Uint8Array(map.cols * map.rows);
+  for (let y = 0; y < map.rows; y++) for (let x = 0; x < map.cols; x++) {
+    if (seen[y * map.cols + x] || map.get(x, y) !== T.FAKE) continue;
+    const cells = [], st = [[x, y]]; seen[y * map.cols + x] = 1;
+    let alt = 0, sol = 0;
+    while (st.length) {
+      const [cx, cy] = st.pop(); cells.push(cx + ',' + cy);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cx + dx, ny = cy + dy, o = map.get(nx, ny);
+        if (o === T.FAKE && map.inBounds(nx, ny)) { if (!seen[ny * map.cols + nx]) { seen[ny * map.cols + nx] = 1; st.push([nx, ny]); } }
+        else if (o === T.ALT) alt++; else if (o === T.SOLID) sol++;
+      }
+    }
+    if (alt > sol) for (const c of cells) set.add(c);
+  }
+  FAKE_CTX.set(map, set);
+  return set;
+}
+const altLike = (map, x, y) => { const o = map.get(x, y); return o === T.ALT || (o === T.FAKE && altFakeSet(map).has(x + ',' + y)); };
+function altRun(map, tx, ty, dx, dy, max) {
+  let k = 0;
+  while (k < max && altLike(map, tx + dx * (k + 1), ty + dy * (k + 1))) k++;
+  return k;
+}
+function litChance(level) { const tod = level?.timeOfDay; return tod === 'night' ? 0.62 : tod === 'day' ? 0.12 : 0.42; }
+function archWindow(pc, x, y, w, h, lit, day, seed) {
+  // moldura escura com topo em arco
+  pc.rect(x, y + 2, w, h - 2, OUT); pc.rect(x + 1, y + 1, w - 2, 1, OUT); pc.rect(x + 2, y, w - 4, 1, OUT);
+  const gx = x + 1, gy = y + 2, gw = w - 2, gh = h - 3;
+  const glass = lit ? '#ffc860' : day ? '#8a9ad0' : '#2a2442';
+  const glass2 = lit ? '#ffe9a8' : day ? '#b8c8f0' : '#3e3864';
+  pc.rect(gx, gy, gw, gh, glass); pc.rect(gx + 1, gy - 1, gw - 2, 1, glass);
+  if (lit) { pc.rect(gx, gy + gh - 2, gw, 2, '#e8963c'); pc.px(gx + 1, gy, glass2); pc.px(gx + 1, gy + 1, glass2); if (seed < 0.3) { pc.rect(gx + gw - 2, gy + 2, 2, gh - 4, '#b0603a'); } }
+  else { pc.line(gx, gy + 3, gx + 2, gy + 1, glass2); pc.px(gx + gw - 1, gy + gh - 1, glass2); }
+  pc.vline(x + (w >> 1), gy - 1, gh + 1, BRASS.dk); pc.hline(gx, gy + (gh >> 1), gw, BRASS.dk);
+  pc.hline(x - 1, y + h - 1, w + 2, BRASS.lt); pc.hline(x - 1, y + h, w + 2, BRASS.sh);
+}
+function drawAltBuilding(pc, x, y, n, rng, info, k) {
+  const { tx, ty, level } = info;
+  const lit = litChance(level), day = level?.timeOfDay === 'day';
+  for (let ly = 0; ly < 16; ly++) for (let lx = 0; lx < 16; lx++) {
+    const wx = tx * 16 + lx, wy = ty * 16 + ly;
+    const course = Math.floor(wy / 4), r = wy - course * 4, off = (course & 1) * 4, bi = Math.floor((wx + off) / 8), bx = (wx + off) - bi * 8;
+    let c;
+    if (r === 3 || bx === 0) c = BRK.mortar;
+    else if (r === 0 && bx < 7) c = h2(bi, course, 140) < 0.3 ? BRK.hi : BRK.base[2];
+    else if (bx === 7) c = BRK.dk;
+    else c = BRK.base[(h2(bi, course, 141) * 3) | 0];
+    if (h2(wx, wy, 142) < 0.025) c = BRK.dk;
+    pc.px(x + lx, y + ly, c);
+  }
+  // faixa entre andares (a cada 2 tiles a partir do topo)
+  if (k.u > 0 && k.u % 2 === 0) {
+    pc.hline(x, y, 16, OUT); pc.hline(x, y + 1, 16, CREAM.md); pc.hline(x, y + 2, 16, CREAM.dk); pc.hline(x, y + 3, 16, BRK.mortar);
+    for (let lx = 1; lx < 16; lx += 4) pc.px(x + lx, y + 1, CREAM.hi);
+  }
+  // janela (um vão por andar, colunas alternadas)
+  const bay = k.l >= 1 && k.r >= 1 && k.d >= 1 && k.u >= 1 && k.u % 2 === 1 && ((k.l + (k.l + k.r) % 2) % 2 === 1);
+  if (bay) {
+    const hv = h2(tx, ty, 143);
+    if (hv < 0.1 && k.l + k.r >= 4) { // óculo-relógio
+      const cx = x + 8, cy = y + 8;
+      pc.circle(cx, cy, 6.6, OUT); pc.circle(cx, cy, 5.8, BRASS.md); pc.circle(cx, cy, 4.8, CREAM.md); pc.px(cx - 3, cy - 3, CREAM.hi);
+      for (let q = 0; q < 12; q += 3) { const a = (q / 12) * TAU; pc.px(Math.round(cx + Math.sin(a) * 3.6 - 0.5), Math.round(cy - Math.cos(a) * 3.6 - 0.5), OUT); }
+      handPx(pc, cx, cy, h2(tx, ty, 144) * TAU, 2, OUT); handPx(pc, cx, cy, h2(tx, ty, 145) * TAU, 4, '#3a2440');
+    } else archWindow(pc, x + 4, y + 2, 8, 12, hv < 0.1 + lit, day, h2(tx, ty, 146));
+  }
+  // cunhais de pedra nas quinas
+  if (!n.l) {
+    for (let ly = 0; ly < 16; ly++) {
+      const wy = ty * 16 + ly, blk = Math.floor(wy / 5) & 1, edge = (wy % 5) === 4;
+      pc.px(x, y + ly, OUT);
+      for (let lx = 1; lx <= (blk ? 4 : 2); lx++) pc.px(x + lx, y + ly, edge ? STONE[0].mortar : lx === 1 ? STONE[0].hi : STONE[0].base[0]);
+      if (!edge) pc.px(x + (blk ? 5 : 3), y + ly, STONE[0].dk);
+    }
+  }
+  if (!n.r) {
+    for (let ly = 0; ly < 16; ly++) {
+      const wy = ty * 16 + ly, blk = (Math.floor(wy / 5) & 1) ^ 1, edge = (wy % 5) === 4;
+      pc.px(x + 15, y + ly, OUT);
+      for (let lx = 14; lx >= (blk ? 11 : 13); lx--) pc.px(x + lx, y + ly, edge ? STONE[0].mortar : lx === 14 ? STONE[1].dk : STONE[0].dk);
+      if (!edge) pc.px(x + (blk ? 10 : 12), y + ly, BRK.dk);
+    }
+  }
+  // cornija de latão no topo
+  if (!n.u) {
+    for (let lx = 0; lx < 16; lx++) {
+      const wx = tx * 16 + lx;
+      pc.px(x + lx, y, OUT); pc.px(x + lx, y + 1, BRASS.hi); pc.px(x + lx, y + 2, (wx & 7) === 3 ? '#fffbe8' : BRASS.lt);
+      pc.px(x + lx, y + 3, BRASS.md); pc.px(x + lx, y + 4, BRASS.dk); pc.px(x + lx, y + 5, OUT);
+      pc.px(x + lx, y + 6, (wx & 3) < 2 ? CREAM.dk : OUT); pc.px(x + lx, y + 7, BRK.soot);
+    }
+  }
+  if (!n.d) {
+    for (let lx = 0; lx < 16; lx++) { pc.px(x + lx, y + 12, OUT); pc.px(x + lx, y + 13, BRASS.md); pc.px(x + lx, y + 14, BRASS.dk); pc.px(x + lx, y + 15, OUT); }
+  }
+  const cut = (a, b, c2, dd) => { pc.erase(x + a[0], y + a[1]); pc.erase(x + b[0], y + b[1]); pc.erase(x + c2[0], y + c2[1]); pc.px(x + dd[0], y + dd[1], OUT); };
+  if (!n.u && !n.l) cut([0, 0], [1, 0], [0, 1], [1, 1]);
+  if (!n.u && !n.r) cut([15, 0], [14, 0], [15, 1], [14, 1]);
+  if (!n.d && !n.l) cut([0, 15], [1, 15], [0, 14], [1, 14]);
+  if (!n.d && !n.r) cut([15, 15], [14, 15], [15, 14], [14, 14]);
+}
+/** Laje de terraço sobre uma fachada de fundo: pedra creme, rufo de latão e mísulas. */
+function drawTerrace(pc, x, y, n, info) {
   const { tx, ty } = info;
+  for (let ly = 0; ly < 16; ly++) for (let lx = 0; lx < 16; lx++) {
+    const wx = tx * 16 + lx, wy = ty * 16 + ly;
+    pc.px(x + lx, y + ly, ly < 8 ? masonry(wx, wy, 0) : masonry(wx, wy, 1));
+  }
+  for (let lx = 0; lx < 16; lx++) {
+    const wx = tx * 16 + lx;
+    if (!n.u) { pc.px(x + lx, y, OUT); pc.px(x + lx, y + 1, BRASS.hi); pc.px(x + lx, y + 2, (wx & 7) === 3 ? '#fffbe8' : BRASS.lt); pc.px(x + lx, y + 3, BRASS.md); pc.px(x + lx, y + 4, BRASS.sh); }
+    pc.px(x + lx, y + 11, OUT); pc.px(x + lx, y + 12, CREAM.md); pc.px(x + lx, y + 13, CREAM.dk); pc.px(x + lx, y + 14, OUT);
+    if ((wx & 7) < 3) pc.px(x + lx, y + 15, (wx & 7) === 0 ? OUT : CREAM.dk); // mísulas
+  }
+  if (!n.l) for (let ly = 0; ly < 15; ly++) { pc.px(x, y + ly, OUT); pc.px(x + 1, y + ly, ly < 5 ? BRASS.hi : STONE[0].hi); }
+  if (!n.r) for (let ly = 0; ly < 15; ly++) { pc.px(x + 15, y + ly, OUT); pc.px(x + 14, y + ly, ly < 5 ? BRASS.dk : STONE[0].dk); }
+  if (!n.u && !n.l) { pc.erase(x, y); pc.erase(x + 1, y); pc.erase(x, y + 1); pc.px(x + 1, y + 1, OUT); }
+  if (!n.u && !n.r) { pc.erase(x + 15, y); pc.erase(x + 14, y); pc.erase(x + 15, y + 1); pc.px(x + 14, y + 1, OUT); }
+}
+function drawMachine(pc, x, y, n, rng, info) {
+  const { tx, ty, map } = info;
+  const k = { u: altRun(map, tx, ty, 0, -1, 40), d: altRun(map, tx, ty, 0, 1, 40), l: altRun(map, tx, ty, -1, 0, 60), r: altRun(map, tx, ty, 1, 0, 60) };
+  if (k.u + k.d >= 2 && k.l + k.r >= 1) return drawAltBuilding(pc, x, y, n, rng, info, k);
+  if (k.d === 0 && map.get(tx, ty + 1) === T.BG) return drawTerrace(pc, x, y, n, info);
   const v = h2(tx, ty, 30);
   if (v < 0.42) { // caixa de latão rebitada com travessas em X
     frame(pc, x, y, BRASS);
@@ -478,9 +615,77 @@ function drawSpike(pc, x, y, dir, rng, info) {
   pc.blit(arr[(h2(info.tx, info.ty, 50) * arr.length) | 0], x, y);
 }
 
+// ------------------------------------------------------------------ bg ao ar livre: FACHADA de prédio ao fundo
+// ':' cujo topo dá para o céu = prédio logo atrás da rua (não "interior de torre"):
+// reboco em tom de fundo, pilastras nas laterais, cornija no topo (o telhado é
+// pintado pelo decorate acima dela), janelas com luz e soco de pedra embaixo.
+const FAC = {
+  day: { wall: ['#b49aac', '#ab90a4'], line: '#9a7e96', pil: '#d6c0c8', pilDk: '#8a6e88', trim: '#7a5e7c', win: '#7a8cc4', win2: '#a8bce8', lit: '#ffe0a0', lit2: '#fff4d0', base: '#8a7090' },
+  dusk: { wall: ['#6e4c68', '#664662'], line: '#583a56', pil: '#8e6a84', pilDk: '#4a3048', trim: '#3e2840', win: '#2e1e3a', win2: '#4a3456', lit: '#ffb850', lit2: '#ffe0a0', base: '#4e3450' },
+  night: { wall: ['#3a3054', '#342a4c'], line: '#2c2442', pil: '#4e4468', pilDk: '#221c36', trim: '#1c1630', win: '#16122a', win2: '#2a2446', lit: '#ffb84f', lit2: '#ffe6a8', base: '#28203e' },
+};
+const bgRun = (map, tx, ty, dx, dy, max) => { let k = 0; while (k < max && map.get(tx + dx * (k + 1), ty + dy * (k + 1)) === T.BG) k++; return k; };
+/** ':' ao ar livre? (subindo pela coluna de ':' chega-se ao céu). */
+function bgOutdoor(map, tx, ty) {
+  let y = ty - 1;
+  const see = (t) => t === T.BG || t === T.ONEWAY || t === T.SPIKE;
+  while (y >= 0 && see(map.get(tx, y))) y--;
+  if (y < 0) return !solidLike(map.get(tx, 0));
+  // laje fina (1-2 tiles) com céu em cima = terraço/marquise do prédio de fundo
+  let k = 0;
+  while (k < 3 && y >= 0 && solidLike(map.get(tx, y))) { y--; k++; }
+  if (k === 0) return map.get(tx, y) === T.EMPTY;
+  return k <= 2 && y >= 0 && map.get(tx, y) === T.EMPTY;
+}
+function drawFacadeBG(pc, x, y, n, info) {
+  const { tx, ty, map, level } = info;
+  const F = FAC[level?.timeOfDay] || FAC.dusk;
+  const k = { u: bgRun(map, tx, ty, 0, -1, 30), d: bgRun(map, tx, ty, 0, 1, 30), l: bgRun(map, tx, ty, -1, 0, 60), r: bgRun(map, tx, ty, 1, 0, 60) };
+  const below = map.get(tx, ty + 1), floor = solidLike(below) || below === T.ONEWAY;
+  for (let ly = 0; ly < 16; ly++) for (let lx = 0; lx < 16; lx++) {
+    const wx = tx * 16 + lx, wy = ty * 16 + ly;
+    let c = th(wx, wy) < 0.2 + 0.25 * h2(wx >> 3, wy >> 3, 150) ? F.wall[1] : F.wall[0];
+    if ((wy % 8) === 7) c = F.line;
+    pc.px(x + lx, y + ly, c);
+  }
+  // faixa por andar
+  if (k.u > 0 && k.u % 2 === 0) { pc.hline(x, y, 16, F.trim); pc.hline(x, y + 1, 16, F.pil); pc.hline(x, y + 2, 16, F.pilDk); }
+  // janela
+  const total = k.l + k.r + 1;
+  const bay = !info.noFeature && k.l >= 1 && k.r >= 1 && k.u % 2 === 1 && !floor && ((k.l + (total % 2 ? 0 : 1)) % 2 === 1 || total <= 4);
+  if (bay) {
+    const hv = h2(tx, ty, 151);
+    const lit = hv < litChance(level) + 0.1;
+    pc.rect(x + 4, y + 3, 8, 11, F.trim);
+    pc.rect(x + 5, y + 4, 6, 9, lit ? F.lit : F.win);
+    pc.rect(x + 5, y + 4, 6, 1, F.trim); pc.px(x + 5, y + 5, F.trim); pc.px(x + 10, y + 5, F.trim);
+    pc.vline(x + 7, y + 5, 8, F.trim); pc.hline(x + 5, y + 9, 6, F.trim);
+    if (lit) { pc.px(x + 6, y + 6, F.lit2); pc.px(x + 6, y + 7, F.lit2); if (hv < 0.12) pc.rect(x + 8, y + 10, 3, 3, F.pilDk); }
+    else pc.px(x + 9, y + 6, F.win2);
+    pc.hline(x + 3, y + 13, 10, F.pil); pc.hline(x + 3, y + 14, 10, F.pilDk);
+  }
+  // soco / porta no térreo
+  if (floor) {
+    pc.rect(x, y + 10, 16, 6, F.base); pc.hline(x, y + 10, 16, F.pil); pc.hline(x, y + 11, 16, F.pilDk);
+    if (!info.noFeature && k.l >= 1 && k.r >= 1 && h2(tx, ty, 152) < 0.22) { // porta de madeira
+      pc.rect(x + 4, y + 2, 8, 14, F.trim); pc.rect(x + 5, y + 4, 6, 12, '#5a3424'); pc.rect(x + 6, y + 3, 4, 1, '#5a3424');
+      pc.vline(x + 8, y + 4, 12, '#3a2018'); pc.px(x + 9, y + 10, BRASS.lt); pc.rect(x + 6, y + 5, 4, 2, F.lit);
+    }
+  }
+  // pilastras nas laterais
+  if (!n.l) { pc.vline(x, y, 16, F.trim); pc.vline(x + 1, y, 16, F.pil); pc.vline(x + 2, y, 16, F.pil); pc.vline(x + 3, y, 16, F.pilDk); }
+  if (!n.r) { pc.vline(x + 12, y, 16, F.trim); pc.vline(x + 13, y, 16, F.pil); pc.vline(x + 14, y, 16, F.pilDk); pc.vline(x + 15, y, 16, F.trim); }
+  // cornija
+  if (!n.u) {
+    pc.hline(x, y, 16, F.trim); pc.hline(x, y + 1, 16, BRASS.dk); pc.hline(x, y + 2, 16, F.pil); pc.hline(x, y + 3, 16, F.pilDk);
+    for (let lx = 0; lx < 16; lx += 3) pc.px(x + lx, y + 4, F.trim);
+  }
+}
+
 // ------------------------------------------------------------------ bg: interior de torre de relógio
 function drawTower(pc, x, y, n, rng, info) {
   const { tx, ty, map } = info;
+  if (bgOutdoor(map, tx, ty)) return drawFacadeBG(pc, x, y, n, info);
   const below = map.get(tx, ty + 1);
   const floor = solidLike(below) || below === T.ONEWAY;
   for (let ly = 0; ly < 16; ly++) for (let lx = 0; lx < 16; lx++) {
@@ -612,6 +817,13 @@ function buildSprites() {
   };
   S.clockS = clockFace(13, { hi: BRASS.hi, md: BRASS.md });
   S.clockL = clockFace(19, { hi: COP.hi, md: COP.md });
+  S.clockCase = mk(23, 27, (pc) => { // caixa de nogueira atrás do mostrador grande + gancho + pinha de corrente
+    const W0 = '#5a3424', W1 = '#7a4a30', W2 = '#9a6440';
+    pc.rect(1, 3, 21, 21, W1); pc.hline(1, 3, 21, W2); pc.vline(1, 3, 21, W2); pc.vline(21, 4, 20, W0); pc.hline(2, 23, 20, W0);
+    pc.tri(3, 3, 19, 3, 11, -0.5, W1); pc.line(3, 3, 11, 0, W2);
+    pc.rect(9, 24, 5, 2, BRASS.md); pc.px(11, 26, BRASS.dk); pc.px(10, 24, BRASS.hi);
+    pc.px(11, 0, BRASS.hi);
+  });
   S.pig = pigeonFrames();
   S.haloAmber = glowHalo(26, '#ffb84f');
   S.haloSmall = glowHalo(14, '#ffc060');
@@ -789,6 +1001,25 @@ function clockAnim(face, x, y, mode, ph) {
     ctx.fillStyle = BRASS.hi; ctx.fillRect(Math.round(x + c - 0.5), Math.round(y + c - 0.5), 1, 1);
   };
 }
+/** Corrente vertical (elos alternados) de um teto até uma plataforma pendurada. */
+function chainAnim(x, y0, len) {
+  return (ctx) => {
+    for (let k = 0; k < len; k += 2) {
+      const m = (k >> 1) & 1;
+      ctx.fillStyle = OUT; ctx.fillRect(x - 1, y0 + k, 3, 2);
+      ctx.fillStyle = m ? IRON.hi : IRON.md; ctx.fillRect(x - (m ? 0 : 1), y0 + k, m ? 1 : 3, 1);
+    }
+    ctx.fillStyle = BRASS.md; ctx.fillRect(x - 2, y0 + len - 1, 5, 2); ctx.fillRect(x - 2, y0, 5, 2);
+  };
+}
+/** Relógio de parede montado: caixa de madeira com gancho e prumo (fica ATRÁS do Tico). */
+function wallClockAnim(x, y, mode, ph) {
+  const face = clockAnim(SPR.clockL, x + 2, y + 4, mode, ph);
+  return (ctx, t) => {
+    ctx.drawImage(SPR.clockCase.canvas, x, y);
+    face(ctx, t);
+  };
+}
 function lampAnim(x, y, ph, small = false) { // vidro tremulante + halo + mariposas
   return (ctx, t, level) => {
     const f = 0.78 + 0.14 * Math.sin(t * 11 + ph) * Math.sin(t * 6.3 + ph * 2) + (Math.sin(t * 37 + ph) > 0.93 ? -0.25 : 0);
@@ -902,6 +1133,7 @@ function decorate(map, rng, data) {
   const add = (o) => out.push(o);
   const blitAt = (spr, x, y, layer = 'back', flip = false) => add({ x, y, w: spr.w, h: spr.h, layer, paint: (pc) => pc.blit(spr, x, y, { flipX: flip }) });
   const clockBand = new Set();
+  const roofTops = [];
   for (let ty = 1; ty < map.rows; ty++) {
     let lastBig = -99, lastPig = -99, lastWall = -99, lastHang = -99, lastPend = -99;
     for (let tx = 0; tx < map.cols; tx++) {
@@ -987,27 +1219,132 @@ function decorate(map, rng, data) {
           add({ x: cx - 8, y: wy + 16, w: 16, h: len + 16, layer: 'back', paint: (pc) => paintChain(pc, cx, wy + 16, len, seed, end) });
         } else if (r < 0.45 && t === T.SOLID) add({ x: wx, y: wy + 16, w: 18, h: 10, layer: 'back', paint: (pc) => paintVines(pc, wx, wy + 16, seed ^ 0x99) });
       }
+      // ---------- plataformas vazadas penduradas: correntes até o teto (nada flutua à toa)
+      if (t === T.ONEWAY && map.get(tx - 1, ty) !== T.ONEWAY) {
+        let ex = tx; while (map.get(ex + 1, ty) === T.ONEWAY) ex++;
+        const ceilAt = (cx) => { for (let k = 1; k <= 9; k++) { const o = map.get(cx, ty - k); if (solidLike(o)) return k; if (o !== T.EMPTY && o !== T.BG) return 0; } return 0; };
+        for (const [cx, ox] of [[tx, 3], [ex, 12]]) {
+          const k = ceilAt(cx);
+          if (k < 2) continue;
+          const x = cx * 16 + ox, y0 = (ty - k + 1) * 16, len = (k - 1) * 16;
+          add({ x: x - 2, y: y0, w: 5, h: len + 2, layer: 'mid', anim: chainAnim(x, y0, len) });
+        }
+      }
       // ---------- passarelas: grade
       if (t === T.ONEWAY && free(tx, ty - 1) && walkStyle(map, tx, ty) === 'walk') {
         const l = map.get(tx - 1, ty) !== T.ONEWAY, rr = map.get(tx + 1, ty) !== T.ONEWAY;
         add({ x: wx, y: wy - 14, w: 16, h: 14, layer: 'back', paint: (pc) => paintRail(pc, wx, wy, l, rr) });
       }
       // ---------- interior das torres: pêndulos e relógios
-      if (t === T.BG) {
+      if (t === T.BG && bgOutdoor(map, tx, ty)) {
+        if (map.get(tx, ty - 1) === T.EMPTY) roofTops.push([tx, ty]);
+      } else if (t === T.BG) {
         const ceil = solidLike(map.get(tx, ty - 1));
         let depth = 0; while (depth < 6 && map.get(tx, ty + depth) === T.BG) depth++;
         if (ceil && depth >= 4 && tx - lastPend >= 5 && rng() < 0.35) {
           lastPend = tx;
           const len = Math.min(56, depth * 16 - 30);
-          add({ x: wx - 8, y: wy, w: 32, h: len + 8, layer: 'front', anim: pendulumAnim(wx + 8, wy, len, rng() * 6) });
+          add({ x: wx - 8, y: wy, w: 32, h: len + 8, layer: 'mid', anim: pendulumAnim(wx + 8, wy, len, rng() * 6) });
         } else if (!ceil && depth >= 3 && depth <= 4 && map.get(tx, ty - 1) === T.BG && map.get(tx, ty + depth) !== T.ONEWAY && !clockBand.has(Math.floor(tx / 5)) && rng() < 0.3) {
           clockBand.add(Math.floor(tx / 5));
-          add({ x: wx - 1, y: wy - 2, w: 19, h: 19, layer: 'front', anim: clockAnim(SPR.clockL, wx - 1, wy - 2, rng.int(0, 2), rng() * 6) });
+          add({ x: wx - 3, y: wy - 4, w: 23, h: 27, layer: 'mid', anim: wallClockAnim(wx - 3, wy - 4, rng.int(0, 2), rng() * 6) });
         }
       }
     }
   }
+  // ---------- telhados sobre as fachadas de fundo (':' ao ar livre)
+  const tod = data?.timeOfDay || 'dusk';
+  const runs = [];
+  for (const [tx, ty] of roofTops) {
+    const last = runs[runs.length - 1];
+    if (last && last.ty === ty && last.x1 === tx - 1) last.x1 = tx; else runs.push({ ty, x0: tx, x1: tx });
+  }
+  for (const rr of runs) {
+    let room = 0;
+    while (room < 3 && rr.ty - room - 1 >= 0) {
+      let ok = true;
+      for (let x = rr.x0; x <= rr.x1; x++) if (map.get(x, rr.ty - room - 1) !== T.EMPTY) { ok = false; break; }
+      if (!ok) break;
+      room++;
+    }
+    if (room < 1) continue;
+    const x0 = rr.x0 * 16, x1 = rr.x1 * 16 + 16, yb = rr.ty * 16, seed = (rr.x0 * 7919 + rr.ty * 31) >>> 0;
+    const hgt = Math.min(room * 16 - 2, 13 + Math.min(10, (rr.x1 - rr.x0) * 2));
+    add({ x: x0 - 4, y: yb - hgt - 30, w: x1 - x0 + 8, h: hgt + 30, layer: 'back', paint: (pc) => paintRoof(pc, x0, x1, yb, hgt, seed, tod) });
+    if (rr.x1 - rr.x0 >= 2 && room >= 2) { // chaminé fumegante na ponta
+      const cx = (h2(rr.x0, rr.ty, 160) < 0.5 ? x0 + 8 : x1 - 14), cy = yb - Math.round(hgt * 0.6) - 8;
+      add({ x: cx - 10, y: cy - 34, w: 26, h: 38, layer: 'back', anim: steamAnim(cx + 3, cy, rng() * 7) });
+    }
+  }
   return out;
+}
+
+/** Telhado mansarda (ardósia ou cobre) com lucarnas acesas e cumeeira de latão. */
+const ROOF = {
+  day: [{ a: '#5e9090', b: '#4e7c80', hi: '#9ac8b4', dk: '#3a5e66' }, { a: '#b06a46', b: '#9a5a3c', hi: '#e09a6a', dk: '#6a3a2a' }],
+  dusk: [{ a: '#2e4a52', b: '#283f48', hi: '#4e7078', dk: '#1a2a32' }, { a: '#6a3030', b: '#5a2828', hi: '#9a4e40', dk: '#3a1a1e' }],
+  night: [{ a: '#16282e', b: '#122228', hi: '#2a4650', dk: '#0a1418' }, { a: '#2a1a22', b: '#24161e', hi: '#46303a', dk: '#140c12' }],
+};
+function paintRoof(pc, x0, x1, yb, hgt, seed, tod) {
+  const r = lrng(seed);
+  const P = (ROOF[tod] || ROOF.dusk)[r() < 0.6 ? 0 : 1];
+  const F = FAC[tod] || FAC.dusk;
+  const inset = Math.min(6, Math.floor(hgt / 2));
+  for (let yy = 0; yy < hgt; yy++) {
+    const k = yy / hgt, xl = Math.round(x0 - 2 + inset * (1 - k)), xr = Math.round(x1 + 1 - inset * (1 - k));
+    const y = yb - hgt + yy;
+    for (let x = xl; x <= xr; x++) {
+      let c = ((x + (Math.floor(yy / 3) & 1) * 3) % 6 === 0) ? P.dk : (yy % 3 === 0 ? P.b : P.a);
+      if (x === xl || x === xr) c = OUT;
+      else if (x === xl + 1) c = P.hi;
+      pc.px(x, y, c);
+    }
+  }
+  pc.hline(x0 - 2 + inset, yb - hgt - 1, x1 - x0 + 4 - inset * 2, OUT);
+  pc.hline(x0 - 1 + inset, yb - hgt, x1 - x0 + 2 - inset * 2, BRASS.lt);
+  // lucarnas
+  const nD = Math.max(1, Math.floor((x1 - x0) / 34));
+  for (let i = 0; i < nD; i++) {
+    const dx = Math.round(x0 + ((i + 0.5) * (x1 - x0)) / nD) - 4, dy = yb - Math.min(hgt - 2, 11);
+    const lit = r() < 0.55;
+    pc.rect(dx, dy, 9, 9, OUT); pc.tri(dx - 1, dy + 1, dx + 9, dy + 1, dx + 4, dy - 4, OUT);
+    pc.tri(dx, dy + 1, dx + 8, dy + 1, dx + 4, dy - 3, P.hi);
+    pc.rect(dx + 2, dy + 2, 5, 6, lit ? F.lit : F.win); pc.vline(dx + 4, dy + 2, 6, OUT);
+    if (lit) pc.px(dx + 3, dy + 3, F.lit2);
+  }
+  // relógio na empena (prédios largos)
+  if (x1 - x0 >= 80 && r() < 0.7) {
+    const cx = Math.round((x0 + x1) / 2), cy = yb - hgt - 7;
+    pc.tri(cx - 11, cy + 8, cx + 11, cy + 8, cx, cy - 8, OUT); pc.tri(cx - 9, cy + 7, cx + 9, cy + 7, cx, cy - 6, P.a);
+    pc.circle(cx, cy + 2, 4.6, OUT); pc.circle(cx, cy + 2, 3.8, CREAM.md); pc.px(cx - 2, cy, CREAM.hi);
+    pc.vline(cx, cy - 1, 3, OUT); pc.hline(cx, cy + 2, 3, OUT); pc.px(cx, cy - 9, BRASS.lt); pc.px(cx, cy - 10, BRASS.hi);
+  } else if (r() < 0.5) { // cata-vento
+    const cx = Math.round(x0 + (x1 - x0) * (0.3 + r() * 0.4)), cy = yb - hgt - 1;
+    pc.vline(cx, cy - 9, 9, IRON.dk); pc.hline(cx - 3, cy - 7, 7, BRASS.md); pc.px(cx + 3, cy - 8, BRASS.md); pc.px(cx - 3, cy - 6, BRASS.dk); pc.px(cx, cy - 10, BRASS.hi);
+  }
+}
+
+// ------------------------------------------------------------------ camada do meio
+// Decor animado com layer 'mid' (relógios de parede e pêndulos dos interiores) precisa
+// ficar POR CIMA das paredes de fundo e ATRÁS do Tico. A LevelScene só conhece 'back'
+// (sob os tiles) e 'front' (sobre as entidades), então as fases do Mundo 3 chamam
+// promoteMidDecor(level) no onStart: cada item vira uma entidade leve com z baixo.
+class MidDecor extends Entity {
+  constructor(level, d) {
+    super(level, d.x, d.y, {});
+    this.w = d.w || 16; this.h = d.h || 16; this.z = 1; this.d = d; this.drawMargin = 24;
+    if (d.light) this.light = { r: d.light.r, color: d.light.color, i: d.light.i ?? 0.8, flicker: d.light.flicker ?? 0.3 };
+  }
+  update() {}
+  draw(ctx) { try { this.d.anim(ctx, this.level.time, this.level); } catch (e) { /* ignore */ } }
+}
+registerEntity('w3_mid_decor', MidDecor);
+export function promoteMidDecor(level) {
+  if (!level?.animDecor) return;
+  const mids = level.animDecor.filter((d) => d.layer === 'mid');
+  if (!mids.length) return;
+  level.animDecor = level.animDecor.filter((d) => d.layer !== 'mid');
+  for (const d of mids) level.entities.push(new MidDecor(level, d));
 }
 
 // ------------------------------------------------------------------ registro

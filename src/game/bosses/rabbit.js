@@ -28,6 +28,7 @@
 // =============================================================================
 import { Entity } from '../../engine/entity.js';
 import { TILE, clamp, lerp, rand, damp, rectsOverlap } from '../../engine/util.js';
+import { T as TT, moveBody } from '../../engine/tilemap.js';
 import { PixelCanvas } from '../../engine/pixel.js';
 import { defineSprite, drawSprite, animFrame, frameMeta, getSprite, hasSprite, defineImage, drawImage } from '../../engine/sprites.js';
 import { audio, registerSfx } from '../../engine/audio.js';
@@ -540,10 +541,12 @@ class RabbitChaser extends Entity {
     for (let r = 4; r < map.rows; r++) if (map.solidAt(col * T + 8, r * T + 8)) return r * T;
     return null;
   }
-  onTouchPlayer() { if (this.state === 'chase') { this.go('pause'); audio.sfx('boss_roar', { vol: 0.5, pitch: 1.3 }); } }
   update(dt) {
-    this.t += dt; this.st += dt;
     const L = this.level, p = L.player;
+    // Tico morreu: o perseguidor CONGELA na hora (sem andar, sem dano). Ao
+    // renascer a fase é recriada e um novo perseguidor nasce atrás do checkpoint.
+    if (!p || p.state === 'dead') { this.contactDamage = 0; this.enemy = false; return; }
+    this.t += dt; this.st += dt;
     switch (this.state) {
       case 'lurk':
         if (!this.driven && !L.inputLocked) { this.lurkT += dt; if (this.lurkT > 0.35) this.emerge(); }
@@ -559,22 +562,29 @@ class RabbitChaser extends Entity {
       case 'chase': this.chase(dt, p); break;
       default: break;
     }
-    this.contactDamage = this.state === 'chase' ? 1 : 0;
-    this.enemy = this.alpha > 0.5;
+    // o contato é tratado em chase() (com colisão); o sistema genérico fica de fora
+    this.contactDamage = 0;
+    this.enemy = false;
   }
   chase(dt, p) {
     const L = this.level;
     const gap = p.cx - this.cx;
     // perseguição de verdade: quase tão rápido quanto o Tico correndo e acelera se ficar longe
     let v = clamp(138 + (gap - 110) * 0.8, 122, 215);
-    if (p.state === 'hurt' || p.state === 'dead' || (p.hurtInv || 0) > 0.3) v = Math.min(v, 85);
-    // ninguém passa por trás do coelho: quem tentar é arremessado para a frente (evita travar a fase)
-    if (gap < 14 && p.state !== 'dead' && !L.inputLocked) {
-      p.x = this.x + this.w + 4; p.vx = 190; p.vy = Math.min(p.vy, -160);
-      if (!(p.hurtInv > 0)) p.hurt(1, this, { noKnock: true });
-      v = 0;
-    }
+    if (p.state === 'hurt' || (p.hurtInv || 0) > 0.3) v = Math.min(v, 85);
     if (L.inputLocked) v = 0;
+    // ninguém passa por trás do coelho: o corpo dele EMPURRA o Tico para a frente,
+    // sempre com colisão (moveBody) — nunca para dentro do chão/paredes.
+    // encostar no coelho = 1 de dano (empurrão para a frente) + ele para 1 s.
+    const vOver = p.y + p.h > this.y + 6 && p.y < this.y + this.h;
+    if (gap < 26 && (vOver || gap < 0) && !L.inputLocked) {
+      const r = this.shove(p);
+      if (r !== 'cornered' && !(p.invuln > 0) && p.state !== 'hurt') {
+        p.hurt(1, this);
+        this.go('pause'); audio.sfx('boss_roar', { vol: 0.5, pitch: 1.3 });
+      }
+      v = Math.min(v, 60);
+    }
     this.x = Math.min(this.x + v * dt, WALL_X - 6 - this.w);   // não atravessa a parede da arena
     // altura dos pés: chão sob o centro; sobre um vão, salta em arco
     const g = this.groundAt(this.cx);
@@ -603,6 +613,41 @@ class RabbitChaser extends Entity {
     this.y = this.fy - this.h - this.bob;
     for (const t of L._rabbitTrees || []) if (!t.smashed && this.x + this.w + 6 > t.x + 4 && this.x < t.x + t.w) t.smash(1);
     if (Math.random() < dt * 3) L.particles.emit('fluff', this.cx - 10, this.y + 20, 1);
+  }
+  /** Empurra o Tico para a frente do coelho usando a colisão do mapa. Se ele
+   *  estiver encurralado (parede/tronco), leva 1 de dano e é posto num lugar
+   *  seguro mais adiante, em vez de ficar entalado no terreno. */
+  shove(p) {
+    const L = this.level, want = this.x + this.w + 4 - p.x;
+    if (want <= 0.5) return 'none';
+    const x0 = p.x;
+    moveBody(p, want, 0, L, {});
+    if (p.vx < 120) p.vx = 120;
+    if (p.x - x0 >= want - 1) return 'free';          // empurrado livremente
+    // encurralado: dano + reposiciona à frente, em chão firme
+    const spot = this.safeSpotAhead(p);
+    if (!(p.invuln > 0)) p.hurt(1, this, { noKnock: true });
+    if (spot) { p.x = spot.x; p.y = spot.y; p.vx = 60; p.vy = 0; L.particles.emit('smoke', p.cx, p.cy, 6, { colors: ['#8a6ac8', '#b8a8e0'] }); }
+    this.go('pause');
+    return 'cornered';
+  }
+  /** Primeira coluna à frente do coelho com chão firme e 2 tiles livres acima. */
+  safeSpotAhead(p) {
+    const map = this.level.map;
+    const c0 = Math.max(Math.floor((this.x + this.w + 20) / T), Math.floor((p.x + p.w) / T) + 1);
+    for (let c = c0; c < Math.min(map.cols - 1, c0 + 24); c++) {
+      for (let r = 3; r < map.rows; r++) {
+        const t = map.get(c, r);
+        if (t === TT.SOLID || t === TT.ALT) {
+          const ok = (cc) => [r - 1, r - 2].every((rr) => { const u = map.get(cc, rr); return u !== TT.SOLID && u !== TT.ALT && u !== TT.SPIKE; })
+            && (map.get(cc, r) === TT.SOLID || map.get(cc, r) === TT.ALT);
+          if (ok(c) && ok(c + 1)) return { x: c * T + 2, y: r * T - p.h };
+          break;
+        }
+        if (t === TT.SPIKE) break;
+      }
+    }
+    return null;
   }
   draw(ctx) {
     if (this.alpha <= 0.01) return;
@@ -898,6 +943,7 @@ class RabbitBoss extends Enemy {
     this.animT += dt; this.st += dt;
     if (this.stompCd > 0) this.stompCd -= dt;
     if (this.state === 'dormant') return;
+    if (this.level.player?.state === 'dead' && this.fighting) return;   // Tico caiu: o chefe congela
     this.think(dt);
     this.contactDamage = (this.weak || NOHARM.has(this.state)) ? 0 : 1;
     const L = this.level;

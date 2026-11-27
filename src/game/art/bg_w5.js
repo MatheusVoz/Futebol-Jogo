@@ -192,7 +192,7 @@ function riftSparks() {
 }
 function portalSwirl() {
   return (ctx, cam, t, w, h, y) => {
-    const L = layers[2], P = PAL[activeTod];
+    const L = layers[3], P = PAL[activeTod];
     for (const [px, py, pr] of PORTALS) for (const sx of layerXs(px, cam, t, L, w)) {
       for (let arm = 0; arm < 3; arm++) for (let k = 1; k < 11; k++) {
         const a = -t * 1.8 + arm * 2.094 + k * 0.55, rr = (k / 10) * (pr - 2);
@@ -209,7 +209,7 @@ function portalSwirl() {
 }
 function threadPulses() {
   return (ctx, cam, t, w, h, y) => {
-    const L = layers[3], P = PAL[activeTod];
+    const L = layers[4], P = PAL[activeTod];
     MID_THREADS.forEach(([x0, y0, x1, y1], i) => {
       for (let j = 0; j < 2; j++) {
         const k = (t * 0.12 + i * 0.29 + j * 0.5) % 1;
@@ -246,6 +246,23 @@ function embers(n, seed, speed) {
 }
 
 // ------------------------------------------------------------------ camadas
+/** Cintilar das estrelas de ponto-cruz da camada 1b (brilhos em cruz que pulsam). */
+function clothTwinkle() {
+  const pts = []; const r = lrng(4242);
+  for (let i = 0; i < 14; i++) pts.push([r.int(0, 720), r.int(6, 190), r() * 6]);
+  return (ctx, cam, t, w, h, y) => {
+    const L = layers[1];
+    for (const [px, py, ph] of pts) {
+      const a = Math.sin(t * 1.6 + ph); if (a < 0.55) continue;
+      for (const sx of layerXs(px, cam, t, L, w)) {
+        const X = Math.round(sx), Y = Math.round(y + py);
+        ctx.globalAlpha = (a - 0.55) * 2.2; ctx.fillStyle = '#fff6c0';
+        ctx.fillRect(X - 2, Y, 5, 1); ctx.fillRect(X, Y - 2, 1, 5);
+        ctx.globalAlpha = 1;
+      }
+    }
+  };
+}
 const layers = [
   // 1) fenda colossal costurada no céu + ilhotas muito distantes
   {
@@ -283,6 +300,60 @@ const layers = [
       });
     },
     animate: riftSparks(),
+  },
+  // 1b) cosmos de tecido: planetas de retalhos costurados (com anel de fio), estrelas
+  //     de ponto-cruz e fios soltos flutuando (cintilam no animate)
+  {
+    width: 720, height: 200, speed: 0.045, speedY: 0.03, anchor: 'top', y: 6,
+    paint(pc, w, h, tod) {
+      curTod = todOf(tod); const P = PAL[curTod];
+      const r = lrng(777);
+      const PATCH = [['#c8306a', '#8a1a4a'], ['#7a3ab0', '#4a1a72'], ['#e0803a', '#a0501e'], ['#3a8aa0', '#1e5268'], ['#d8b040', '#8a6a1e']];
+      // planetas de retalhos
+      for (const [px, py, pr] of [[110, 70, 22], [420, 46, 14], [600, 118, 30], [290, 140, 9]]) {
+        wrap(w, (o) => {
+          const cx = px + o, cy = py;
+          const pa = PATCH[r.int(0, PATCH.length - 1)], pb = PATCH[r.int(0, PATCH.length - 1)];
+          const ang = r() * 3;
+          for (let yy = -pr; yy <= pr; yy++) for (let xx = -pr; xx <= pr; xx++) {
+            const d = xx * xx + yy * yy; if (d > pr * pr) continue;
+            const side = (xx * Math.cos(ang) + yy * Math.sin(ang)) > 0;
+            const quad = side ? pa : pb;
+            const shade = (xx + yy) > pr * 0.55 ? 1 : 0;           // sombra embaixo-direita
+            let c = tc(P, quad[shade]);
+            if (Math.abs(xx * Math.cos(ang) + yy * Math.sin(ang)) < 1) c = ((xx + yy) & 3) < 2 ? P.gold : P.goldD; // costura
+            if (d > (pr - 1.2) * (pr - 1.2)) c = P.riftLip;
+            pc.px(cx + xx, cy + yy, c);
+          }
+          pc.px(cx - (pr >> 1), cy - (pr >> 1), '#fff0e0'); pc.px(cx - (pr >> 1) + 1, cy - (pr >> 1), '#ffd0c0');
+          // botão costurado no planeta
+          if (pr > 12) { pc.circle(cx + (pr >> 2), cy - (pr >> 2), 3, tc(P, '#f4f0e4')); pc.px(cx + (pr >> 2) - 1, cy - (pr >> 2), P.riftLip); pc.px(cx + (pr >> 2) + 1, cy - (pr >> 2), P.riftLip); }
+          // anel de fio dourado (elipse inclinada, metade de trás e da frente)
+          if (pr > 12) for (let a = 0; a < Math.PI * 2; a += 0.02) {
+            const rx = pr * 1.7, ry = pr * 0.42;
+            const x = Math.round(cx + Math.cos(a) * rx), y = Math.round(cy + Math.sin(a) * ry - Math.cos(a) * pr * 0.2);
+            const front = Math.sin(a) > 0;
+            if (!front && (x - cx) ** 2 + (y - cy) ** 2 < pr * pr) continue;
+            pc.px(x, y, front ? P.gold : P.goldD);
+          }
+        });
+      }
+      // estrelas de ponto-cruz (X dourado com brilho) e estrelinhas de pesponto
+      for (let i = 0; i < 26; i++) {
+        const x = r.int(0, w), y = r.int(4, h - 10), big = r() < 0.3, c = r() < 0.5 ? P.gold : '#ffd0e8';
+        wrap(w, (o) => {
+          const X = x + o;
+          if (big) { for (let k = -2; k <= 2; k++) { pc.px(X + k, y + k, c); pc.px(X + k, y - k, c); } pc.px(X, y, '#ffffff'); pc.px(X, y - 3, P.goldD); pc.px(X, y + 3, P.goldD); }
+          else { pc.px(X, y, c); pc.px(X - 1, y, P.goldD); pc.px(X + 1, y, P.goldD); }
+        });
+      }
+      // fios soltos flutuando (curvinhas)
+      for (let i = 0; i < 7; i++) {
+        const x = r.int(0, w), y = r.int(20, h - 30), len = r.int(14, 30), c = r() < 0.5 ? P.goldD : P.midR;
+        wrap(w, (o) => pc.curve(x + o, y, x + o + len * 0.5, y - r.int(-8, 8), x + o + len, y + r.int(-6, 6), c, 0));
+      }
+    },
+    animate: clothTwinkle(),
   },
   // 2) fios gigantes distantes + castelo-tear espinhoso flutuante
   {

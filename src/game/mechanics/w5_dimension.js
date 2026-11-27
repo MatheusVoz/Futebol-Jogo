@@ -28,6 +28,7 @@
 // Fase de teste: ?level=test_w5_mech&god=1&unlock=all
 // =============================================================================
 import { Entity } from '../../engine/entity.js';
+import { T } from '../../engine/tilemap.js';
 import { TILE, clamp, rectsOverlap } from '../../engine/util.js';
 import { defineImage, drawImage, getImage, hasImage } from '../../engine/sprites.js';
 import { audio } from '../../engine/audio.js';
@@ -60,7 +61,17 @@ function mergeCells(level, x, y, props, { horiz = true, vert = true } = {}) {
   let w = 1, h = 1;
   if (horiz) while (at(cx + w, cy) === ch) w++;
   if (vert) while (at(cx, cy + h) === ch) h++;
+  bgUnder(level.map, cx, cy, w, h);
   return { w, h };
+}
+/** Retângulo de mecânica dentro de um painel de fundo (':'): as células viram fundo
+ *  também (sem "janela" para o céu atrás de correntes/blocos de fase). */
+function bgUnder(map, cx, cy, w, h) {
+  if (!map) return;
+  for (let r = cy; r < cy + h; r++) {
+    if (map.get(cx - 1, r) !== T.BG && map.get(cx + w, r) !== T.BG) continue;
+    for (let i = 0; i < w; i++) if (map.get(cx + i, r) === T.EMPTY) map.set(cx + i, r, T.BG);
+  }
 }
 function standsOn(b, s) {
   return !!b && !b.dead && b.vy >= 0 && b.x + b.w > s.x + 1 && b.x < s.x + s.w - 1 && (b.groundEntity === s || (b.grounded && Math.abs(b.y + b.h - s.y) < 1.5));

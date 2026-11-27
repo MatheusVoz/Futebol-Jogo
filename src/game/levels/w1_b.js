@@ -9,7 +9,7 @@
 // Mapas montados com grid() de w1_a.js.
 // =============================================================================
 import { registerLevel } from '../registry.js';
-import { grid, hideRoom } from './w1_a.js';
+import { grid, hideRoom, spikePit, creek } from './w1_a.js';
 
 // =============================================================================
 // w1_3 — Trilha dos Brinquedos Quebrados. Chão na linha 22 (Tico em pé na 21).
@@ -18,7 +18,8 @@ import { grid, hideRoom } from './w1_a.js';
   const m = grid(260, 30);
   m.id = 'w1_3';
   const G = 22;
-  const block = (x0, x1, top) => m.fill(x0, top, x1, top + 1, '%'); // bloco de brinquedo (2 de altura)
+  /** Torre de blocos de brinquedo do topo `top` até o fundo do fosso (linha 27). */
+  const tower = (x0, x1, top) => m.fill(x0, top, x1, 27, '%');
   m.ground(0, 37, G);
   // --- A: trilha dos brinquedos + Pip foge -------------------------------------
   m.put(3, 21, 'P');
@@ -29,13 +30,13 @@ import { grid, hideRoom } from './w1_a.js';
   m.put(26, 21, 'a');
   m.sign(28, 21, 'w1_sign_pip');
   m.put(33, 21, 'n', { npc: 'pip', dialog: 'w1_pip_1', flee: true });
-  m.arc(38, 19, 3, 1);                                         // vão 3
+  creek(m, 38, 40, G, 3); m.arc(38, 19, 3, 1);                // riacho (3)
   m.ground(41, 99, G);
   // --- B: cogumelos-bomba ------------------------------------------------------
   m.sign(44, 21, 'w1_sign_boom');
   m.put(50, 21, 'd');
   m.fill(55, 20, 62, 21, '%'); m.put(59, 19, 'd'); m.line(56, 61, 18, 'o', 2);
-  m.clear(66, G, 69, 29); m.arc(66, 19, 4, 2);                 // vão 4
+  spikePit(m, 66, 69, G, 28); m.arc(66, 19, 4, 2);            // fosso de sarças (4)
   m.put(73, 21, 'd');
   m.plat(76, 79, 18); m.line(76, 79, 17);
   m.put(80, 21, 'a');
@@ -43,34 +44,33 @@ import { grid, hideRoom } from './w1_a.js';
   m.put(88, 21, 'K');
   m.put(94, 21, 'd');
   m.sign(97, 21, 'w1_sign_birds');
-  // --- C: ponte de blocos sobre o abismo + pássaros de papel -------------------
-  block(102, 104, 21); m.line(102, 104, 20 - 1);
-  block(108, 110, 19); m.arc(105, 18, 3, 1);
-  block(114, 116, 20); m.arc(111, 17, 3, 1);
-  block(120, 123, 18); m.line(120, 123, 17 - 1);
-  block(128, 130, 20); m.arc(124, 17, 4, 1);
-  block(134, 136, 19); m.arc(131, 18, 3, 1);
-  block(140, 142, 21); m.arc(137, 18, 3, 1);
+  // --- C: torres de blocos sobre o fosso de sarças + pássaros de papel ---------
+  m.ground(100, 145, 28); m.fill(100, 27, 145, 27, '^');
+  tower(102, 104, 21); m.line(102, 104, 19);
+  tower(108, 110, 19); m.arc(105, 18, 3, 1);
+  tower(114, 116, 20); m.arc(111, 17, 3, 1);
+  tower(120, 123, 18); m.line(120, 123, 16); m.put(121, 16, 'h');
+  tower(128, 130, 20); m.arc(124, 17, 4, 1);
+  tower(134, 136, 19); m.arc(131, 18, 3, 1);
+  tower(140, 142, 21); m.arc(137, 18, 3, 1);
   m.put(112, 13, 'g'); m.put(132, 12, 'g');
-  m.ground(101, 145, 27);                                       // chão seguro sob a ponte
-  m.fill(141, 25, 145, 26, '%'); m.put(143, 24, 'h');           // degrau de volta
-  m.put(115, 26, 'a'); m.put(130, 26, 'a');
   m.ground(146, 187, G);
-  // --- D: ravina vertical (chão seguro embaixo) --------------------------------
+  // --- D: ravina vertical ------------------------------------------------------
   m.put(150, 21, 'K'); m.put(147, 21, 'h');
   m.sign(153, 21, 'w1_sign_climb');
   m.put(158, 20, 'F', { dy: -8, speed: 34, pause: 1 });       // elevador: linha 20 → 12
-  m.fill(162, 12, 165, 12, '%'); m.line(162, 165, 11);        // patamar
+  m.fill(162, 12, 165, 21, '%'); m.line(162, 165, 11);        // torre-patamar (até o chão)
   m.put(168, 12, 'W', { width: 2 }); m.put(168, 10, 'o');
   m.put(172, 11, 'W', { width: 2 }); m.put(173, 9, 'o');
   m.put(176, 10, 'W', { width: 2 }); m.put(176, 8, 'o');
   m.put(180, 10, 'W', { width: 2 }); m.put(181, 8, 'o');
-  m.fill(184, 10, 186, 10, '%');
-  // rota "expert" (blocos isolados, pulos de 4 + dash)
-  m.put(185, 18, '%'); m.put(182, 14, '%');
-  // nicho opcional à esquerda (★2): elevador → plataforma que cai → borda
+  // escadaria de blocos (volta de quem cai; degraus de 3)
+  m.fill(178, 19, 179, 21, '%'); m.fill(180, 16, 181, 21, '%');
+  m.fill(182, 13, 183, 21, '%'); m.fill(184, 10, 185, 21, '%');
+  m.put(179, 18, 'o'); m.put(181, 15, 'o'); m.put(183, 12, 'o');
+  // casa na árvore à esquerda (★2): elevador → plataforma que cai → tábuas
   m.put(155, 10, 'W', { width: 2 });
-  m.fill(149, 9, 153, 9, '%'); m.put(150, 8, '*'); m.line(151, 153, 8);
+  m.plat(148, 153, 9); m.put(149, 8, '*'); m.line(150, 152, 8);
   // penhasco + trilha alta
   m.ground(188, 229, 9);
   // sala secreta 1 na base do penhasco (parede falsa)
@@ -83,7 +83,7 @@ import { grid, hideRoom } from './w1_a.js';
   hideRoom(m, 201, 11, 210, 12);                               // sala rasa (sai com 1 pulo)
   m.put(202, 12, '*'); m.put(209, 12, 'X'); m.line(203, 207, 12, 'o', 2);
   m.line(201, 204, 7); m.line(207, 210, 7);                    // botões "desviam" do buraco
-  m.put(210, 8, 'K');
+  m.put(212, 8, 'K');
   m.put(215, 8, 'd'); m.plat(216, 219, 5); m.put(217, 4, 'o'); m.put(218, 4, 'o');
   m.put(221, 8, 'a');
   m.put(226, 4, 'g');
@@ -98,6 +98,7 @@ import { grid, hideRoom } from './w1_a.js';
     id: 'w1_3', world: 1, index: 3, name: 'Trilha dos Brinquedos Quebrados', subtitle: 'Mundo 1-3',
     music: 'w1_level', tileset: 'w1', background: 'w1', timeOfDay: 'dusk', parTime: 200,
     darkness: 0, ambient: 'w1_fireflies', oxygen: false,
+    decor: [{ t: 'tree', x: 150.5, base: G, top: 5 }, { t: 'tree', x: 24, base: G, top: 9 }],
     map: m.build(), props: m.props, objects: m.objects,
   });
 }
@@ -143,7 +144,7 @@ import { grid, hideRoom } from './w1_a.js';
   cave(93, 5, 158, 14);
   m.put(100, 14, 'a'); m.put(103, 14, 'h');
   m.put(97, 14, '@', { group: 'd2' });                          // fio em rampa → ★2
-  m.fill(103, 9, 107, 9, '%'); m.put(104, 8, '@', { group: 'd2' });
+  m.plat(103, 107, 9); m.put(104, 8, '@', { group: 'd2' });      // tábua sobre estacas
   m.line(105, 106, 8); m.put(107, 8, '*');
   cave(106, 15, 110, 16); m.fill(106, 17, 110, 17, '^');       // fosso de espinhos (5)
   m.put(105, 14, '@', { group: 'd1' }); m.put(111, 14, '@', { group: 'd1' });
@@ -155,7 +156,7 @@ import { grid, hideRoom } from './w1_a.js';
   hideRoom(m, 128, 16, 136, 18); m.fill(131, 15, 132, 15, 'H');   // chão falso + sala rasa
   m.put(129, 18, '*'); m.put(135, 18, 'X'); m.put(134, 18, 'e'); m.line(130, 133, 18, 'o', 2);
   m.put(137, 14, 'b');
-  m.fill(141, 5, 142, 9, '%'); m.fill(148, 5, 148, 8, '%');    // raízes pendentes
+  m.fill(141, 5, 142, 6, '#'); m.put(141, 7, '#'); m.fill(148, 5, 148, 6, '#'); // raízes pendentes (presas ao teto)
   m.line(144, 154, 13, 'o', 2);
   m.put(152, 14, 'a');
   // --- raízes fundas E (rota de baixo, chave do Pip) ---------------------------
@@ -189,7 +190,7 @@ import { grid, hideRoom } from './w1_a.js';
   m.put(203, 14, 'f');
   m.fill(208, 11, 210, 14, '%'); m.line(208, 210, 10);
   m.put(214, 14, 'a');
-  m.fill(218, 4, 219, 8, '%');
+  m.fill(218, 4, 219, 5, '#'); m.put(219, 6, '#');
   m.line(220, 224, 13);
   m.put(226, 14, 'n', PIP);
   m.put(231, 14, 'E');

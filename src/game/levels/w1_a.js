@@ -92,8 +92,30 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   if (coins) for (let x = nx + 4; x < fx - 2; x += 2) if (m.get(x, floor - 1) === '.') m.put(x, floor - 1, 'o');
 }
 
+/**
+ * Fosso de espinhos com fundo VISÍVEL (sarças): limpa as colunas x0..x1 da linha
+ * `top` para baixo, põe chão em `floor` e espinhos na linha de cima do chão.
+ * Cair = dano e volta ao último chão seguro, mas o perigo fica legível.
+ */
+export function spikePit(m, x0, x1, top, floor) {
+  m.clear(x0, top, x1, m.H - 1);
+  m.ground(x0, x1, floor);
+  m.fill(x0, floor - 1, x1, floor - 1, '^');
+  return m;
+}
+/** Riacho: vala rasa cheia d'água (vão seguro e legível). depth = linhas de água. */
+export function creek(m, x0, x1, top, depth = 3) {
+  m.clear(x0, top, x1, m.H - 1);
+  m.ground(x0, x1, top + depth);
+  m.fill(x0, top, x1, top + depth - 1, '~');
+  return m;
+}
+
 // =============================================================================
 // w1_1 — Clareira dos Esquecidos (tutorial). Chão na linha 19 (Tico em pé na 18).
+// Regras de cenário do Mundo 1: tudo que é sólido toca o chão (ou é tábua com
+// estacas / galho de árvore — veja `decor` e tiles_w1.js), todo buraco tem
+// propósito (riacho seguro ou fosso de sarças com fundo visível).
 // =============================================================================
 {
   const m = grid(220, 24);
@@ -108,7 +130,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.fill(18, 18, 19, 18, '%'); m.line(18, 19, 16);          // toco baixo (1)
   m.fill(23, 17, 25, 18, '%'); m.line(23, 25, 15);          // toco médio (2)
   m.line(28, 31, 17);
-  m.plat(26, 29, 14); m.put(27, 13, 'o'); m.put(28, 13, 'o');                // galhinho opcional
+  m.plat(26, 29, 14); m.put(27, 13, 'o'); m.put(28, 13, 'o');                // banquinho de tábua (estacas)
   m.put(33, 18, 'B', { contents: 'buttons:3' });
   // --- B: Sr. Botão, pulo variável, espinhos -----------------------------------
   m.put(37, 18, 'n', { npc: 'botao', dialog: 'w1_botao_1' });
@@ -119,29 +141,30 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.sign(58, 18, 'w1_sign_spikes');
   m.fill(61, 18, 62, 18, '^');
   m.put(60, 16, 'o'); m.put(61, 15, 'o'); m.put(62, 15, 'o'); m.put(63, 16, 'o');
-  // --- C: correr, valas (seguras) e árvore opcional ---------------------------
+  // --- C: correr, riachos (seguros) e árvore opcional -------------------------
   m.sign(66, 18, 'w1_sign_run');
   m.put(72, 18, 'K');
   m.plat(64, 67, 15); m.put(65, 14, 'o'); m.put(66, 14, 'o');
-  m.ground(78, 80, 22);                                       // vala 1 (3)
+  creek(m, 78, 80, G, 3);                                     // riacho 1 (3)
   m.put(78, 16, 'o'); m.put(79, 15, 'o'); m.put(80, 16, 'o');
   m.ground(81, 88, G);
   m.fill(84, 17, 85, 18, '%'); m.put(84, 16, 'h');           // toco com coração
-  m.ground(89, 93, 22);                                       // vala 2 (5: correndo)
+  creek(m, 89, 93, G, 3);                                     // riacho 2 (5: correndo)
   m.arc(89, 16, 5, 2);
-  m.line(90, 92, 21);
+  m.line(90, 92, 21);                                         // botões no fundo do riacho
   m.ground(94, 160, G);
-  m.fill(101, 6, 101, 18, ':');                               // tronco (fundo)
+  // árvore grande: galhos de tábua (tronco desenhado pelo decor)
   m.plat(97, 99, 16); m.put(98, 15, 'o');
   m.plat(102, 104, 13); m.put(103, 12, 'o');
   m.plat(97, 99, 10); m.put(98, 9, 'o');
   m.plat(102, 105, 7); m.line(102, 103, 6);
   m.put(105, 6, '*');                                         // ★2 (copa da árvore, fora do caminho)
-  // --- D: ataque (blocos), baú, golpe p/ baixo (segredo 1) --------------------
+  // --- D: ataque (forte de blocos), baú, golpe p/ baixo (segredo 1) ------------
   m.sign(111, 18, 'w1_sign_attack');
-  m.fill(114, 10, 121, 16, '%');                              // tronco caído oco
-  m.put(117, 17, 'B'); m.put(117, 18, 'B');
+  m.fill(114, 14, 121, 16, '#'); m.fill(114, 17, 121, 18, ':'); // morrinho com túnel (fundo escuro = toca)
+  m.put(117, 17, 'B'); m.put(117, 18, 'B');                   // porta de blocos quebráveis
   m.put(115, 18, 'o'); m.put(116, 18, 'o'); m.put(119, 18, 'o'); m.put(120, 18, 'o');
+  m.line(115, 120, 13, 'o', 2);                               // telhado do forte (pela copa)
   m.put(124, 18, 'c', { contents: 'buttons:5' });
   m.sign(126, 18, 'w1_sign_downstrike');
   hideRoom(m, 126, 20, 134, 21);                              // câmara escondida (sob o chão)
@@ -150,22 +173,22 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   // --- E: dash ----------------------------------------------------------------
   m.put(140, 18, 'K');
   m.sign(143, 18, 'w1_sign_dash');
-  m.clear(147, G, 151, 21);                                   // vala 3 (5)
-  m.line(148, 150, 21);
+  m.clear(147, G, 151, 20); m.fill(147, 21, 151, 21, '^');    // vala de sarças (5)
   m.arc(147, 16, 5, 2);
   m.put(155, 18, 'a');
   m.plat(153, 156, 15); m.put(154, 14, 'o'); m.put(155, 14, 'o');
-  m.clear(161, 0, 164, 23);                                   // vão de verdade (4)
+  spikePit(m, 161, 164, G, 23);                               // vão de verdade (4) com sarças no fundo
   m.arc(161, 16, 4, 2);
   m.ground(165, 219, G);
   // colina com sala secreta (parede falsa) — ★3
-  m.fill(170, 15, 177, 18, '#');                              // colina (mesma textura da parede falsa)
+  m.fill(170, 15, 177, 18, '#');
   m.plat(166, 168, 16);
   m.fill(170, 17, 171, 18, 'H');
   hideRoom(m, 172, 17, 176, 18);
   m.put(173, 18, 'X'); m.put(172, 17, 'o'); m.put(174, 17, 'o'); m.put(175, 18, '*');
   m.line(171, 176, 14, 'o', 2);
   // --- F: pisão nos inimigos e saída ------------------------------------------
+  m.put(180, 18, 'K');
   m.sign(182, 18, 'w1_sign_stomp');
   m.put(185, 17, 'h');
   m.put(188, 18, 'B'); m.put(188, 17, 'B', { contents: 'buttons:3' });
@@ -181,6 +204,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
     id: 'w1_1', world: 1, index: 1, name: 'Clareira dos Esquecidos', subtitle: 'Mundo 1-1',
     music: 'w1_level', tileset: 'w1', background: 'w1', timeOfDay: 'day', parTime: 170,
     darkness: 0, ambient: 'w1_fireflies', oxygen: false, intro: 'arrival',
+    decor: [{ t: 'tree', x: 100.5, base: G, top: 5 }],
     map: m.build(), props: m.props, objects: m.objects,
   });
 }
@@ -211,9 +235,12 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.put(50, 17, '@', { group: 's2' }); m.put(59, 16, '@', { group: 's2' });
   m.arc(51, 15, 8, 1);
   m.ground(59, 103, 17);
-  // --- B2: primeiros inimigos -------------------------------------------------
+  // --- B2: primeiros inimigos + toca dos botões (segredo 1: piso oco) ----------
   m.sign(62, 16, 'w1_sign_enemies');
-  m.put(70, 16, 'a');
+  m.put(66, 17, 'B'); m.put(67, 17, 'B');                     // piso quebrável (golpe p/ baixo)
+  hideRoom(m, 63, 18, 71, 19);
+  m.put(64, 19, 'X'); m.line(65, 69, 19); m.put(70, 19, 'r');
+  m.put(72, 16, 'a');
   m.plat(73, 76, 14); m.line(73, 76, 13);
   m.put(79, 16, 'K');
   m.sign(82, 16, 'w1_sign_lasso');
@@ -222,38 +249,38 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
   m.put(95, 16, 'a');
   m.put(88, 9, 'g');
   m.put(99, 16, 'h');
-  // --- C: abismo de verdade + toca com portão por baixo (segredo 1) -----------
-  m.ground(104, 111, 23); m.fill(104, 22, 111, 22, '^');
+  // --- C: abismo de verdade (fosso de sarças) ---------------------------------
+  spikePit(m, 104, 111, 17, 23);
   m.ground(112, 239, 17);
-  burrow(m, { nx: 97, fx: 116, top: 17, floor: 26, signal: 'toca1' });
   m.sign(101, 16, 'w1_sign_realgap');
-  m.put(103, 16, '@', { group: 'c1', signal: 'toca1', latch: true });
+  m.put(103, 16, '@', { group: 'c1' });
   m.put(112, 16, '@', { group: 'c1' });
   m.arc(104, 14, 8, 1);
-  m.sign(101, 25, 'w1_sign_burrow');
-  m.put(107, 25, 'X'); m.put(113, 25, 'r');
-  // --- D: ilhó com sinal abre o portão do morro -------------------------------
+  // --- D: ilhó com sinal abre o portão sob o morro ----------------------------
   m.put(119, 16, 'a'); m.plat(117, 121, 13); m.line(118, 120, 12, 'o', 2);
   m.sign(126, 16, 'w1_sign_gate');
   m.fill(131, 16, 135, 16, '^');
   m.put(130, 16, '@', { group: 'p1' });
   m.put(136, 16, '@', { group: 'p1', signal: 'portao1', latch: true });
-  m.fill(140, 9, 152, 16, '%'); m.clear(140, 15, 152, 16);
-  m.put(140, 16, 'G', { signal: 'portao1' });
-  m.line(142, 150, 16, 'o', 2);
-  // ilha flutuante opcional (★2) — só com fio em rampa
-  m.put(155, 16, '@', { group: 'i1' });
-  m.plat(161, 165, 12, '#'); m.put(161, 11, '@', { group: 'i1' });
+  m.ground(140, 152, 9);                                      // morro maciço (alto demais p/ pular)
+  m.clear(138, 17, 154, 18);                                  // vala + túnel por baixo do morro
+  m.fill(140, 17, 152, 18, ':');
+  m.put(140, 18, 'G', { signal: 'portao1' });                 // portão do teto do túnel ao chão
+  m.line(142, 150, 18, 'o', 2);
+  // casa na árvore opcional (★2) — só com fio em rampa
+  m.put(156, 16, '@', { group: 'i1' });
+  m.plat(161, 165, 12); m.put(161, 11, '@', { group: 'i1' });
   m.line(162, 163, 11); m.put(164, 11, '*');
   m.put(167, 16, 'K');
   m.put(171, 16, 'B'); m.put(171, 15, 'B', { contents: 'heart' });
   m.put(178, 9, 'g');
-  // --- E: inimigos, penhasco com sala secreta (★3) e saída --------------------
+  // --- E: inimigos, riacho, penhasco com sala secreta (★3) e saída -------------
   m.put(175, 16, 'a');
   m.plat(180, 184, 14); m.put(182, 13, 'b');
   m.line(186, 189, 15);
   m.put(192, 16, 'a');
-  m.clear(196, 17, 198, 27); m.arc(196, 15, 3, 1);
+  creek(m, 196, 198, 17, 3); m.arc(196, 15, 3, 1);
+  m.put(200, 16, 'K');
   m.put(202, 16, '%'); m.fill(203, 15, 203, 16, '%');
   m.fill(205, 12, 214, 16, '#');
   m.fill(205, 15, 206, 16, 'H');
@@ -269,6 +296,7 @@ export function burrow(m, { nx, fx, top, floor, signal, coins = true }) {
     id: 'w1_2', world: 1, index: 2, name: 'Altar da Primeira Costura', subtitle: 'Mundo 1-2',
     music: 'w1_level', tileset: 'w1', background: 'w1', timeOfDay: 'day', parTime: 190,
     darkness: 0, ambient: 'w1_fireflies', oxygen: false,
+    decor: [{ t: 'tree', x: 163, base: 17, top: 8 }],
     map: m.build(), props: m.props, objects: m.objects,
   });
 }
