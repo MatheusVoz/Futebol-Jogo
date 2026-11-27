@@ -92,7 +92,10 @@ function countSolid(map, tx, ty, dx, dy, max) {
 function drawSoil(pc, x, y, n0, rng, info) {
   const { tx, ty, map } = info;
   const bottomRow = ty >= map.rows - 1;
-  const n = bottomRow ? { ...n0, d: true, dl: true, dr: true } : n0;
+  let n = bottomRow ? { ...n0, d: true, dl: true, dr: true } : n0;
+  // bloco de brinquedo (alt) apoiado em cima: o solo continua gramado/iluminado
+  // por baixo dele (antes ficava um "buraco" escuro sob cada pilha de blocos)
+  if (ty > 0 && map.get(tx, ty - 1) === T.ALT) n = { ...n, u: false, ul: false, ur: false };
   const MAX = 3;
   const ku = n.u ? 1 + countSolid(map, tx, ty - 1, 0, -1, MAX - 1) : 0;
   const kd = n.d ? 1 + countSolid(map, tx, ty + 1, 0, 1, MAX - 1) : 0;
@@ -137,11 +140,23 @@ function drawSoil(pc, x, y, n0, rng, info) {
   }
   const lv = (lx, ly) => levAt[Math.max(0, Math.min(15, ly)) * 16 + Math.max(0, Math.min(15, lx))];
 
-  // objetos enterrados (variações)
-  if (rng() < 0.3) {
+  // objetos enterrados (variações) — mais frequentes e menos apagados no solo
+  // profundo, para as grandes massas de terra não virarem retângulos lisos
+  const deep = ku >= MAX && kl >= 2 && kr >= 2;
+  if (deep && rng() < 0.22) { // aglomerado de pedras / raiz grossa no fundo
+    const cx = x + rng.int(2, 13), cy = y + rng.int(2, 13);
+    if (rng() < 0.6) {
+      pc.ellipse(cx, cy, 3.4, 2.2, '#2e2430'); pc.ellipse(cx, cy - 0.5, 2.6, 1.6, '#4a3e4c'); pc.px(cx - 1, cy - 1, '#6a5c6c');
+      pc.ellipse(cx + 4, cy + 2, 2, 1.4, '#3a2e3a'); pc.px(cx + 3, cy + 1, '#5a4c5c');
+    } else {
+      pc.curve(cx - 7, cy - 3, cx, cy + 4, cx + 7, cy - 1, '#3a2418'); pc.curve(cx - 7, cy - 2, cx, cy + 5, cx + 7, cy, '#2a1810');
+      pc.px(cx - 2, cy + 1, '#5a3a26');
+    }
+  }
+  if (rng() < (deep ? 0.42 : 0.3)) {
     const cx = rng.int(3, 12), cy = rng.int(n.u ? 3 : 10, 12);
     const L = lv(cx, cy);
-    const s = (c) => (L ? mix(c, '#140a0c', Math.min(0.75, L * 0.25)) : c);
+    const s = (c) => (L ? mix(c, '#140a0c', Math.min(deep ? 0.5 : 0.75, L * (deep ? 0.17 : 0.25))) : c);
     const kind = rng.int(0, 5);
     if (kind <= 1) { // botão de costura
       const col = BTN_COLS[rng.int(0, BTN_COLS.length - 1)];
@@ -419,6 +434,31 @@ function drawHollow(pc, x, y, n0, rng, info) {
     pc.hline(fx + (left ? 0 : 1), fy - 1, 4, '#5fd8d0');
     pc.px(fx + (left ? 2 : 2), fy - 1, '#c8fff4');
   }
+  runMid(pc, x, y, info);
+}
+
+/**
+ * Camada "do meio" dentro de interiores (':'): decor que deve ficar ATRÁS do Tico
+ * mas na FRENTE da parede de fundo (raízes, estacas, cogumelos...). O decor normal
+ * 'back' é pintado antes dos tiles e ficaria escondido sob o fundo da árvore oca;
+ * então decorate() registra esses pintores por célula em map._w1mid e eles são
+ * repintados aqui, recortados à célula, logo depois do fundo.
+ */
+function runMid(pc, x, y, info) {
+  const list = info.map._w1mid?.get(info.tx + info.ty * 65536);
+  if (!list) return;
+  const ox = x - info.tx * 16, oy = y - info.ty * 16;
+  const X0 = x + pc.ox, Y0 = y + pc.oy;
+  const base = Object.getPrototypeOf(pc).px;
+  pc.px = function (px, py, c) {
+    const ax = Math.floor(px + this.ox), ay = Math.floor(py + this.oy);
+    if (ax < X0 || ay < Y0 || ax >= X0 + 16 || ay >= Y0 + 16) return this;
+    return base.call(this, px, py, c);
+  };
+  pc.translate(ox, oy);
+  try { for (const f of list) f(pc); } catch (e) { /* decor nunca derruba o bake */ }
+  pc.translate(-ox, -oy);
+  delete pc.px;
 }
 
 // ------------------------------------------------------------------ sprites de decoração (cache)

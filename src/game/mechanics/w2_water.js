@@ -10,7 +10,7 @@
 //  l  w2_air_bubble  RESPIRADOURO: solta bolhas de ar (props.rate s, props.delay s) que
 //                    sobem até a superfície/teto (ou props.h tiles a seco). Tocar uma
 //                    bolha = oxigênio cheio. Use em fases `oxygen: true`.
-//  m  w2_water_block BLOCO DE ÁGUA flutuante (waterVolume → o Tico nada dentro).
+//  m  w2_water_block BOLHA DE ÁGUA mágica flutuante (waterVolume → o Tico nada dentro).
 //                    Retângulo de 'm' contíguos (ou props.w/h). props.dx/dy (tiles) +
 //                    speed (px/s) + pause (s) = flutua levando o Tico. Afoga (oxygen).
 //  p  w2_toy_boat    BARQUINHO: plataforma vazada que boia na superfície (acha a água
@@ -37,6 +37,7 @@ import { audio, registerSfx } from '../../engine/audio.js';
 import { save } from '../../engine/save.js';
 import { registerEntity, registerLegend, registerLevel } from '../registry.js';
 import { EnemyProjectile } from '../enemies/base.js';
+import { drawWaterBubble } from '../art/tiles_w2.js';
 
 const Rn = Math.round;
 const TAU = Math.PI * 2;
@@ -369,43 +370,12 @@ class WaterBlock extends Entity {
     if (p.oxygen <= 0) { p.oxygen = 0.35; p.hurt(1, null, { noKnock: true }); }
   }
   draw(ctx) {
-    const x = Rn(this.x), y = Rn(this.y), W = this.w, H = this.h, t = this.t;
-    ctx.globalAlpha = 0.5; ctx.fillStyle = WAT.body; ctx.fillRect(x, y + 3, W, H - 3);
-    ctx.globalAlpha = 0.22; ctx.fillStyle = WAT.deep;
-    ctx.fillRect(x, y + (H >> 1), W, H - (H >> 1)); ctx.fillRect(x, y + Rn(H * 0.78), W, H - Rn(H * 0.78));
-    // superfície ondulada + espuma
-    for (let i = 0; i < W; i++) {
-      const o = Rn(Math.sin(i * 0.35 + t * 3.1) * 1.1 + Math.sin(i * 0.13 - t * 1.7) * 0.8);
-      ctx.globalAlpha = 0.5; ctx.fillStyle = WAT.body; ctx.fillRect(x + i, y + 2 + o, 1, Math.max(0, 1 - o));
-      ctx.globalAlpha = 0.9; ctx.fillStyle = WAT.foam; ctx.fillRect(x + i, y + 1 + o, 1, 1);
-      ctx.globalAlpha = 0.45; ctx.fillStyle = WAT.top; ctx.fillRect(x + i, y + 3 + o, 1, 2);
-    }
-    // membrana nas laterais e no fundo
+    // bolha de água mágica (mesma arte dos bolsões flutuantes do tileset) + gota pingando
+    const x = Rn(this.x), y = Rn(this.y + Math.sin(this.t * 1.4 + this.seed) * 0.8), t = this.t;
+    drawWaterBubble(ctx, x, y, this.w / TILE, this.h / TILE, t, this.seed);
+    const g = (t * 0.45 + this.seed * 0.01) % 1, gx = x + 6 + (this.seed % Math.max(1, this.w - 12));
     ctx.fillStyle = WAT.mem;
-    for (let yy = 4; yy < H; yy += 2) {
-      const o = Rn(Math.sin((y + yy) * 0.45 + t * 2.6) * 0.7);
-      ctx.globalAlpha = 0.6; ctx.fillRect(x + Math.max(0, o), y + yy, 1, 2); ctx.fillRect(x + W - 1 + Math.min(0, o), y + yy, 1, 2);
-      ctx.globalAlpha = 0.2; ctx.fillRect(x + 1 + Math.max(0, o), y + yy, 1, 2);
-    }
-    for (let xx = 0; xx < W; xx += 2) {
-      const o = Rn(Math.sin((x + xx) * 0.4 + t * 2.2) * 0.7);
-      ctx.globalAlpha = 0.55; ctx.fillRect(x + xx, y + H - 1 + Math.min(0, o), 2, 1);
-    }
-    // brilhos (cáusticas), bolhinhas subindo e uma gota pingando
-    const n = Math.max(2, (W * H) >> 9);
-    for (let i = 0; i < n; i++) {
-      const hs = ((i * 977 + this.seed * 131) % 1000) / 1000;
-      const a = 0.5 + 0.5 * Math.sin(t * 2.4 + hs * 30);
-      ctx.globalAlpha = a * 0.7; ctx.fillStyle = '#ffffff';
-      ctx.fillRect(x + 2 + Rn(((hs * 7919) % 1) * (W - 4) + Math.sin(t * 0.7 + i) * 3), y + 6 + Rn(((hs * 3571) % 1) * (H - 10)), 1, 1);
-      const k = (t * (0.18 + hs * 0.2) + hs) % 1;
-      ctx.globalAlpha = k > 0.85 ? (1 - k) / 0.15 * 0.8 : 0.8; ctx.fillStyle = WAT.foam;
-      ctx.fillRect(x + 3 + Rn(hs * (W - 6) + Math.sin(t * 3 + i) * 1.2), Rn(y + H - 4 - k * (H - 8)), 1, 1);
-    }
-    const g = (t * 0.45 + this.seed * 0.01) % 1, gx = x + 4 + (this.seed % Math.max(1, W - 8));
-    ctx.fillStyle = WAT.mem;
-    if (g < 0.5) { ctx.globalAlpha = 0.8 * (1 - g * 2); ctx.fillRect(gx, Rn(y + H + g * g * 120), 1, 2); }
-    else { ctx.globalAlpha = 0.6; ctx.fillRect(gx, y + H, 1, g > 0.8 ? 2 : 1); }
+    if (g < 0.5) { ctx.globalAlpha = 0.8 * (1 - g * 2); ctx.fillRect(gx, Rn(y + this.h + g * g * 120), 1, 2); }
     ctx.globalAlpha = 1;
   }
 }

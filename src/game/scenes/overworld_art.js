@@ -448,7 +448,6 @@ function buildRegion(world, geo) {
   } else if (world === 3) {
     addN('riv', 14, (x, y, i) => inland[i] && dRiv[i] > 2.5);
     addN('glint', 8, seaOpen);
-    addN('cloud', 2, () => true, { v: 2 });
   } else if (world === 4) {
     addN('eyes', 16, (x, y, i) => !land[i] && dOut[i] > 8 && Dp[i] > 12);
     addN('eyes', 6, (x, y, i) => solid(i) && dIn[i] > 6 && Dp[i] > 14 && Dn[i] > 20);
@@ -733,8 +732,11 @@ const glowImg = () => cached('ow_glow', () => {
 });
 
 /** Detalhes animados da região (ctx já transladado para coords do MAPA; ox = x da região). */
+const TOP_ANIMS = new Set(['fly', 'cloud', 'gull', 'mote']);
 export function drawRegionAnims(ctx, world, region, ox, t, layer) {
   for (const a of region.anims) {
+    const top = TOP_ANIMS.has(a.k);
+    if (layer === 'shadow' ? a.k !== 'cloud' : (layer === 'top') !== top) continue;
     const x = ox + a.x, y = a.y, ph = a.ph || 0;
     switch (a.k) {
       case 'glint': {
@@ -757,12 +759,11 @@ export function drawRegionAnims(ctx, world, region, ox, t, layer) {
         break;
       }
       case 'cloud': {
-        if (layer !== 'top' && layer !== 'shadow') break;
         const C = cloudImgs()[Math.floor(ph) % 3];
         const span = RW + 120;
         const cx = ox + ((((a.x + t * (4 + ph)) % span) + span) % span) - 60;
-        if (layer === 'shadow') ctx.drawImage(C.sh, R0(cx + 10), R0(y + 22));
-        else { ctx.globalAlpha = 0.85; ctx.drawImage(C.img, R0(cx), R0(y - 6)); ctx.globalAlpha = 1; }
+        if (layer === 'shadow') break;
+        ctx.globalAlpha = 0.8; ctx.drawImage(C.img, R0(cx), R0(y - 6)); ctx.globalAlpha = 1;
         break;
       }
       case 'whirl': {

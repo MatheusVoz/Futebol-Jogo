@@ -352,7 +352,9 @@ function altFakeSet(map) {
   FAKE_CTX.set(map, set);
   return set;
 }
-const altLike = (map, x, y) => { const o = map.get(x, y); return o === T.ALT || (o === T.FAKE && altFakeSet(map).has(x + ',' + y)); };
+const altSolid = (map, x, y) => { const o = map.get(x, y); return o === T.ALT || (o === T.FAKE && altFakeSet(map).has(x + ',' + y)); };
+// (um buraco de 1 tile entre '%' — ex.: estrela dentro de sala secreta — não quebra o desenho do prédio)
+const altLike = (map, x, y) => altSolid(map, x, y) || (map.get(x, y) === T.EMPTY && altSolid(map, x, y - 1) && altSolid(map, x, y + 1));
 function altRun(map, tx, ty, dx, dy, max) {
   let k = 0;
   while (k < max && altLike(map, tx + dx * (k + 1), ty + dy * (k + 1))) k++;
@@ -627,15 +629,19 @@ const FAC = {
 const bgRun = (map, tx, ty, dx, dy, max) => { let k = 0; while (k < max && map.get(tx + dx * (k + 1), ty + dy * (k + 1)) === T.BG) k++; return k; };
 /** ':' ao ar livre? (subindo pela coluna de ':' chega-se ao céu). */
 function bgOutdoor(map, tx, ty) {
-  let y = ty - 1;
   const see = (t) => t === T.BG || t === T.ONEWAY || t === T.SPIKE;
-  while (y >= 0 && see(map.get(tx, y))) y--;
-  if (y < 0) return !solidLike(map.get(tx, 0));
-  // laje fina (1-2 tiles) com céu em cima = terraço/marquise do prédio de fundo
-  let k = 0;
-  while (k < 3 && y >= 0 && solidLike(map.get(tx, y))) { y--; k++; }
-  if (k === 0) return map.get(tx, y) === T.EMPTY;
-  return k <= 2 && y >= 0 && map.get(tx, y) === T.EMPTY;
+  let y = ty - 1;
+  for (;;) {
+    while (y >= 0 && see(map.get(tx, y))) y--;
+    if (y < 0) return !solidLike(map.get(tx, 0));
+    if (map.get(tx, y) === T.EMPTY) return y === 0 || map.get(tx, y - 1) === T.EMPTY || ty - y > 1;
+    // laje fina (1-2 tiles) = terraço/marquise do prédio de fundo: continua subindo
+    let k = 0;
+    while (k < 3 && y >= 0 && solidLike(map.get(tx, y))) { y--; k++; }
+    if (k === 0 || k > 2 || y < 0) return false;
+    if (map.get(tx, y) === T.EMPTY) return y === 0 || map.get(tx, y - 1) === T.EMPTY;
+    if (!see(map.get(tx, y))) return false;
+  }
 }
 function drawFacadeBG(pc, x, y, n, info) {
   const { tx, ty, map, level } = info;
@@ -1245,8 +1251,8 @@ function decorate(map, rng, data) {
           lastPend = tx;
           const len = Math.min(56, depth * 16 - 30);
           add({ x: wx - 8, y: wy, w: 32, h: len + 8, layer: 'mid', anim: pendulumAnim(wx + 8, wy, len, rng() * 6) });
-        } else if (!ceil && depth >= 3 && depth <= 4 && map.get(tx, ty - 1) === T.BG && map.get(tx, ty + depth) !== T.ONEWAY && !clockBand.has(Math.floor(tx / 5)) && rng() < 0.3) {
-          clockBand.add(Math.floor(tx / 5));
+        } else if (!ceil && depth >= 3 && depth <= 4 && map.get(tx, ty - 1) === T.BG && map.get(tx, ty + depth) !== T.ONEWAY && !clockBand.has(Math.floor(tx / 7)) && rng() < 0.22) {
+          clockBand.add(Math.floor(tx / 7));
           add({ x: wx - 3, y: wy - 4, w: 23, h: 27, layer: 'mid', anim: wallClockAnim(wx - 3, wy - 4, rng.int(0, 2), rng() * 6) });
         }
       }

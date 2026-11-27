@@ -932,8 +932,8 @@ class WhaleBoss extends Enemy {
       const dur = 1.0 * this.tele, k = Math.min(1, st / dur), blink = Math.floor(st * 14) % 2 === 0;
       const cy = this.laneY(this.lane), y0 = Rn(cy - 14), y1 = Rn(cy + 16);
       const by0 = Rn(cy - HH), by1 = Rn(cy + HH);
-      ctx.fillStyle = `rgba(160,230,255,${0.04 + k * 0.05})`; ctx.fillRect(AX0, by0, AX1 - AX0, by1 - by0);
-      ctx.fillStyle = `rgba(255,110,140,${0.08 + k * 0.14})`; ctx.fillRect(AX0, y0, AX1 - AX0, y1 - y0);
+      ctx.fillStyle = `rgba(160,230,255,${0.05 + k * 0.06})`; ctx.fillRect(AX0, by0, AX1 - AX0, by1 - by0);
+      ctx.fillStyle = `rgba(255,110,140,${0.14 + k * 0.2})`; ctx.fillRect(AX0, y0, AX1 - AX0, y1 - y0);
       ctx.fillStyle = blink ? 'rgba(255,170,190,0.85)' : 'rgba(255,170,190,0.45)';
       const dir = -this.enterSide;
       for (let x = AX0 + ((st * 90 * dir) % 10 + 10) % 10; x < AX1; x += 10) { ctx.fillRect(Rn(x), y0, 5, 1); ctx.fillRect(Rn(x), y1, 5, 1); }
@@ -954,7 +954,11 @@ class WhaleBoss extends Enemy {
     if (s === 'slamwind' || s === 'rise' || s === 'slam') {
       const dur = 0.95 * this.tele;
       const k = s === 'slam' ? 1 : s === 'rise' ? 0.25 : Math.min(1, st / dur);
-      fillEllipse(ctx, this.cx, AFLOOR - 2, Rn(54 * (0.6 + 0.4 * k)), 3, shadowCol(0.2 + 0.45 * k));
+      const rx = Rn(54 * (0.6 + 0.4 * k));
+      fillEllipse(ctx, this.cx, AFLOOR - 2, rx, 3, shadowCol(0.3 + 0.45 * k));
+      // contorno rosa piscando: legível mesmo no fundo escuro
+      ctx.fillStyle = Math.floor(st * 12) % 2 ? 'rgba(255,150,175,0.9)' : 'rgba(255,220,230,0.6)';
+      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; ctx.fillRect(Rn(this.cx + Math.cos(a) * (rx + 2)), Rn(AFLOOR - 2 + Math.sin(a) * 4), 2, 1); }
       if (s === 'slamwind') {
         const blink = Math.floor(st * 12) % 2 === 0;
         ctx.fillStyle = blink ? 'rgba(255,150,175,0.8)' : 'rgba(255,150,175,0.4)';
@@ -983,7 +987,11 @@ class WhaleBoss extends Enemy {
     // aura de "alvo" quando ela está cansada (ou quando o Tico está em cima)
     if (k >= 1 && vuln) drawGlow(ctx, x, y, 14, '#ffd23f', 0.25 + 0.15 * Math.sin(t * 8));
     fillEllipse(ctx, x, y, r + 1, r, OUTL);
-    fillEllipse(ctx, x, y, r, r - 1, FAB[1]);
+    fillEllipse(ctx, x, y, r, r - 1, FAB[2]);
+    fillEllipse(ctx, x, y, r - 2, r - 3, FAB[1]);
+    // borda de crochê (picô) em roxo claro: destaca o alvo sobre o vidro
+    ctx.fillStyle = '#d8a8ff';
+    for (let i = 0; i < 14; i++) { const a = (i / 14) * Math.PI * 2 + 0.2; ctx.fillRect(Rn(x + Math.cos(a) * (r + 1)), Rn(y + Math.sin(a) * r), 1, 1); }
     // voltas do crochê (pontinhos em anel); somem conforme o PV
     const rings = [[r - 2, 10], [r - 5, 6]];
     rings.forEach(([rr, n], ri) => {

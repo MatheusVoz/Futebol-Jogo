@@ -702,18 +702,6 @@ export function w2WaterInfo(map, rows) {
     else if (d === 0 && !isThin(above) && above !== T.WATER) ceil[i] = 1;
     memb[i] = (air(x - 1, y) ? 1 : 0) | (air(x + 1, y) ? 2 : 0) | (air(x, y + 1) ? 4 : 0);
   }
-  // --- linha do mar: linha de superfície mais comum entre regiões grandes não flutuantes
-  const cnt = new Map();
-  for (const Rg of regions) {
-    if (Rg.bubble || Rg.n < 40) continue;
-    for (const k of Rg.cells) if (surf[k]) { const y = (k / C) | 0; cnt.set(y, (cnt.get(y) || 0) + 1); }
-  }
-  let seaRow = null, best = 0;
-  for (const [y, n] of cnt) if (n > best) { best = n; seaRow = y; }
-  for (const Rg of regions) {
-    Rg.kind = Rg.bubble ? 'bubble' : 'pool';
-    if (!Rg.bubble && seaRow !== null) for (const k of Rg.cells) if (surf[k] && ((k / C) | 0) === seaRow) { Rg.kind = 'sea'; break; }
-  }
   // --- células cobertas (água ou ar sob rocha/casco/parede): ganham parede de fundo
   const solidish = (t) => t === T.SOLID || t === T.ALT || t === T.FAKE;
   const styleAt = (x, y) => {
@@ -739,6 +727,18 @@ export function w2WaterInfo(map, rows) {
       if (covered && (t === T.WATER || t === T.EMPTY || isThin(t))) cover[i] = styleAt(x, y);
     }
   }
+  // --- linha do mar: linha de superfície mais comum entre regiões grandes não flutuantes
+  const cnt = new Map();
+  for (const Rg of regions) {
+    if (Rg.bubble || Rg.n < 40) continue;
+    for (const k of Rg.cells) if (surf[k] && !cover[k] && map.data[k - C] !== T.BG) { const y = (k / C) | 0; cnt.set(y, (cnt.get(y) || 0) + 1); }
+  }
+  let seaRow = null, best = 0;
+  for (const [y, n] of cnt) if (n > best) { best = n; seaRow = y; }
+  for (const Rg of regions) {
+    Rg.kind = Rg.bubble ? 'bubble' : 'pool';
+    if (!Rg.bubble && seaRow !== null) for (const k of Rg.cells) if (surf[k] && !cover[k] && ((k / C) | 0) === seaRow) { Rg.kind = 'sea'; break; }
+  }
   for (const Rg of regions) if (Rg.kind === 'sea' || Rg.kind === 'pool') { let open = 0; for (const k of Rg.cells) if (!cover[k]) open++; Rg.open = open; }
   I = { C, R, reg, regions, depth, surf, ceil, memb, cover, seaRow, bubbleCache: new Map() };
   _winfo.set(map, I);
@@ -750,7 +750,7 @@ export function w2WaterInfo(map, rows) {
 // com brilho especular. Assado uma vez por forma; por quadro só a borda + brilhos.
 const BUB_RIM = ['#e8ffff', '#ffd6f4', '#c8fff0', '#fff6c8'];
 function bakeBubble(bw, bh, inCell) {
-  const W = bw * 16 + 4, H = bh * 16 + 4, O2 = 2, r = 7;
+  const W = bw * 16 + 4, H = bh * 16 + 4, O2 = 2, r = Math.round(clamp(Math.min(bw, bh) * 16 / 3.2, 6, 13));
   const inside = new Uint8Array(W * H);
   const has = (cx, cy) => cx >= 0 && cy >= 0 && cx < bw && cy < bh && inCell(cx, cy);
   for (let y = 0; y < bh * 16; y++) for (let x = 0; x < bw * 16; x++) {
@@ -790,6 +790,12 @@ function bakeBubble(bw, bh, inCell) {
     else if (d <= 3 && fy > 0.62) c = '#1a5aa070';
     if (d >= 2 && d <= 3 && fx < 0.42 && fy < 0.42 && (fx + fy) < 0.55) c = '#ffffffc8';
     pc.px(x, y, c);
+  }
+  // contorno escuro por fora (lê bem contra o céu claro)
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x;
+    if (inside[i]) continue;
+    if (inside[i - 1] || inside[i + 1] || inside[i - W] || inside[i + W]) pc.px(x, y, '#12407acc');
   }
   // brilhos fixos
   const sx = O2 + 7, sy = O2 + 9;

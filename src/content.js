@@ -43,6 +43,7 @@ import './game/mechanics/w2_water.js';
 import './game/mechanics/w3_time.js';
 import './game/mechanics/w4_dark.js';
 import './game/mechanics/w5_dimension.js';
+import './game/mechanics/dynamic.js';
 // ---- inimigos e chefes
 import './game/enemies/w1.js';
 import './game/enemies/w2.js';
@@ -89,3 +90,4 @@ import './game/levels/w4_c.js';
 import './game/levels/w5_a.js';
 import './game/levels/w5_b.js';
 import './game/levels/w5_c.js';
+import './game/levels/dynamic_levels.js';

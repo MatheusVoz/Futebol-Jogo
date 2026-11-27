@@ -41,7 +41,7 @@
 import { Entity } from '../../engine/entity.js';
 import { TILE, clamp, approach, damp, rand, rectsOverlap } from '../../engine/util.js';
 import { T, moveBody, isSolidType } from '../../engine/tilemap.js';
-import { defineSprite, drawSprite, animFrame, defineImage, drawImage } from '../../engine/sprites.js';
+import { defineSprite, drawSprite, animFrame, defineImage, drawImage, getImage } from '../../engine/sprites.js';
 import { audio } from '../../engine/audio.js';
 import { input } from '../../engine/input.js';
 import { registerEntity } from '../registry.js';
@@ -685,29 +685,20 @@ class Lift extends Entity {
 }
 registerEntity('dyn_lift', Lift);
 const _plankCache = new Map();
-/** Corta/repete a imagem base (48 px) na largura pedida. */
+/** Corta/repete a imagem base (48 px) na largura pedida (cacheado). */
 function plankFor(w, name) {
   const k = name + w;
   let c = _plankCache.get(k);
   if (c) return c;
-  const src = (() => { const cv = document.createElement('canvas'); const img = drawImageSource(name); cv.width = img.width; cv.height = img.height; cv.getContext('2d').drawImage(img, 0, 0); return cv; })();
+  const src = getImage(name);
   c = document.createElement('canvas'); c.width = w; c.height = src.height;
   const g = c.getContext('2d');
-  if (w <= src.width) { g.drawImage(src, 0, 0, w - 4, src.height, 0, 0, w - 4, src.height); g.drawImage(src, src.width - 4, 0, 4, src.height, w - 4, 0, 4, src.height); }
-  else { for (let x = 0; x < w; x += src.width - 8) g.drawImage(src, x === 0 ? 0 : 4, 0, src.width - 4, src.height, x, 0, src.width - 4, src.height); g.drawImage(src, src.width - 4, 0, 4, src.height, w - 4, 0, 4, src.height); }
+  const sw = src.width;
+  g.drawImage(src, 0, 0, 4, src.height, 0, 0, 4, src.height);
+  for (let x = 4; x < w - 4; x += sw - 8) { const ww = Math.min(sw - 8, w - 4 - x); g.drawImage(src, 4, 0, ww, src.height, x, 0, ww, src.height); }
+  g.drawImage(src, sw - 4, 0, 4, src.height, w - 4, 0, 4, src.height);
   _plankCache.set(k, c);
   return c;
-}
-function drawImageSource(name) {
-  const cv = document.createElement('canvas');
-  // drawImage do módulo de sprites desenha a imagem cacheada; aqui só a capturamos
-  const tmp = cv.getContext('2d');
-  cv.width = 64; cv.height = 16;
-  drawImage(tmp, name, 0, 0);
-  const out = document.createElement('canvas');
-  const w = name === 'dyn_plank' ? 48 : 48, h = name === 'dyn_plank' ? 8 : 10;
-  out.width = w; out.height = h; out.getContext('2d').drawImage(cv, 0, 0);
-  return out;
 }
 
 class LiftSpawner extends Entity {
@@ -760,6 +751,7 @@ class Vehicle extends Entity {
   init() {
     const L = this.level;
     L.add(new VehicleFront(L, this));
+    if (!this.auto && L.scroller && L.scroller.mode === 'up') L.scroller.gateY = this.y - L.camera.viewH * 0.6;
     if (this.auto) { const p = this.player; this.x = p.cx - this.seatOX - this.w / 2; this.y = p.bottom - this.seatOY; this.mount(true); }
   }
   mount(silent) {

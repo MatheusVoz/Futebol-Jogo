@@ -9,7 +9,7 @@
 // Mapas montados com grid()/burrow() de w1_a.js.
 // =============================================================================
 import { registerLevel } from '../registry.js';
-import { grid, burrow, hideRoom } from './w1_a.js';
+import { grid, hideRoom, spikePit } from './w1_a.js';
 
 // =============================================================================
 // w1_5 — Névoa do Coelho. Chão na linha 22 (Tico em pé na 21).
@@ -29,7 +29,8 @@ import { grid, burrow, hideRoom } from './w1_a.js';
   m.plat(33, 36, 18); m.line(33, 36, 17, 'o', 2);
   m.put(38, 21, 'a');
   m.put(42, 21, 'n', { npc: 'botao', dialog: 'w1_botao_3' });
-  // --- B: vãos com ilhós, abismo de verdade com toca por baixo -----------------
+  // --- B: vãos com ilhós e abismo de verdade (fossos de sarças) ---------------
+  spikePit(m, 54, 57, 22, 28);
   m.put(52, 21, '@', { group: 'b1' }); m.put(58, 21, '@', { group: 'b1' });
   m.put(54, 20, '*');                                           // ★1 (fácil)
   m.arc(53, 18, 5, 1);
@@ -37,20 +38,23 @@ import { grid, burrow, hideRoom } from './w1_a.js';
   m.ground(58, 78, 22);
   m.put(65, 21, 'b');
   m.plat(68, 71, 18); m.line(68, 71, 17);
-  m.ground(79, 86, 28); m.fill(79, 27, 86, 27, '^');
+  spikePit(m, 79, 86, 22, 28);
   m.ground(87, 279, 22);
-  burrow(m, { nx: 73, fx: 91, top: 22, floor: 31, signal: 'toca5' });
   m.sign(76, 21, 'w1_sign_anchors'); m.put(74, 21, 'h');
-  m.put(78, 21, '@', { group: 'n1', signal: 'toca5', latch: true }); m.put(87, 21, '@', { group: 'n1' });
+  m.put(78, 21, '@', { group: 'n1' }); m.put(87, 21, '@', { group: 'n1' });
   m.arc(79, 19, 8, 1);
-  m.put(82, 30, 'X'); m.put(85, 30, 'h');                       // segredo 1 (toca)
-  m.put(97, 21, 'K');
-  m.sign(101, 21, 'w1_sign_faceless2');
-  m.line(104, 108, 20, 'o', 2);
+  m.put(92, 21, 'K');
+  // segredo 1: toca sob o chão (piso oco, golpe p/ baixo)
+  m.sign(97, 21, 'w1_sign_burrow');
+  m.put(100, 22, 'B'); m.put(101, 22, 'B');
+  hideRoom(m, 98, 23, 106, 24);
+  m.put(99, 24, 'X'); m.line(101, 104, 24); m.put(105, 24, 'h');
+  m.sign(103, 21, 'w1_sign_faceless2');
+  m.line(105, 109, 20, 'o', 2);
   m.plat(106, 109, 17); m.put(108, 9, 'g');
   m.put(112, 21, 'f');
   m.fill(118, 20, 119, 21, '%');                                // tora: o ursinho bate e fica tonto
-  // --- C: árvore com ilhó alto que abre o portão de espinhos -------------------
+  // --- C: árvore com ilhó alto que abre o portão sob o morro -------------------
   m.plat(124, 126, 19); m.put(125, 18, 'o');
   m.plat(129, 131, 16); m.put(130, 15, 'o');
   m.plat(130, 132, 12);                                         // degrau extra até o galho
@@ -58,23 +62,24 @@ import { grid, burrow, hideRoom } from './w1_a.js';
   m.plat(135, 139, 11); m.put(136, 10, '@', { group: 'v1', signal: 'nevoa1', latch: true });
   m.line(137, 139, 9); m.put(138, 10, 'O'); m.put(139, 10, '*');  // ★2 (galho do outro lado)
   m.put(131, 7, 'g');
-  m.sign(145, 21, 'w1_sign_gate2');
-  m.fill(150, 8, 161, 21, '%'); m.clear(150, 19, 161, 21);
-  m.put(150, 21, 'G', { signal: 'nevoa1' });
-  m.line(152, 160, 21, 'o', 2);
-  // --- D: ilhós + inimigos sobre vãos -----------------------------------------
+  m.sign(144, 21, 'w1_sign_gate2');
+  m.ground(150, 161, 8);                                        // morro alto (não dá p/ pular)
+  m.clear(147, 22, 164, 23);                                    // vala + túnel sob o morro
+  m.fill(150, 22, 161, 23, ':');
+  m.put(150, 23, 'G', { signal: 'nevoa1' });
+  m.line(152, 160, 23, 'o', 2);
+  // --- D: ilhós + inimigos sobre fossos ----------------------------------------
   m.put(166, 21, 'K'); m.put(168, 21, 'h');
-  m.clear(172, 22, 176, 31);
+  spikePit(m, 172, 176, 22, 28);
   m.put(171, 21, '@', { group: 'd3' }); m.put(177, 21, '@', { group: 'd3' });
   m.arc(172, 19, 5, 2); m.put(174, 14, 'g');
-  m.clear(182, 22, 185, 31);
+  spikePit(m, 182, 185, 22, 28);
   m.ground(186, 200, 20);
   m.put(181, 21, '@', { group: 'd4' }); m.put(186, 19, '@', { group: 'd4' });
   m.put(193, 19, 'b'); m.put(197, 19, 'd'); m.line(188, 191, 18); m.line(195, 199, 18);
-  // copa morta opcional: fios em rampa → ilha com parede falsa (★3 + memória)
-  m.fill(207, 6, 207, 21, ':');
+  // copa morta opcional: fios em rampa → toca no alto do tronco (★3 + memória)
   m.put(203, 21, '@', { group: 't1' });
-  m.plat(210, 214, 16); m.put(210, 15, '@', { group: 't1' }); m.put(214, 15, '@', { group: 't2' });
+  m.plat(209, 213, 16); m.put(210, 15, '@', { group: 't1' }); m.put(213, 15, '@', { group: 't2' });
   m.plat(221, 226, 11); m.put(221, 10, '@', { group: 't2' }); m.line(222, 226, 10);
   m.fill(227, 6, 234, 11, '#'); hideRoom(m, 227, 8, 233, 10);
   m.put(229, 10, 'X'); m.put(230, 10, '*'); m.put(232, 10, 'M', { memory: 'mem_1' }); m.line(230, 232, 8);
@@ -94,6 +99,10 @@ import { grid, burrow, hideRoom } from './w1_a.js';
     id: 'w1_5', world: 1, index: 5, name: 'Névoa do Coelho', subtitle: 'Mundo 1-5',
     music: 'w1_level', tileset: 'w1', background: 'w1', timeOfDay: 'night', parTime: 230,
     darkness: 0.22, ambient: 'w1_spores', oxygen: false,
+    decor: [
+      { t: 'tree', x: 128, base: 22, top: 9 }, { t: 'tree', x: 140.5, base: 22, top: 8 },
+      { t: 'tree', x: 207, base: 22, top: 9, dead: true }, { t: 'tree', x: 230.5, base: 22, top: 11, dead: true, canopy: false, w: 22 },
+    ],
     map: m.build(), props: m.props, objects: m.objects,
   });
 }
@@ -125,7 +134,7 @@ import { grid, burrow, hideRoom } from './w1_a.js';
   // --- sala 3: corrente de ilhós (2 pontes) ou molas no fosso -----------------
   m.ground(91, 104, 27); m.fill(91, 26, 104, 26, '^');
   m.put(96, 26, 'J'); m.put(102, 26, 'J');
-  m.put(90, 21, '@'); m.fill(99, 20, 100, 20, '%'); m.put(99, 19, '@'); m.put(108, 21, '@');
+  m.put(90, 21, '@'); m.fill(99, 20, 100, 25, '%'); m.put(99, 19, '@'); m.put(108, 21, '@');  // torre de blocos no fosso
   m.arc(91, 19, 8, 1);
   m.ground(105, 123, 22);
   // --- sala 4: torre de molas -----------------------------------------------------
@@ -143,7 +152,7 @@ import { grid, burrow, hideRoom } from './w1_a.js';
   m.arc(137, 5, 5, 1);
   m.fill(149, 7, 151, 7, '^');
   m.put(146, 7, '@', { group: 'i' });
-  m.plat(152, 157, 4, '#'); m.put(153, 3, '@', { group: 'i' }); m.line(154, 155, 3); m.put(157, 3, '*'); // ★3
+  m.plat(152, 157, 3); m.put(153, 2, '@', { group: 'i' }); m.line(154, 155, 2); m.put(157, 2, '*'); // ★3 (tábua alta)
   m.line(160, 166, 6);
   m.fill(169, 7, 171, 7, '%');
   m.put(170, 6, 'T');

@@ -18,7 +18,7 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   const m = grid(250, 30), G = 24;
   m.ground(0, 249, G);
   // --- segredo: volte à esquerda na largada (parede falsa) -------------------
-  m.fill(0, 4, 8, 19, '%'); m.fill(8, 20, 8, 23, 'H');
+  m.fill(0, 0, 8, 19, '%'); m.fill(8, 20, 8, 23, 'H');
   m.put(2, 23, 'X'); m.put(3, 23, 'r'); m.line(4, 7, 23); m.line(2, 7, 21);
   hide(m, 1, 20, 7, 23);
   // --- A: largada, esteira e primeiro robô -----------------------------------
@@ -39,7 +39,7 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.line(44, 52, 7, 'o', 2); m.put(54, 7, '*');               // ★1 (sobre a viga)
   // --- C: corredor de esteiras contra + serras -------------------------------
   m.put(67, 23, 'K'); m.put(69, 23, 'h');
-  m.fill(71, 4, 101, 17, '%');
+  m.fill(71, 0, 101, 17, '%');                                // galpão (até o céu: sem andar no telhado)
   m.sign(70, 23, 'w3_sign_saw');
   m.fill(73, 23, 86, 23, 'w'); m.props['73,23'] = { dir: 'l', speed: 45 };
   m.put(78, 19, 'm', { hazard: true, size: 2, dy: 3, moveSpeed: 40 });
@@ -48,22 +48,22 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.line(74, 86, 21, 'o', 3);
   m.put(98, 23, 'd');
   // --- D: novelo na esteira → placa → portão ---------------------------------
-  m.sign(103, 23, 'w3_sign_conveyor');
+  m.sign(103, 23, 'w3_sign_conveyor'); m.put(102, 23, 'K');
   m.obj({ type: 'boulder', x: 106, y: 23 });
   m.fill(108, 24, 116, 24, 'w'); m.props['108,24'] = { dir: 'r', speed: 40 };
   m.fill(118, 20, 118, 23, 'B'); m.line(108, 116, 20, 'o', 2);
   m.clear(121, G, 123, G); m.put(122, G, 'D', { signal: 'w33_gate' });
-  m.fill(127, 4, 129, 19, '%'); m.put(128, 23, 'G', { signal: 'w33_gate' });
+  m.fill(127, 0, 129, 19, '%'); m.put(128, 23, 'G', { signal: 'w33_gate' });
   // --- E: porta costurada + elevador de engrenagem (★2) ----------------------
-  m.put(134, 23, 'b');
+  m.put(134, 23, 'b'); m.put(131, 23, 'K');
   m.fill(139, 11, 142, 11, '%'); m.line(139, 141, 10); m.put(142, 10, '*');  // ★2
   m.put(145, 21, 'm', { size: 3, speed: -30, dy: -8, moveSpeed: 30 });
-  m.fill(150, 4, 151, 19, '%'); m.fill(150, 20, 151, 23, 'S');
+  m.fill(150, 0, 151, 19, '%'); m.fill(150, 20, 151, 23, 'S');
   m.put(148, 23, 'e');
   // --- F: esteira rápida sob serras + bolha lenta -----------------------------
   m.put(155, 23, 'K'); m.put(157, 22, 'h');
   m.sign(158, 23, 'w3_sign_slow');
-  m.fill(160, 4, 190, 14, '%');
+  m.fill(160, 0, 190, 14, '%');
   m.fill(161, 23, 186, 23, 'w'); m.props['161,23'] = { dir: 'r', speed: 55 };
   m.put(167, 16, 'm', { hazard: true, size: 2, dy: 5, moveSpeed: 55 });
   m.put(174, 20, 'q', { r: 3.5 });
@@ -128,10 +128,10 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.put(156, 33, 'q', { r: 3 }); m.put(160, 31, 'f');
   m.put(172, 35, 'h'); m.put(178, 35, 'b');
   // poço A
-  m.fill(194, 32, 196, 32, '%'); m.fill(188, 29, 190, 29, '%');
+  m.plat(194, 196, 32); m.plat(188, 190, 29);                // passarelas do poço
   m.put(197, 25, 'm', { size: 3, speed: 35 }); m.line(188, 190, 28);
   // ---------------------------------------------------------------- T2 (←)
-  m.put(178, 26, 'K');
+  m.put(178, 26, 'K'); m.put(116, 26, 'K');
   m.put(168, 26, 'a');
   m.sign(126, 26, 'w3_sign_gate');
   m.fill(120, 20, 121, 23, '%'); m.put(120, 26, 'u', { open: 1.6, closed: 2.2, h: 3 }); m.put(121, 26, 'u', { open: 1.6, closed: 2.2, h: 3 });
@@ -148,7 +148,7 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.fill(30, 20, 31, 22, '%'); m.fill(30, 23, 31, 26, 'S');
   m.put(22, 26, 'h');
   // poço B (★1 nos relógios do canto)
-  m.fill(4, 23, 6, 23, '%'); m.fill(10, 20, 12, 20, '%');
+  m.plat(4, 6, 23); m.plat(10, 12, 20);
   clk(m, 7, 17, 2, 0); clk(m, 2, 15, 2, 1); m.put(2, 13, '*');  // ★1
   // ---------------------------------------------------------------- T3 (→)
   m.put(20, 17, 'K');
@@ -158,7 +158,7 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.fill(60, 17, 65, 17, '^'); m.fill(66, 16, 66, 17, '%'); m.fill(67, 17, 72, 17, '^');
   clk(m, 61, 15, 2, 0); clk(m, 69, 15, 2, 1); m.put(66, 14, 'o'); m.line(61, 62, 14); m.line(69, 70, 14);
   m.put(80, 17, 'b'); m.put(90, 17, 'a');
-  m.put(100, 13, 'v', { trigger: 'below' });
+  m.put(100, 13, 'v', { trigger: 'below' }); m.put(104, 17, 'K');
   m.put(110, 15, 'm', { hazard: true, size: 2, dx: 6, moveSpeed: 45 });
   m.put(122, 14, 'f'); m.put(130, 17, 'd'); m.put(127, 16, 'e');
   m.put(140, 13, 'p', { len: 4, amp: 50, period: 2.6 }); m.put(150, 13, 'p', { len: 4, amp: 50, period: 2.6, phase: 0.5 });
@@ -167,13 +167,13 @@ import { grid, W3, pit, back, clk, hide, npc } from './w3_a.js';
   m.line(155, 175, 16, 'o', 4);
   m.put(180, 17, 'h');
   // poço C (★2 num desvio)
-  m.fill(194, 14, 196, 14, '%'); m.fill(188, 11, 190, 11, '%');
+  m.plat(194, 196, 14); m.plat(188, 190, 11);
   clk(m, 196, 8, 2, 0); m.put(198, 6, '*');                   // ★2
   // ---------------------------------------------------------------- T4 (←)
-  m.put(170, 8, 'a');
+  m.put(170, 8, 'a'); m.put(176, 8, 'K'); m.put(93, 8, 'K');
   m.fill(151, 8, 156, 8, '^'); m.put(153, 4, 'l', { len: 3, speed: 45 });
   m.put(140, 8, 'b'); m.line(140, 148, 5, 'o', 2);
-  m.fill(128, 3, 129, 5, '%'); m.put(128, 8, 'u', { open: 1.4, closed: 2, h: 3 }); m.put(129, 8, 'u', { open: 1.4, closed: 2, h: 3 });
+  m.fill(128, 0, 129, 5, '%');                // torre do portão até o céu (sem pular por cima) m.put(128, 8, 'u', { open: 1.4, closed: 2, h: 3 }); m.put(129, 8, 'u', { open: 1.4, closed: 2, h: 3 });
   m.put(115, 5, 'f');
   m.fill(96, 8, 101, 8, '^'); m.fill(102, 7, 102, 8, '%'); m.fill(103, 8, 108, 8, '^');
   clk(m, 97, 6, 2, 1, 2.4); clk(m, 105, 6, 2, 0, 2.4); m.line(97, 107, 4, 'o', 2);
