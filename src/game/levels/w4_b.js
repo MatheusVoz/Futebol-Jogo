@@ -125,7 +125,7 @@ import { grid, gateWall, pit } from './w4_a.js';
   m.line(73, 87, 20, 'o', 3);
   m.put(94, 25, 'K');
   // --- D: muralhas de blocos (por baixo, por cima), ★1 no nicho -------------------
-  m.fill(100, 4, 102, 20, '%'); m.line(98, 104, 24, 'o', 3);
+  m.fill(100, 0, 102, 20, '%');   // muralha desce do teto (passa-se por baixo) m.line(98, 104, 24, 'o', 3);
   m.put(108, 25, 'u', { height: 9 });
   m.plat(110, 112, 21); m.plat(106, 108, 16); m.plat(110, 112, 11);
   m.fill(114, 10, 116, 25, '%');
@@ -135,7 +135,7 @@ import { grid, gateWall, pit } from './w4_a.js';
   m.put(124, 25, 'a'); m.put(132, 25, 'a');
   m.line(121, 135, 22, 'o', 2);
   m.put(138, 25, 'b');
-  m.fill(141, 4, 143, 21, '%');
+  m.fill(141, 0, 143, 21, '%');
   // --- E: corredor dos abajures, bloco secreto (★2) -------------------------------
   m.sign(146, 25, 'w4_sign_lamps');
   m.put(149, 25, 'm', { on: false, radius: 4 }); m.put(157, 25, 'm', { on: false, radius: 4 });

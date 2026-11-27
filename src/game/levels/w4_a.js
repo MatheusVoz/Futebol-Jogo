@@ -91,6 +91,7 @@ export const pit = (m, x0, x1, G) => m.clear(x0, G, x1, m.H - 1);
   m.put(183, 21, 'b');
   m.plat(187, 191, 16); m.put(189, 15, '*');
   m.plat(181, 184, 18);
+  m.put(193, 21, 'K');                                         // checkpoint antes do trecho final
   m.put(195, 21, 'm', { on: false });
   m.put(199, 21, 'd');
   pit(m, 205, 208, G); m.arc(205, 19, 4, 2);
