@@ -341,13 +341,14 @@ function drawHull(pc, x, y, n0, rng, info) {
     }
   }
   // vigia de latão com vidro luminoso
-  if (n.l && n.r && n.u && n.d && rng() < 0.22) {
+  const near = Math.min(countSolid(map, tx, ty, 0, -1, 3), countSolid(map, tx, ty, 0, 1, 3), countSolid(map, tx, ty, -1, 0, 3), countSolid(map, tx, ty, 1, 0, 3));
+  if (n.l && n.r && n.u && n.d && near === 1 && ((tx + (ty >> 1)) % 4 === 0) && ty % 2 === 0) {
     const cx = x + 8, cy = y + 8;
     pc.circle(cx, cy, 5.6, '#2a1c12'); pc.circle(cx, cy, 4.7, '#b8862e'); pc.circle(cx - 0.6, cy - 0.6, 3.9, '#f0d080');
     pc.circle(cx, cy, 3.3, '#0c3444'); pc.circle(cx, cy, 2.5, '#1a6878');
     pc.px(cx - 2, cy - 2, '#d8fffa'); pc.px(cx - 1, cy - 2, '#7ae8f0'); pc.px(cx - 2, cy - 1, '#7ae8f0'); pc.px(cx + 1, cy + 1, '#2aa8b8');
     pc.px(cx - 4, cy - 4, '#5a4020'); pc.px(cx + 3, cy - 4, '#5a4020'); pc.px(cx - 4, cy + 3, '#5a4020'); pc.px(cx + 3, cy + 3, '#5a4020');
-  } else if (rng() < 0.3) { // aglomerado de cracas
+  } else if (rng() < (near >= 3 ? 0.06 : 0.25)) { // aglomerado de cracas
     const bx = rng.int(3, 12), by = rng.int(4, 12), k = rng.int(2, 4);
     for (let i = 0; i < k; i++) barnacle(pc, x + bx + rng.int(-2, 2), y + by + rng.int(-2, 2));
   }
@@ -901,8 +902,10 @@ function drawWater(ctx, map, x0, y0, x1, y1, t) {
       const px = tx * 16, py = ty * 16;
       const d = I.depth[i];
       const surface = I.surf[i] === 1;
+      if (I.cover[i]) ctx.globalAlpha = 0.62; // parede de fundo aparece através da água
       if (surface) ctx.drawImage(S.surf[fs], px & 63, 0, 16, 19, px, py - 3, 16, 19);
       else ctx.drawImage(S.body[d], px, py);
+      ctx.globalAlpha = 1;
       if (I.ceil[i]) { ctx.globalAlpha = 0.45; ctx.fillStyle = '#062038'; ctx.fillRect(px, py, 16, 2); }
       // cáusticas (somem com a profundidade)
       if (d < 4) {

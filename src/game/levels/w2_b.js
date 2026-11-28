@@ -19,6 +19,7 @@ import { hideRoom } from './w1_a.js';
 // =============================================================================
 {
   const m = grid(250, 40);
+  m.id = 'w2_3';
   m.ground(0, 249, 38);
   m.fill(13, 18, 249, 37, '~');
   // --- A: rochedo de partida, Capitã Bolha, garrafa ---------------------------
@@ -94,7 +95,7 @@ import { hideRoom } from './w1_a.js';
   m.fill(196, 18, 198, 19, '~');                                // escotilha H5 (cabine)
   // --- G: cabine da capitã (U4) + sala escondida (★3) — segredo 2 --------------
   m.fill(180, 12, 224, 17, ':');
-  m.fill(175, 13, 178, 17, ':'); m.fill(179, 14, 179, 17, 'H');
+  hideRoom(m, 175, 13, 179, 17);                                // cabine escondida (parede falsa)
   m.put(178, 17, 'X'); m.put(176, 17, '*'); m.line(175, 177, 14);
   m.sign(182, 17, 'w2_sign_captain');
   m.put(188, 17, 'c', { contents: 'buttons:10' });
@@ -180,10 +181,10 @@ import { hideRoom } from './w1_a.js';
   m.ground(208, 214, 12);
   m.put(211, 11, 'o');
   wblock(m, 215, 10, 3, 3, { dy: -6, speed: 20, pause: 1.4 });
-  m.plat(218, 222, 5, '#'); m.fill(222, 6, 222, 21, '#');         // saliência presa num pilar fino
+  m.plat(218, 222, 5, '#'); m.fill(220, 6, 222, 21, '#');         // saliência no alto de um pilar
   m.put(221, 4, '*'); marujo(m, 219, 4);                          // ★3 + marujo 2/3
   // --- G: descida, barquinho no lago e saída ------------------------------------
-  m.ground(217, 222, 22); m.put(219, 21, 'K'); m.put(221, 21, 'h');
+  m.ground(217, 222, 22); m.put(218, 21, 'K'); m.put(219, 21, 'h');
   m.put(223, 29, 'p', { dx: 18, w: 3, speed: 26, pause: 0.8 });
   m.put(228, 31, 'f'); m.put(238, 31, 'f');
   m.arc(224, 26, 20, 2);
