@@ -585,11 +585,11 @@ function poseFor(anim, f, n) {
       const ang = anim === 'attack2' ? -0.4 : -0.12;
       const last = n - 1;
       if (f === 0) {
-        return K({ sq: big ? 0.9 : 0.35, bx: -1.2, hx: -1.8, hy: hi, tilt: -0.12, arm: 2.5, armLen: 3.4, fist: true,
+        return K({ sq: big ? 0.9 : 0.35, bx: -1.2, hx: -1.8, hy: hi, tilt: -0.12, arm: 3.7, armLen: 3.4, fist: true,
           eye: 'det', mouth: 'flat', tail: 0.35, spikes: big ? 0.8 : 0.3, wig: big ? 1 : 0 });
       }
       if (f === last) {
-        return K({ bx: 0.4, hx: 0.6, hy: hi, arm: 0.3, armLen: 3.8, fist: true, eye: 'open', mouth: 'smile', spikes: big ? 0.3 : 0 });
+        return K({ bx: 0.4, hx: 0.6, hy: hi, arm: -0.15, armLen: 3.6, fist: true, eye: 'open', mouth: 'smile', spikes: big ? 0.3 : 0 });
       }
       const strike = f === 1 || (big && f === 2);
       const o = { sq: strike ? -0.25 : -0.1, bx: big ? 2.4 : 1.8, hx: big ? 3.2 : 2.5, hy: hi, tilt: 0.12,
@@ -602,7 +602,7 @@ function poseFor(anim, f, n) {
       return K(Object.assign(o, { fx }));
     }
     case 'attack_up': {
-      if (f === 0) return K({ sq: 0.55, hx: -1.5, tilt: -0.3, arm: 0.9, armLen: 3.4, fist: true, eye: 'det', mouth: 'flat', look: [0, -1] });
+      if (f === 0) return K({ sq: 0.55, hx: -1.5, tilt: -0.3, arm: 0.1, armLen: 3.4, fist: true, eye: 'det', mouth: 'flat', look: [0, -1] });
       if (f === 3) return K({ sq: 0, hx: -1, tilt: -0.2, arm: -0.6, armLen: 3.8, fist: true, eye: 'open', mouth: 'smile' });
       const o = { sq: f === 1 ? -0.55 : -0.35, by: -1, hx: -3, tilt: -0.5, arm: -1.45, armLen: 4.8, fist: true,
         eye: 'det', mouth: f === 1 ? 'open' : 'smile', spikes: 0.5, look: [0, -1] };
@@ -612,7 +612,7 @@ function poseFor(anim, f, n) {
     case 'attack_down': {
       const base = { by: -5, fy: -4, tilt: 0.45, look: [0, 1], lf: [2, 0.5], lb: [-1, 1], tail: 0.5, spikes: 0.4, fist: true };
       if (f === 0) return K(Object.assign({}, base, { arm: -1.3, armLen: 3.4, eye: 'det', mouth: 'flat', sq: -0.2 }));
-      if (f === 3) return K(Object.assign({}, base, { arm: 0.6, armLen: 3.8, eye: 'open', mouth: 'smile' }));
+      if (f === 3) return K(Object.assign({}, base, { arm: -0.15, armLen: 3.6, eye: 'open', mouth: 'smile' }));
       const o = Object.assign({}, base, { arm: 1.35, armLen: 4.8, eye: 'det', mouth: f === 1 ? 'open' : 'smile', sq: 0.2, hx: 1, hy: 1 });
       const pw = pawOf(o);
       return K(Object.assign(o, { fx: [{ k: 'smear', x: pw.x, y: pw.y - 1, r: f === 1 ? 6.5 : 5, a0: 0.65, a1: 2.5, th: f === 1 ? 3 : 2 }] }));
