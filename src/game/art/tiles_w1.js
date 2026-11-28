@@ -153,7 +153,7 @@ function drawSoil(pc, x, y, n0, rng, info) {
       pc.px(cx - 2, cy + 1, '#5a3a26');
     }
   }
-  if (rng() < (deep ? 0.42 : 0.3)) {
+  if (rng() < (deep ? 0.34 : 0.3)) {
     const cx = rng.int(3, 12), cy = rng.int(n.u ? 3 : 10, 12);
     const L = lv(cx, cy);
     const s = (c) => (L ? mix(c, '#140a0c', Math.min(deep ? 0.5 : 0.75, L * (deep ? 0.17 : 0.25))) : c);

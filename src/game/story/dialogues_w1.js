@@ -120,7 +120,7 @@ registerDialogues({
     ...placa('Este buraco é de verdade: espinhos lá embaixo! Costure e atravesse rápido.'),
     { who: 'tico', expr: 'determined', text: 'Fio dourado, não me deixa na mão. Quer dizer... na pata.' },
   ],
-  w1_sign_burrow: placa('Toca dos Botões. A porta de raiz se abre quando o ilhó lá em cima é costurado.'),
+  w1_sign_burrow: placa('Toca dos Botões. Dizem que o chão por aqui é oco... um golpe para baixo bem dado e quem sabe?'),
   w1_sign_gate: placa('Portão de raízes. Dizem que ele se abre quando alguém costura os ilhós da frente.'),
 
   // ------------------------------------------------------- placas — w1_3

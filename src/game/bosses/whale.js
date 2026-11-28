@@ -822,7 +822,7 @@ class WhaleBoss extends Enemy {
       m.w = 30; m.h = 30; m.x = this.cx + (f > 0 ? 36 : -66); m.y = this.cy - 14;
       m.enemy = true;
     } else if (s === 'slam') {
-      m.w = 104; m.h = 18; m.x = this.cx - 54; m.y = this.cy + 10;
+      m.w = 92; m.h = 18; m.x = this.cx - 46; m.y = this.cy + 10;       // menor que a sombra (justo)
       m.enemy = true;
     } else { m.enemy = false; m.x = this.cx; m.y = this.cy; }
     // crochês

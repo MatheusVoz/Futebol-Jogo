@@ -1548,7 +1548,67 @@ function decorate(map, rng, data) {
     }
   }
   flush();
+  // --- prateleiras soltas ('=' sem parede ao lado) ganham apoio visual: tronco de coral
+  // ou poste de madeira até o chão, ou cordas até o teto (nada fica "flutuando").
+  const sol = (tx, ty) => { const t = map.get(tx, ty); return t === T.SOLID || t === T.ALT || t === T.FAKE; };
+  for (let ty = 0; ty < map.rows; ty++) {
+    let tx = 0;
+    while (tx < map.cols) {
+      if (map.get(tx, ty) !== T.ONEWAY) { tx++; continue; }
+      let e = tx; while (map.get(e + 1, ty) === T.ONEWAY) e++;
+      const x0 = tx, x1 = e; tx = e + 1;
+      if (sol(x0 - 1, ty) || sol(x1 + 1, ty)) continue;
+      { let held = false; for (let c = x0; c <= x1 && !held; c++) if (sol(c, ty + 1) || sol(c, ty - 1)) held = true; if (held) continue; }
+      const cols = x1 - x0 >= 3 ? [x0, x1] : [Math.round((x0 + x1) / 2)];
+      // chão abaixo?
+      let yb = -1;
+      for (let k = 1; k <= 18; k++) { const t = map.get(cols[0], ty + k); if (sol(cols[0], ty + k)) { yb = ty + k; break; } if (t === T.ONEWAY || t === T.SPIKE || ty + k >= map.rows) break; }
+      if (yb > 0 && cols.every((c) => sol(c, yb) || [1, 2, 3].some((k) => sol(c, yb + k - 1)))) {
+        const hull = map.get(cols[0], yb) === T.ALT || WI.cover[(yb - 1) * map.cols + cols[0]] === 2;
+        const wet = map.get(cols[0], yb - 1) === T.WATER;
+        const top = ty * 16 + 8, bot = yb * 16 + 2;
+        for (const c of cols) {
+          const xs = c === x0 && cols.length > 1 ? c * 16 + 3 : c === x1 && cols.length > 1 ? c * 16 + 10 : c * 16 + 6;
+          const sd = (c * 31 + ty * 17) >>> 0;
+          out.unshift({ x: xs - 8, y: top, w: 20, h: bot - top + 4, layer: 'back', paint: (pc) => (hull || !wet ? paintPost : paintCoralStem)(pc, xs, top, bot, sd, hull) });
+        }
+        continue;
+      }
+      // teto acima? cordas
+      let yt = -1;
+      for (let k = 1; k <= 8; k++) { if (sol(cols[0], ty - k)) { yt = ty - k; break; } if (map.get(cols[0], ty - k) === T.ONEWAY) break; }
+      if (yt >= 0) for (const c of (x1 - x0 >= 2 ? [x0, x1] : [x0])) {
+        const xs = c === x0 ? c * 16 + 3 : c * 16 + 12, y0r = yt * 16 + 16, len = ty * 16 + 2 - y0r;
+        out.push({ x: xs - 2, y: y0r, w: 6, h: len + 2, layer: 'back', paint: (pc) => { for (let k = 0; k < len; k++) { pc.px(xs, y0r + k, (k & 2) ? '#a88a58' : '#e0c890'); pc.px(xs + 1, y0r + k, '#6a5434'); } } });
+      }
+    }
+  }
   return out;
+}
+/** Poste de madeira (cais/convés) da prateleira até o chão. */
+function paintPost(pc, x, top, bot, sd, hull) {
+  const c = hull ? ['#7a5230', '#5a3a22', '#3a2416'] : ['#b08454', '#86603a', '#5a3e24'];
+  for (let y = top; y < bot; y++) {
+    pc.px(x - 1, y, OUT); pc.px(x, y, c[0]); pc.px(x + 1, y, c[1]); pc.px(x + 2, y, c[2]); pc.px(x + 3, y, OUT);
+    if ((y - top) % 11 === 5) { pc.px(x, y, c[2]); pc.px(x + 1, y, c[2]); pc.px(x + 2, y, OUT); }
+  }
+  for (let k = 0; k < 3; k++) if (h2(sd, k, 9) < 0.5) barnacle(pc, x + 1, top + 10 + Math.floor(h2(sd, k, 8) * Math.max(1, bot - top - 14)));
+}
+/** Tronco de coral ramificado (embaixo d'água) da prateleira até o leito. */
+function paintCoralStem(pc, x, top, bot, sd) {
+  const P = [CORAL.pink, CORAL.orange, CORAL.violet][sd % 3];
+  const r = lrng(sd + 7);
+  let cx = x;
+  for (let y = bot; y > top; y--) {
+    const k = (bot - y) / Math.max(1, bot - top);
+    if (r() < 0.08) cx += r() < 0.5 ? -1 : 1;
+    cx = clamp(cx, x - 2, x + 2);
+    const w = k < 0.3 ? 4 : 3;
+    for (let i = 0; i < w; i++) pc.px(cx + i - 1, y, i === 0 ? P.lt : i === w - 1 ? P.dk : P.md);
+    pc.px(cx - 2, y, OUT); pc.px(cx + w - 1, y, OUT);
+    if (r() < 0.06) { const side = r() < 0.5 ? -1 : 1; for (let j = 1; j < 5; j++) { pc.px(cx + 1 + side * (j + 1), y - j, P.md); pc.px(cx + 1 + side * (j + 1), y - j + 1, OUT); } pc.px(cx + 1 + side * 6, y - 5, P.hi || P.lt); }
+  }
+  for (let i = -3; i <= 4; i++) pc.px(x + i, bot - 1, i & 1 ? SAND.md : SAND.lt);
 }
 
 // ------------------------------------------------------------------ registro
