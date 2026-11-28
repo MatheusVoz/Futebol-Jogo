@@ -92,7 +92,7 @@ export function prop(name, v = 0) {
     }
     case 'dead_tree': {
       return make('dead' + v, 17, 22, 8, 20, 4, (pc) => {
-        const c = '#2a1e3a', l = '#4a3a62';
+        const c = '#5a4a7a', l = '#8a7aaa';
         pc.rect(7, 9, 3, 12, c); pc.vline(7, 9, 12, l);
         pc.line(8, 10, 2, 4, c); pc.line(2, 4, 1, 1, c); pc.line(8, 8, 14, 3, c); pc.line(14, 3, 16, 4, c);
         pc.line(8, 12, 13, 9, c); pc.line(4, 6, 6, 2, c); pc.line(12, 4, 11, 0, c);

@@ -91,7 +91,7 @@ function terrain(world, geo, Dp, rng) {
   // ilhas extras / lagos feitos à mão
   const blobs = {
     2: [[150, 206, 24], [300, 150, 18], [60, 60, 20], [128, 36, 12], [196, 158, 14], [410, 236, 12], [272, 252, 10], [360, 44, 16], [392, 196, 10], [24 + 40, 120, 9]],
-    4: [[136, 112, 20], [334, 42, 18], [370, 236, 18], [40, 52, 14], [276, 112, 12], [118, 236, 12], [204, 20, 10]],
+    4: [[136, 112, 26], [334, 42, 22], [370, 236, 20], [40, 52, 18], [276, 112, 16], [118, 236, 14], [204, 20, 12], [420, 150, 10], [30, 150, 8]],
   }[world] || [];
   const river = world === 1 ? [[266, 0], [270, 50], [292, 100], [288, 140], [318, 186], [328, 236], [332, 272]] : null;
   const lake = world === 1 ? { x: 304, y: 122, rx: 20, ry: 11 } : null;
@@ -123,7 +123,7 @@ function terrain(world, geo, Dp, rng) {
       for (const [bx, by, r] of blobs) v = Math.max(v, r - Math.hypot(x - bx, y - by));
       v += (vnoise(x, y, 8, seed) - 0.5) * 9;
     } else if (world === 4) {
-      v = 15 - dp + (fbm(x, y, seed) - 0.5) * 18;
+      v = 21 - dp + (fbm(x, y, seed) - 0.5) * 26;
       for (const [bx, by, r] of blobs) v = Math.max(v, r - Math.hypot(x - bx, y - by) + (vnoise(x, y, 7, seed) - 0.5) * 8);
       if (dp < 9) v = Math.max(v, 1);
     } else {
@@ -377,8 +377,9 @@ function buildRegion(world, geo) {
     scatter(() => prop('teddy'), 1, { minIn: 7 });
     scatter(() => prop('night_lamp'), 3, { minIn: 5, extra: { glow: true } });
     scatter(() => prop('sock', rng.int(0, 1)), 4);
-    cluster(() => (rng() < 0.75 ? prop('dead_tree', rng.int(0, 3)) : prop('tree', 'dusk')), 8, 6, 22);
-    scatter(() => prop('mushroom', rng.int(1, 2)), 18);
+    cluster(() => (rng() < 0.7 ? prop('dead_tree', rng.int(0, 3)) : rng() < 0.5 ? prop('tree', 'dusk') : prop('bush', 'dusk')), 12, 7, 22, { minIn: 3 });
+    scatter(() => prop('mushroom', rng.int(1, 2)), 26, { minIn: 3 });
+    scatter(() => (rng() < 0.6 ? prop('dead_tree', rng.int(0, 3)) : prop('bush', 'dusk')), 30, { minIn: 3, overlap: 0.8 });
     scatter(() => prop('block', rng.int(4, 7)), 8);
     scatter(() => prop('rock', 2), 10);
     scatter(() => prop('hill', 20 + rng.int(0, 1)), 3, { minIn: 8 });
@@ -394,7 +395,7 @@ function buildRegion(world, geo) {
     const hs = prop('big_heart', 0);
     for (let k = 0; k < 600; k++) {
       const x = rng.int(40, W - 40), y = rng.int(60, H - 20);
-      if (free(hs, x, y, { minIn: 6, overlap: 1 })) { placed.push({ s: hs, x, y, skip: true }); anims.push({ k: 'heart', x, y }); break; }
+      if (free(hs, x, y, { on: k < 300 ? 'void' : 'land', minOut: 10, minIn: 6, overlap: 1 })) { placed.push({ s: hs, x, y, skip: true }); anims.push({ k: 'heart', x, y }); break; }
     }
   }
   // sombras primeiro, depois os carimbos ordenados por y

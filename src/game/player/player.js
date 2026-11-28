@@ -39,11 +39,6 @@ export const P = {
   REGEN_T: 20,      // s para recuperar meio coração
 };
 
-// Pose (anim + quadro fixo) do sprite durante cada soco — quadros SEM o fio do
-// antigo chicote; o braço e a luva são desenhados por cima (weapons.js).
-const PUNCH_POSE = {
-  side1: ['run', 1], side2: ['run', 5], side3: ['run', 1], up: ['jump', 0], down: ['fall', 0],
-};
 
 export const ABILITY_ORDER = ['stitch', 'unstitch', 'rewind', 'decoy', 'unravel'];
 
@@ -490,6 +485,7 @@ export class Player extends Entity {
       if (this.grounded) this.vx += this.facing * (this.combo === 3 ? 70 : 30);
     }
     this.attackTotal = this.attackT;
+    this.anim = ''; // reinicia a anim mesmo repetindo o mesmo golpe
     audio.sfx('whoosh', { randomPitch: 0.08, pitch: this.attackKind === 'side3' ? 1.0 : 1.35, vol: 0.8 });
   }
 
@@ -719,9 +715,9 @@ export class Player extends Entity {
     if (this.castT > 0) { this.castT -= 1 / 60; this.setAnim('cast'); return; }
     if (this.attackT > 0 && this.attackKind) {
       if (this.attackKind === 'needle') { this.setAnim('charge'); return; }
-      const pose = PUNCH_POSE[this.attackKind] || PUNCH_POSE.side1;
-      this.setAnim(pose[0]);
-      this.pose = pose;
+      // anims de soco do sprite (braço curto + luvinha; sem fio)
+      const a = this.attackKind.startsWith('side') ? 'attack' + this.attackKind.slice(4) : 'attack_' + this.attackKind;
+      this.setAnim(a);
       return;
     }
     if (this.inWater) { if (this.anim !== 'swim' || animDone('tico', 'swim', this.animT)) this.setAnim('swim'); return; }

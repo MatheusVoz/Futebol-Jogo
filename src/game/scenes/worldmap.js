@@ -824,6 +824,7 @@ class WorldMapScene extends Scene {
     font.draw(ctx, name, x + 10 + tagW, y + 7, { color: st === 'soon' ? '#a898d8' : '#fff4dc', shadow: '#0b0716', maxWidth: tw - tagW - 4, maxChars: 60 });
     const L2 = y + 19, L3 = y + 30;
     if (st === 'soon') { font.draw(ctx, 'Esta fase ainda está sendo costurada.', x + 8, L2, { color: '#a898d8', maxWidth: tw }); return; }
+    if (this.sew && n === this.sew.to) { font.draw(ctx, `Costurando o caminho até o Mundo ${n.world}...`, x + 8, L2, { color: '#ffd23f', maxWidth: tw }); return; }
     if (st === 'locked') {
       const msg = this.worldShut(n.world) ? 'Mundo costurado: vença o chefe anterior.' : n.bonus ? `Junte ${wd.bonusStarsNeeded} estrelas do mundo.` : 'Termine a fase anterior para liberar.';
       font.draw(ctx, msg, x + 8, L2, { color: '#a898d8', maxWidth: tw });

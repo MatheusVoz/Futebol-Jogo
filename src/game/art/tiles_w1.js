@@ -726,22 +726,272 @@ function grassAnim(x, y, ph) {
   };
 }
 
+// ------------------------------------------------------------------ decor extra (vida!)
+const WOOD = { hi: '#c89058', b: '#8a5a30', lo: '#5e3a1e', o: OUT, rope: '#d4b27a', ropeD: '#8a6a44' };
+/** Estaca de madeira de (px, y0) até y1 (coordenadas de mundo). */
+function paintPost(pc, px, y0, y1) {
+  const len = y1 - y0;
+  if (len <= 0) return;
+  pc.rect(px - 2, y0, 1, len, WOOD.o); pc.rect(px + 2, y0, 1, len, WOOD.o);
+  pc.rect(px - 1, y0, 3, len, WOOD.b); pc.vline(px - 1, y0, len, WOOD.hi); pc.vline(px + 1, y0, len, WOOD.lo);
+  for (let yy = y0 + 7; yy < y1 - 2; yy += 9) pc.px(px, yy, WOOD.lo);       // veios
+  pc.hline(px - 2, y0 + 1, 5, WOOD.rope); pc.hline(px - 2, y0 + 2, 5, WOOD.ropeD); // amarração
+  pc.hline(px - 3, y1 - 1, 7, WOOD.o); pc.hline(px - 2, y1 - 2, 5, WOOD.lo);       // pé
+}
+/** Mão-francesa sob a ponta de uma tábua presa na parede. dir: +1 parede à esquerda. */
+function paintBracket(pc, wallX, y, dir) {
+  for (let k = 0; k < 9; k++) {
+    const xx = wallX + dir * k, yy = y + 12 - k;
+    pc.px(xx, yy, WOOD.b); pc.px(xx, yy + 1, WOOD.lo); pc.px(xx, yy + 2, WOOD.o);
+  }
+  pc.vline(wallX + (dir > 0 ? 0 : -1), y + 2, 12, WOOD.lo);
+  pc.px(wallX + dir, y + 11, '#e8e0d0'); // prego
+}
+/** Corda/cipó subindo da tábua até sumir na copa (quando não há chão embaixo). */
+function paintRopeUp(pc, px, y0, y1, seed) {
+  const r = lrng(seed);
+  for (let yy = y1; yy > y0; yy--) {
+    const xx = px + Math.round(Math.sin(yy * 0.05 + seed) * 0.6);
+    pc.px(xx, yy, ((yy >> 1) & 1) ? WOOD.rope : WOOD.ropeD);
+    if (r() < 0.05) { pc.px(xx + 1, yy, G.md); pc.px(xx + 2, yy - 1, G.lt); }
+  }
+}
+/** Arbusto de feltro com frutinhas/flores. */
+function paintBush(pc, cx, yb, wdt, hgt, seed, tod) {
+  const r = lrng(seed);
+  const P = tod === 'night' ? ['#0e2420', '#163a2e', '#245040', '#3a6a52'] : tod === 'dusk' ? ['#1e2e2a', '#2e4a36', '#466a44', '#6a8a5a'] : ['#24502c', '#36723a', '#4e9444', '#7cbc5a'];
+  const blobs = [];
+  const n = 3 + Math.round(wdt / 10);
+  for (let i = 0; i < n; i++) {
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    const rr = hgt * (0.45 + r() * 0.25) * (1 - Math.abs(t - 0.5) * 0.7);
+    blobs.push([cx - wdt / 2 + t * wdt, yb - rr * 0.9 - r() * 2, rr]);
+  }
+  for (const [x, y, rr] of blobs) pc.circle(x, y + 1, rr + 1, OUT);
+  for (const [x, y, rr] of blobs) pc.circle(x, y + 1, rr, P[0]);
+  for (const [x, y, rr] of blobs) pc.circle(x - rr * 0.15, y - rr * 0.1, rr * 0.8, P[1]);
+  for (const [x, y, rr] of blobs) pc.circle(x - rr * 0.35, y - rr * 0.35, rr * 0.42, P[2]);
+  for (const [x, y, rr] of blobs) pc.px(Math.round(x - rr * 0.45), Math.round(y - rr * 0.55), P[3]);
+  pc.rect(cx - wdt / 2 - 1, yb, wdt + 2, 2, P[0]); // base no chão
+  const kind = r();
+  const cols = kind < 0.4 ? ['#e04a5a', '#ff8a8a'] : kind < 0.7 ? FLOWER_COLS : null;
+  if (cols) for (let i = 0; i < 3 + (wdt >> 3); i++) {
+    const [x, y, rr] = blobs[r.int(0, blobs.length - 1)];
+    const fx = Math.round(x + (r() - 0.5) * rr * 1.2), fy = Math.round(y + (r() - 0.6) * rr);
+    const c = cols[r.int(0, cols.length - 1)];
+    pc.px(fx, fy, c); if (kind >= 0.4) { pc.px(fx + 1, fy, c); pc.px(fx, fy + 1, mix(c, '#000000', 0.3)); }
+    else pc.px(fx - 1, fy - 1, '#ffd0d0');
+  }
+  // botão de costura esquecido no meio do arbusto
+  if (r() < 0.25) { const [x, y] = blobs[0]; pc.circle(x + 2, y + 2, 1.6, BTN_COLS[r.int(0, 4)]); pc.px(Math.round(x + 2), Math.round(y + 2), OUT); }
+}
+/** Samambaia de feltro (folhas em leque). */
+function paintFern(pc, x, yb, seed, tod) {
+  const r = lrng(seed);
+  const C = tod === 'night' ? ['#16302a', '#24483a'] : tod === 'dusk' ? ['#2e4a36', '#4a6a44'] : ['#3e7a34', '#6aa848'];
+  const n = r.int(3, 5);
+  for (let i = 0; i < n; i++) {
+    const a = -Math.PI / 2 + (i / (n - 1) - 0.5) * 2.2, len = r.int(8, 14);
+    const ex = x + Math.cos(a) * len, ey = yb + Math.sin(a) * len;
+    pc.curve(x, yb, (x + ex) / 2, ey - 2, ex, ey + 2, C[0]);
+    for (let k = 2; k < len; k += 2) {
+      const t = k / len, px = x + (ex - x) * t, py = yb + (ey - yb) * t - Math.sin(t * Math.PI) * 2;
+      pc.px(Math.round(px - 1), Math.round(py - 1), C[1]); pc.px(Math.round(px + 1), Math.round(py), C[0]);
+    }
+  }
+}
+/** Canteiro de flores (3–5 flores de alturas diferentes). */
+function paintFlowerPatch(pc, x, yb, seed) {
+  const r = lrng(seed);
+  const n = r.int(3, 5);
+  for (let i = 0; i < n; i++) paintFlower(pc, x + i * 3 + r.int(-1, 1), yb, seed + i * 977);
+}
+
+/** Árvore grande da fase (dados `decor` da fase): tronco de feltro, copa de pompom e
+ *  galhos que seguram as tábuas próximas. Pintada no fundo (atrás dos tiles). */
+function treePainter(d, runs, tod) {
+  const bx = Math.round(d.x * 16 + 8), by = d.base * 16 + 4, top = d.top * 16 + 8;
+  const w = d.w || 14, half = w >> 1;
+  const dead = !!d.dead;
+  const bark = tod === 'night' ? ['#1e1620', '#2c2230', '#3a2e3e', '#120c14'] : tod === 'dusk' ? ['#3a2a30', '#4e3a3e', '#6a5050', '#22161c'] : ['#5a3e2a', '#74523a', '#946c4a', '#3a2618'];
+  const leaf = dead ? null : tod === 'night' ? ['#0c1a1c', '#12282a', '#1a3a38', '#2a524a'] : tod === 'dusk' ? ['#2a2440', '#3a3254', '#55456a', '#8a6a80'] : ['#1f4a2a', '#2e6a36', '#46903f', '#78bc58'];
+  const r = lrng((bx * 31 + top) >>> 0);
+  const blobs = [];
+  if (leaf && d.canopy !== false) {
+    const R = d.r || 34;
+    for (let i = 0; i < 9; i++) { const a = r() * Math.PI * 2, dd = r() * R * 0.6; blobs.push([bx + Math.cos(a) * dd * 1.3, top - 6 + Math.sin(a) * dd * 0.7, R * (0.38 + r() * 0.3)]); }
+    blobs.push([bx, top - 10, R * 0.55]);
+  }
+  // galhos até as tábuas vizinhas
+  const branches = [];
+  for (const run of runs) {
+    const ry = run.ty * 16;
+    if (ry < top - 24 || ry > by - 8) continue;
+    const near = run.x1 * 16 + 16 < bx ? run.x1 * 16 + 14 : run.x0 * 16 > bx ? run.x0 * 16 + 2 : null;
+    if (near === null) { run.tree = true; continue; } // tábua cruzando o tronco
+    if (Math.abs(near - bx) > 5 * 16) continue;
+    run.tree = true;
+    branches.push([near, ry + 7]);
+  }
+  const x0 = bx - 70, y0 = Math.min(top - 60, by - 10);
+  return {
+    x: x0, y: y0, w: 140, h: by - y0 + 8, layer: 'back',
+    paint(pc) {
+      if (leaf && blobs.length) for (const [x, y, rr] of blobs) pc.circle(x + 2, y + 3, rr + 1, leaf[0]);
+      for (const [ex, ey] of branches) {
+        const sx = ex < bx ? bx - half + 2 : bx + half - 2, sy = ey + 10;
+        pc.thickLine(sx, sy, ex, ey, 2.2, bark[3]);
+        pc.thickLine(sx, sy - 1, ex, ey - 1, 1.6, bark[1]);
+        pc.line(sx, sy - 2, ex, ey - 2, bark[2]);
+        if (!dead) { pc.circle(ex + (ex < bx ? -2 : 2), ey - 3, 3, leaf ? leaf[2] : bark[2]); pc.px(ex, ey - 5, leaf ? leaf[3] : bark[2]); }
+      }
+      // tronco (afina para cima) com raízes no pé
+      for (let y = top; y < by; y++) {
+        const t = (y - top) / Math.max(1, by - top);
+        const ww = Math.round(w * (0.75 + 0.25 * t) + (t > 0.9 ? (t - 0.9) * 90 : 0));
+        const xl = bx - (ww >> 1);
+        pc.hline(xl - 1, y, ww + 2, bark[3]);
+        pc.hline(xl, y, ww, bark[1]);
+        pc.hline(xl, y, 2, bark[2]); pc.hline(xl + ww - 3, y, 3, bark[0]);
+        if ((y >> 2) % 3 === 0) pc.px(xl + (ww >> 1) + ((y >> 4) & 1 ? 1 : -1), y, bark[0]);
+        if ((y & 3) < 2) pc.px(xl + (ww >> 1), y, bark[2] === bark[1] ? bark[0] : THREAD[2]); // costura central
+      }
+      // oco/nó e remendo costurado
+      const hy = Math.round(top + (by - top) * 0.55);
+      pc.ellipse(bx + 1, hy, 3, 4, bark[3]); pc.ellipse(bx + 1, hy + 1, 2, 2.6, '#0c0608');
+      if (by - top > 80) {
+        const py = Math.round(top + (by - top) * 0.3);
+        pc.rect(bx - half + 2, py, 6, 7, dead ? '#5a4a5a' : '#6a3a52');
+        for (let i = 0; i < 6; i += 2) { pc.px(bx - half + 2 + i, py, THREAD[0]); pc.px(bx - half + 2 + i, py + 6, THREAD[0]); }
+      }
+      if (dead) { // galhos secos no topo
+        pc.thickLine(bx, top + 4, bx - 22, top - 14, 1.5, bark[3]); pc.line(bx, top + 3, bx - 22, top - 15, bark[1]);
+        pc.thickLine(bx, top + 10, bx + 20, top - 6, 1.5, bark[3]); pc.line(bx, top + 9, bx + 20, top - 7, bark[1]);
+        pc.line(bx - 14, top - 8, bx - 18, top - 20, bark[1]); pc.line(bx + 12, top, bx + 16, top - 12, bark[1]);
+      }
+      if (leaf && blobs.length) {
+        for (const [x, y, rr] of blobs) pc.circle(x, y, rr, leaf[1]);
+        for (const [x, y, rr] of blobs) pc.circle(x - rr * 0.25, y - rr * 0.3, rr * 0.6, leaf[2]);
+        for (const [x, y, rr] of blobs) { pc.px(Math.round(x - rr * 0.4), Math.round(y - rr * 0.5), leaf[3]); pc.px(Math.round(x - rr * 0.2), Math.round(y - rr * 0.6), leaf[3]); }
+        for (let i = 0; i < 6; i++) { const [x, y, rr] = blobs[i % blobs.length]; pc.px(Math.round(x + rr * 0.3), Math.round(y + rr * 0.2), FLOWER_COLS[i % FLOWER_COLS.length]); }
+      }
+    },
+  };
+}
+
+// ------------------------------------------------------------------ bichinhos (decor animado, sem colisão)
+const BUTTERFLY_COLS = [['#f2a0d0', '#c25aa6'], ['#f2d462', '#c08a2a'], ['#8ad0f2', '#3a7ab0'], ['#f4ecd8', '#a89a8a']];
+function butterflyAnim(cx, cy, ph, col) {
+  return (ctx, t) => {
+    const tt = t * 0.5 + ph;
+    const x = Math.round(cx + Math.sin(tt * 1.3) * 22 + Math.sin(tt * 3.1) * 5);
+    const y = Math.round(cy + Math.sin(tt * 1.7 + 1) * 9 + Math.sin(tt * 5.3) * 2);
+    const open = Math.sin(t * 16 + ph * 7) > 0;
+    ctx.fillStyle = col[1];
+    if (open) { ctx.fillRect(x - 2, y - 1, 2, 2); ctx.fillRect(x + 1, y - 1, 2, 2); ctx.fillStyle = col[0]; ctx.fillRect(x - 2, y - 1, 1, 1); ctx.fillRect(x + 2, y - 1, 1, 1); }
+    else { ctx.fillRect(x - 1, y - 2, 1, 2); ctx.fillRect(x + 1, y - 2, 1, 2); }
+    ctx.fillStyle = '#1a1018'; ctx.fillRect(x, y - 1, 1, 2);
+  };
+}
+function firefliesAnim(cx, cy, ph, n, cols) {
+  const pts = [];
+  const r = lrng(Math.floor(ph * 1000));
+  for (let i = 0; i < n; i++) pts.push([r() * 6.28, 0.4 + r() * 0.8, 10 + r() * 22, 4 + r() * 10, r() * 6.28]);
+  return (ctx, t) => {
+    for (let i = 0; i < pts.length; i++) {
+      const [a, sp, rx, ry, bph] = pts[i];
+      const b = Math.sin(t * 2.2 * sp + bph);
+      if (b < 0.1) continue;
+      const x = Math.round(cx + Math.sin(t * 0.4 * sp + a) * rx), y = Math.round(cy + Math.cos(t * 0.33 * sp + a * 1.7) * ry);
+      ctx.globalAlpha = b * 0.35; ctx.fillStyle = cols[i % cols.length]; ctx.fillRect(x - 1, y - 1, 3, 3);
+      ctx.globalAlpha = Math.min(1, b + 0.2); ctx.fillRect(x, y, 1, 1);
+    }
+    ctx.globalAlpha = 1;
+  };
+}
+
 // ------------------------------------------------------------------ decorate
 function decorate(map, rng, data) {
   if (!SPR) SPR = buildSprites();
   const out = [];
   const rows = data?.map || [];
+  const tod = data?.timeOfDay || 'day';
   const chAt = (tx, ty) => (rows[ty] && rows[ty][tx]) || '.';
   const isAir = (tx, ty) => { const t = map.get(tx, ty); return (t === T.EMPTY || t === T.BG) && chAt(tx, ty) === '.'; };
   const surf = (tx, ty) => map.get(tx, ty) === T.SOLID && isAir(tx, ty - 1);
-  let lastAnim = -99, lastToy = -99, lastFront = -99;
+  // ---- camada do meio (interiores): ver runMid()
+  const mid = new Map();
+  map._w1mid = mid;
+  const interiorCell = (t) => t === T.BG || t === T.ONEWAY || t === T.SPIKE;
+  /** Decor de fundo que também aparece dentro de interiores (sobre a parede ':'). */
+  const addMid = (d) => {
+    out.push({ ...d, layer: 'back' });
+    for (let cy = Math.floor(d.y / 16); cy <= Math.floor((d.y + d.h) / 16); cy++)
+      for (let cx = Math.floor(d.x / 16); cx <= Math.floor((d.x + d.w) / 16); cx++) {
+        if (!interiorCell(map.get(cx, cy))) continue;
+        const k = cx + cy * 65536;
+        let l = mid.get(k); if (!l) mid.set(k, (l = []));
+        l.push(d.paint);
+      }
+  };
+  // ---- tábuas (oneway): estacas até o chão, mão-francesa na parede ou galho de árvore
+  const runs = [];
+  for (let ty = 0; ty < map.rows; ty++) {
+    for (let tx = 0; tx < map.cols; tx++) {
+      if (map.get(tx, ty) !== T.ONEWAY) continue;
+      let x1 = tx; while (map.get(x1 + 1, ty) === T.ONEWAY) x1++;
+      runs.push({ x0: tx, x1, ty });
+      tx = x1;
+    }
+  }
+  const trees = (data?.decor || []).filter((d) => d.t === 'tree');
+  const treeDecor = trees.map((d) => treePainter(d, runs, tod));
+  const solidL = (t) => t === T.SOLID || t === T.ALT || t === T.FAKE;
+  for (const run of runs) {
+    const { x0, x1, ty } = run;
+    const y = ty * 16;
+    const attL = solidL(map.get(x0 - 1, ty)), attR = solidL(map.get(x1 + 1, ty));
+    if (attL) addMid({ x: x0 * 16, y, w: 12, h: 16, paint: (pc) => paintBracket(pc, x0 * 16, y, 1) });
+    if (attR) addMid({ x: x1 * 16 + 4, y, w: 12, h: 16, paint: (pc) => paintBracket(pc, x1 * 16 + 16, y, -1) });
+    if (attL || attR || run.tree) continue;
+    const n = x1 - x0 + 1;
+    const cols = n === 1 ? [x0 * 16 + 8] : [x0 * 16 + 4, x1 * 16 + 11];
+    if (n >= 7) cols.push(Math.round((x0 + x1) / 2) * 16 + 8);
+    const found = [];
+    for (const px of cols) {
+      const tx = Math.floor(px / 16);
+      let gy = -1, kind = 0;
+      for (let yy = ty + 1; yy < Math.min(map.rows, ty + 16); yy++) {
+        const t = map.get(tx, yy);
+        if (t === T.EMPTY || t === T.BG) continue;
+        if (t === T.WATER) continue; // estaca entra na água até o fundo
+        gy = yy; kind = t; break;
+      }
+      if (gy > 0) {
+        const yEnd = gy * 16 + (kind === T.SPIKE ? 10 : kind === T.ONEWAY ? 2 : 3);
+        found.push([px, yEnd]);
+        addMid({ x: px - 4, y: y + 3, w: 9, h: yEnd - y, paint: (pc) => paintPost(pc, px, y + 3, yEnd) });
+      } else {
+        const yTop = Math.max(0, y - 16 * 14);
+        addMid({ x: px - 2, y: yTop, w: 5, h: y - yTop + 2, paint: (pc) => paintRopeUp(pc, px, yTop, y + 1, px) });
+      }
+    }
+    if (found.length >= 2) { // travessa em X entre as duas primeiras estacas
+      const [[ax, ay], [bx2, by2]] = found;
+      const yb = Math.min(ay, by2) - 4;
+      if (yb - (y + 8) > 14) addMid({ x: ax, y: y + 6, w: bx2 - ax, h: yb - y, paint: (pc) => { pc.line(ax + 1, y + 8, bx2 - 1, yb, WOOD.lo); pc.line(ax + 1, yb, bx2 - 1, y + 8, WOOD.lo); } });
+    }
+  }
+
+  let lastAnim = -99, lastToy = -99, lastFront = -99, lastBush = -99, lastBug = -99;
   let run = null; // trecho de lâminas da frente (um decor animado por até 10 tiles)
   const flush = () => {
     if (run && run.items.length) { const q = run; out.push({ x: q.x0 - 4, y: q.y - 2, w: q.x1 - q.x0 + 26, h: 12, layer: 'front', anim: bladesAnim(q.items, q.y) }); }
     run = null;
   };
+  const bugCols = tod === 'night' ? ['#d8ff9a', '#9af0ff'] : ['#e8ff7a', '#fff6a8', '#c8ff5a'];
   for (let ty = 1; ty < map.rows; ty++) {
-    lastAnim = -99; lastToy = -99; lastFront = -99;
+    lastAnim = -99; lastToy = -99; lastFront = -99; lastBush = -99;
     flush();
     for (let tx = 0; tx < map.cols; tx++) {
       const t = map.get(tx, ty);
@@ -749,7 +999,6 @@ function decorate(map, rng, data) {
       const seed = (tx * 92821 + ty * 68917) >>> 0;
       if (surf(tx, ty)) {
         const inside = map.get(tx, ty - 1) === T.BG;
-        const layer = inside ? 'front' : 'back';
         const room2 = isAir(tx, ty - 2);
         const r = rng();
         const wide = surf(tx - 1, ty) && surf(tx + 1, ty);
@@ -757,7 +1006,11 @@ function decorate(map, rng, data) {
           lastAnim = tx;
           const spr = SPR.mush[rng.int(0, SPR.mush.length - 1)];
           const x = wx - 2 + rng.int(0, 2), y = wy - 15;
-          out.push({ x, y, w: 20, h: 16, layer, anim: mushAnim(spr, SPR.halo[spr.key], x, y, rng() * 6), light: { r: 34, color: spr.glow, i: 0.55, flicker: 0.12 } });
+          const light = { r: 34, color: spr.glow, i: 0.55, flicker: 0.12 };
+          if (inside) { // dentro da árvore: estático na camada do meio + só a luz animada
+            addMid({ x, y, w: 20, h: 16, paint: (pc) => pc.blit(spr.pc, x, y) });
+            out.push({ x, y, w: 20, h: 16, layer: 'back', anim: () => {}, light });
+          } else out.push({ x, y, w: 20, h: 16, layer: 'back', anim: mushAnim(spr, SPR.halo[spr.key], x, y, rng() * 6), light });
         } else if (r < 0.11 && room2 && !inside && tx - lastAnim > 4 && wide) { // flor que observa
           lastAnim = tx;
           const x = wx + rng.int(0, 2), y = wy - 29;
@@ -767,68 +1020,93 @@ function decorate(map, rng, data) {
           const k = rng.int(0, SPR.toys.length - 1), spr = SPR.toys[k];
           const flip = rng() < 0.5, sink = k === 0 ? 3 : k === 5 ? 3 : 1;
           const x = wx + rng.int(-2, 16 - spr.w + 2), y = wy - spr.h + sink;
-          out.push({ x, y, w: spr.w, h: spr.h, layer, paint: (pc) => pc.blit(spr, x, y, { flipX: flip }) });
-        } else if (r < 0.2 && !inside && tx - lastFront > 6 && tx - lastAnim > 2) { // grama da frente
+          addMid({ x, y, w: spr.w, h: spr.h, paint: (pc) => pc.blit(spr, x, y, { flipX: flip }) });
+        } else if (r < 0.2 && !inside && tx - lastFront > 6 && tx - lastAnim > 2) { // grama da frente (só na altura do pé)
           lastFront = tx;
           const x = wx + rng.int(0, 3), y = wy - 12;
           out.push({ x, y, w: 14, h: 14, layer: 'front', anim: grassAnim(x, y, rng() * 6) });
         } else if (r < 0.3) {
-          out.push({ x: wx, y: wy - 10, w: 16, h: 12, layer, paint: (pc) => paintSmallMush(pc, wx + 4 + (seed % 8), wy + 1, seed) });
+          addMid({ x: wx, y: wy - 10, w: 16, h: 12, paint: (pc) => paintSmallMush(pc, wx + 4 + (seed % 8), wy + 1, seed) });
+        }
+        // arbustos, samambaias e canteiros (fundo) — só com espaço livre acima
+        if (!inside && room2 && wide && isAir(tx, ty - 3)) {
+          const q = rng();
+          if (q < 0.16 && tx - lastBush > 5) {
+            lastBush = tx;
+            const bw = rng.int(18, 34), bh = rng.int(11, 18), cx = wx + 8 + rng.int(-4, 4);
+            out.push({ x: cx - bw / 2 - 12, y: wy - bh * 2 - 4, w: bw + 24, h: bh * 2 + 8, layer: 'back', paint: (pc) => paintBush(pc, cx, wy + 2, bw, bh, seed ^ 0xb5, tod) });
+          } else if (q < 0.26) out.push({ x: wx - 12, y: wy - 18, w: 40, h: 20, layer: 'back', paint: (pc) => paintFern(pc, wx + 8, wy + 1, seed ^ 0xfe, tod) });
+          else if (q < 0.36 && tod !== 'night') out.push({ x: wx - 2, y: wy - 14, w: 22, h: 16, layer: 'back', paint: (pc) => paintFlowerPatch(pc, wx + 2, wy + 1, seed ^ 0xf1) });
+        }
+        // bichinhos: borboletas de dia, vaga-lumes no entardecer/noite e nas tocas
+        if (room2 && isAir(tx, ty - 3) && tx - lastBug > 14 && rng() < 0.09) {
+          lastBug = tx;
+          const cx = wx + 8, cy = wy - rng.int(22, 40);
+          if (inside || tod !== 'day') out.push({ x: cx - 40, y: cy - 20, w: 80, h: 40, layer: 'back', anim: firefliesAnim(cx, cy, rng() * 6, rng.int(4, 7), bugCols) });
+          else out.push({ x: cx - 34, y: cy - 16, w: 68, h: 32, layer: 'back', anim: butterflyAnim(cx, cy, rng() * 6, BUTTERFLY_COLS[rng.int(0, BUTTERFLY_COLS.length - 1)]) });
         }
         // gramado denso em todo topo gramado + grama pendurada nas bordas
-        out.push({ x: wx - 2, y: wy - 12, w: 20, h: 13, layer, paint: (pc) => paintMeadow(pc, wx, wy, seed ^ 0x55, inside) });
+        out.push({ x: wx - 2, y: wy - 12, w: 20, h: 13, layer: inside ? 'front' : 'back', paint: (pc) => paintMeadow(pc, wx, wy, seed ^ 0x55, inside) });
         if (!inside && map.get(tx - 1, ty) === T.EMPTY) out.push({ x: wx - 4, y: wy, w: 6, h: 18, layer: 'back', paint: (pc) => paintHang(pc, wx - 1, wy, seed ^ 0x1234, -1) });
         if (!inside && map.get(tx + 1, ty) === T.EMPTY) out.push({ x: wx + 14, y: wy, w: 6, h: 18, layer: 'back', paint: (pc) => paintHang(pc, wx + 16, wy, seed ^ 0x4321, 1) });
-        // lâminas soltas na frente, balançando ao vento
+        // lâminas soltas na frente, balançando ao vento (na altura do pé)
         if (!inside) {
           if (!run || tx - run.tx0 >= 10 || run.ty !== ty) { flush(); run = { items: [], y: wy - 8, x0: wx, x1: wx, tx0: tx, ty }; }
           if (rng() < 0.6) run.items.push([wx - 1 + rng.int(-2, 2), rng.int(0, SPR.blades.length - 1)]);
           run.x1 = wx;
         } else flush();
       } else if (run && run.ty === ty) flush();
-      // raízes penduradas sob tetos
+      // raízes penduradas sob tetos (sempre ATRÁS do Tico)
       if ((t === T.SOLID) && isAir(tx, ty + 1) && ty + 1 < map.rows && rng() < 0.4) {
-        const inside = map.get(tx, ty + 1) === T.BG;
-        out.push({ x: wx, y: wy + 16, w: 18, h: 28, layer: inside ? 'front' : 'back', paint: (pc) => paintRoots(pc, wx + 1, wy + 15, seed ^ 0x99) });
+        addMid({ x: wx, y: wy + 16, w: 18, h: 28, paint: (pc) => paintRoots(pc, wx + 1, wy + 15, seed ^ 0x99) });
       }
     }
   }
   flush();
-  // ---- árvores de fundo (sensação de floresta): troncos altos e copas em tons apagados
+  // ---- árvores de fundo em duas profundidades (a de trás mais clara/enevoada)
   {
     const open = (tx, ty) => map.get(tx, ty) === T.EMPTY;   // nada de árvore dentro de cavernas
-    const tod = data?.timeOfDay || 'day';
     const headroom = (tx, ty, n) => { for (let k = 1; k <= n; k++) if (!open(tx, ty - k)) return false; return true; };
-    let tx = rng.int(2, 6);
-    while (tx < map.cols - 2) {
-      let gy = -1;
-      for (let ty = 2; ty < map.rows; ty++) if (map.get(tx, ty) === T.SOLID && open(tx, ty - 1) && headroom(tx, ty, 4)) { gy = ty; break; }
-      if (gy > 0) {
-        const bx = tx * 16 + 8, by = gy * 16 + 2;
-        const h = rng.int(44, 78), r = rng.int(15, 22), tone = rng() < 0.5 ? 0 : 1;
-        const PAL = {
-          day: [['#1f3f30', '#2a5440', '#36684c', '#4a7e5a'], ['#24402e', '#2f5a38', '#3c6e44', '#548a52']],
-          dusk: [['#2a2440', '#3a3254', '#4a3e62', '#7a5a7a'], ['#2e2a3e', '#40384e', '#52465c', '#8a6070']],
-          night: [['#0e1626', '#152034', '#1c2a42', '#2a3c58'], ['#101a24', '#182632', '#203240', '#30465a']],
-        }[tod] || null;
-        const C = (PAL || [])[tone] || ['#24402e', '#2f5a38', '#3c6e44', '#548a52'];
-        const trunk = tod === 'night' ? ['#141018', '#1e1822'] : tod === 'dusk' ? ['#2a2028', '#3a2c34'] : tone ? ['#3a2c26', '#4a3a30'] : ['#3e2e22', '#52402e'];
-        const blobs = [];
-        for (let i = 0; i < 4; i++) blobs.push([bx + rng.int(-r, r) * 0.7, by - h + rng.int(-6, 8), r * rng.range(0.6, 0.95)]);
-        blobs.push([bx, by - h - 4, r]);
-        out.push({ x: bx - r * 2, y: by - h - r * 2, w: r * 4, h: h + r * 2, layer: 'back', paint(pc) {
-          pc.rect(bx - 3, by - h + 4, 7, h - 4, trunk[0]); pc.rect(bx - 3, by - h + 4, 2, h - 4, trunk[1]);
-          pc.line(bx, by - h * 0.55, bx + 9, by - h * 0.72, trunk[0]); pc.line(bx, by - h * 0.45, bx - 8, by - h * 0.6, trunk[0]);
-          for (const [x, y, rr] of blobs) pc.circle(x + 1, y + 2, rr, C[0]);
-          for (const [x, y, rr] of blobs) pc.circle(x, y, rr - 1, C[1]);
-          for (const [x, y, rr] of blobs) pc.circle(x - rr * 0.25, y - rr * 0.25, rr * 0.6, C[2]);
-          for (const [x, y, rr] of blobs) { pc.px(Math.round(x - rr * 0.4), Math.round(y - rr * 0.5), C[3]); pc.px(Math.round(x - rr * 0.2), Math.round(y - rr * 0.6), C[3]); }
-        } });
+    const PALS = {
+      day: [['#1f3f30', '#2a5440', '#36684c', '#4a7e5a'], ['#24402e', '#2f5a38', '#3c6e44', '#548a52']],
+      dusk: [['#2a2440', '#3a3254', '#4a3e62', '#7a5a7a'], ['#2e2a3e', '#40384e', '#52465c', '#8a6070']],
+      night: [['#0e1626', '#152034', '#1c2a42', '#2a3c58'], ['#101a24', '#182632', '#203240', '#30465a']],
+    };
+    const HAZE = { day: '#9cc4c8', dusk: '#7a5a86', night: '#1c2440' };
+    const PAL = PALS[tod] || PALS.day;
+    var bg = [];
+    const groundAt = (tx) => { for (let ty = 2; ty < map.rows; ty++) if (map.get(tx, ty) === T.SOLID && open(tx, ty - 1) && headroom(tx, ty, 4)) return ty; return -1; };
+    for (const far of [true, false]) {
+      let tx = rng.int(1, 5);
+      while (tx < map.cols - 2) {
+        const gy = groundAt(tx);
+        if (gy > 0) {
+          const bx = tx * 16 + 8 + rng.int(-4, 4), by = gy * 16 + 2;
+          const h = far ? rng.int(70, 110) : rng.int(44, 78), r = far ? rng.int(18, 26) : rng.int(15, 22), tone = rng() < 0.5 ? 0 : 1;
+          const base = PAL[tone];
+          const C = far ? base.map((c) => mix(c, HAZE[tod] || HAZE.day, 0.45)) : base;
+          const trunkBase = tod === 'night' ? ['#141018', '#1e1822'] : tod === 'dusk' ? ['#2a2028', '#3a2c34'] : tone ? ['#3a2c26', '#4a3a30'] : ['#3e2e22', '#52402e'];
+          const trunk = far ? trunkBase.map((c) => mix(c, HAZE[tod] || HAZE.day, 0.4)) : trunkBase;
+          const tw = far ? 5 : 7;
+          const blobs = [];
+          for (let i = 0; i < 4; i++) blobs.push([bx + rng.int(-r, r) * 0.7, by - h + rng.int(-6, 8), r * rng.range(0.6, 0.95)]);
+          blobs.push([bx, by - h - 4, r]);
+          bg.push({ x: bx - r * 2, y: by - h - r * 2, w: r * 4, h: h + r * 2, layer: 'back', paint(pc) {
+            pc.rect(bx - (tw >> 1), by - h + 4, tw, h - 4, trunk[0]); pc.rect(bx - (tw >> 1), by - h + 4, 2, h - 4, trunk[1]);
+            pc.line(bx, by - h * 0.55, bx + 9, by - h * 0.72, trunk[0]); pc.line(bx, by - h * 0.45, bx - 8, by - h * 0.6, trunk[0]);
+            for (const [x, y, rr] of blobs) pc.circle(x + 1, y + 2, rr, C[0]);
+            for (const [x, y, rr] of blobs) pc.circle(x, y, rr - 1, C[1]);
+            for (const [x, y, rr] of blobs) pc.circle(x - rr * 0.25, y - rr * 0.25, rr * 0.6, C[2]);
+            for (const [x, y, rr] of blobs) { pc.px(Math.round(x - rr * 0.4), Math.round(y - rr * 0.5), C[3]); pc.px(Math.round(x - rr * 0.2), Math.round(y - rr * 0.6), C[3]); }
+          } });
+        }
+        tx += far ? rng.int(5, 11) : rng.int(4, 9);
       }
-      tx += rng.int(4, 9);
     }
   }
-  return out;
+  // o bake pinta na ordem do array: árvores de fundo (longe → perto) primeiro,
+  // depois as árvores grandes da fase, e só então arbustos/estacas/grama
+  return [...bg, ...treeDecor, ...out];
 }
 
 // ------------------------------------------------------------------ registro

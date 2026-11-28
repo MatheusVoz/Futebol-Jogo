@@ -145,7 +145,7 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   // --- praia (fim) -----------------------------------------------------------------
   m.fill(312, SURF, W - 1, 17, '#'); m.fill(310, 12, 311, 16, '#');
   m.put(318, 5, 'E');
-  m.obj({ type: 'dyn_dismount', x: 305, y: 0, w: 7, h: 18, hopX: 150 });
+  m.obj({ type: 'dyn_dismount', x: 305, y: 0, w: 7, h: 18, toX: 314, toY: 6 });
   m.obj({ type: 'dyn_turtle', x: 5, y: 6 });
   m.obj({ type: 'dyn_scroller', x: 0, y: 0, mode: 'right', speed: 66, delay: 2.4, stop: 324, zones: [{ col: 112, speed: 60 }, { col: 150, speed: 70 }, { col: 214, speed: 74 }] });
   m.objects.unshift(m.objects.pop());
@@ -234,7 +234,7 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   m.fill(0, 14, W - 1, 15, '#');
   const tower2 = (x, top, w = 2) => m.fill(x, top, x + w - 1, 13, '%');      // pilha de brinquedos/livros do chão
   const hang = (x, bot, w = 2) => m.fill(x, 0, x + w - 1, bot, '%');        // estrado da cama / caixa pendurada
-  m.put(5, 13, 'P');
+  m.put(5, 7, 'P');
   // --- A: céu do pesadelo ---------------------------------------------------------
   m.arc(14, 8, 10, 2); m.line(28, 38, 5, 'o', 2);
   m.put(30, 4, 'a'); m.put(32, 9, 'a'); m.put(34, 6, 'a'); m.put(44, 3, 'a'); m.put(46, 10, 'a');

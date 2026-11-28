@@ -1,8 +1,9 @@
 // =============================================================================
 // player/weapons.js — As duas armas do Tico (troca com o botão TROCAR / Q / Tab):
 //   • 'punch' (Soco): luva de pelúcia, curta, forte e rápida. Combo de 3 golpes,
-//     soco p/ cima e p/ baixo no ar (quica em inimigos). Visual: braço + luva
-//     com onda de impacto e estrela "pow" no ponto do acerto.
+//     soco p/ cima e p/ baixo no ar (quica em inimigos). Visual: braço curto +
+//     luvinha (no sprite 'tico', anims attack*), arco branco de impacto até o
+//     alcance real, linhas de velocidade e estrela "pow" no ponto do acerto.
 //   • 'bow'   (Arco): toque dispara uma flechinha de linha (horizontal, ou p/ cima
 //     segurando ↑), alcance ~220 px, recarga 0.35 s, para em paredes.
 // Projétil: entidade 'player_arrow'. Acerta pela MESMA API do ataque corpo a
@@ -210,64 +211,59 @@ export function punchGeom(p) {
   return { kind, el, total, k, sx: R0(sx), sy: R0(sy), dx, dy, L, ex: R0(sx + dx * L), ey: R0(sy + dy * L) };
 }
 
-/** Desenha braço + luva + onda de impacto do soco (coordenadas de MUNDO). */
+/**
+ * Efeitos do soco (coordenadas de MUNDO). O braço curto + luvinha fazem parte do
+ * próprio sprite do Tico (anims attack*); aqui só desenhamos o alcance: um arco
+ * branco ("swoosh") que corre até o fim da caixa de acerto + 2–3 linhas de velocidade.
+ */
 export function drawPunch(ctx, p) {
   const g = punchGeom(p);
-  if (!g || g.L < 2) return;
-  const { sx, sy, dx, dy, ex, ey } = g;
-  // braço de pelúcia (3 px + contorno)
-  if (dx) {
-    const x0 = Math.min(sx, ex), w = Math.abs(ex - sx) + 1;
-    ctx.fillStyle = OUT; ctx.fillRect(x0, sy - 2, w, 5);
-    ctx.fillStyle = BODY; ctx.fillRect(x0, sy - 1, w, 3);
-    ctx.fillStyle = BODY_L; ctx.fillRect(x0, sy - 1, w, 1);
-  } else {
-    const y0 = Math.min(sy, ey), h = Math.abs(ey - sy) + 1;
-    ctx.fillStyle = OUT; ctx.fillRect(sx - 2, y0, 5, h);
-    ctx.fillStyle = BODY; ctx.fillRect(sx - 1, y0, 3, h);
-    ctx.fillStyle = BODY_L; ctx.fillRect(sx - 1, y0, 1, h);
-  }
-  // linhas de velocidade enquanto o braço estica
-  if (g.el < 0.1) {
+  if (!g) return;
+  const box = p.attackBox?.();
+  const { dx, dy, el } = g;
+  const a0 = ctx.globalAlpha;
+  const big = g.kind === 'side3';
+  // ponto de partida: logo à frente da luvinha (≈ 10 px do corpo)
+  const ox = dx ? R0(p.cx + dx * 14) : R0(p.cx + p.facing * 3);
+  const oy = dy < 0 ? R0(p.y - 4) : dy > 0 ? R0(p.bottom + 4) : R0(p.bottom - (g.kind === 'side2' ? 14 : 12));
+  // linhas de velocidade (2–3) logo no início do golpe
+  if (el < 0.12) {
+    ctx.globalAlpha = a0 * (1 - el / 0.12) * 0.9;
     ctx.fillStyle = '#ffffff';
-    if (dx) { ctx.fillRect(Math.min(ex - dx * 14, ex - dx * 6), sy - 5, 8, 1); ctx.fillRect(Math.min(ex - dx * 18, ex - dx * 9), sy + 4, 9, 1); }
-    else { ctx.fillRect(sx - 5, Math.min(ey - dy * 14, ey - dy * 6), 1, 8); ctx.fillRect(sx + 4, Math.min(ey - dy * 18, ey - dy * 9), 1, 9); }
+    const n = big ? 3 : 2;
+    for (let i = 0; i < n; i++) {
+      const off = (i - (n - 1) / 2) * 5, len = 7 + (i % 2) * 3;
+      const lead = R0(el * 120);
+      if (dx) ctx.fillRect(dx > 0 ? ox - 4 + lead : ox + 4 - lead - len, oy + R0(off), len, 1);
+      else ctx.fillRect(ox + R0(off), dy < 0 ? oy + 4 - lead - len : oy - 4 + lead, 1, len);
+    }
   }
-  // luva
-  const name = dy < 0 ? 'fx_glove_up' : dy > 0 ? 'fx_glove_down' : 'fx_glove';
-  const im = getImage(name);
-  if (im) {
-    const gx = ex + dx * 4 - im.width / 2, gy = ey + dy * 4 - im.height / 2;
-    drawImage(ctx, name, R0(gx), R0(gy), { flip: dx < 0 });
-  }
-  // onda de impacto: um ")" que corre da luva até o fim do alcance real
-  const box = p.attackBox?.() || p._lastPunchBox;
-  if (box && g.el >= 0.03 && g.el <= 0.17) {
-    const t = (g.el - 0.03) / 0.14;
-    ctx.globalAlpha *= 1;
-    const a0 = ctx.globalAlpha;
-    ctx.globalAlpha = a0 * (1 - t) * 0.9;
-    ctx.fillStyle = g.kind === 'side3' ? '#fff0a0' : '#ffffff';
-    const half = R0(7 - t * 2) + (g.kind === 'side3' ? 3 : 0);
+  // arco de impacto ")" correndo até o alcance real
+  if (box && el >= 0.03 && el <= 0.17) {
+    const t = (el - 0.03) / 0.14;
+    ctx.globalAlpha = a0 * (1 - t * 0.8);
+    const half = R0((big ? 10 : 7) - t * 2);
+    const bend = big ? 4 : 3;
+    const cols = big ? ['#fff0a0', '#ffffff'] : ['#ffffff', '#d8f8ff'];
     if (dx) {
-      const far = dx > 0 ? box.x + box.w - 2 : box.x + 2;
-      const start = ex + dx * 8;
-      const cx = R0(start + (far - start) * t), cy = sy;
+      const far = dx > 0 ? box.x + box.w - 3 : box.x + 3;
+      const cx = R0(ox + (far - ox) * t);
       for (let j = -half; j <= half; j++) {
-        const off = R0((1 - (j * j) / (half * half)) * 3);
-        ctx.fillRect(cx + dx * off, cy + j, 1, 1);
+        const off = R0((1 - (j * j) / (half * half)) * bend);
+        ctx.fillStyle = cols[0]; ctx.fillRect(cx + dx * off, oy + j, 1, 1);
+        if (Math.abs(j) < half - 1) { ctx.fillStyle = cols[1]; ctx.fillRect(cx + dx * (off - 1), oy + j, 1, 1); }
       }
     } else {
-      const far = dy < 0 ? box.y + 2 : box.y + box.h - 2;
-      const start = ey + dy * 8;
-      const cy = R0(start + (far - start) * t), cx = sx;
+      const far = dy < 0 ? box.y + 3 : box.y + box.h - 3;
+      const cy = R0(oy + (far - oy) * t);
       for (let j = -half; j <= half; j++) {
-        const off = R0((1 - (j * j) / (half * half)) * 3);
-        ctx.fillRect(cx + j, cy + dy * off, 1, 1);
+        const off = R0((1 - (j * j) / (half * half)) * bend);
+        ctx.fillStyle = cols[0]; ctx.fillRect(ox + j, cy + dy * off, 1, 1);
+        if (Math.abs(j) < half - 1) { ctx.fillStyle = cols[1]; ctx.fillRect(ox + j, cy + dy * (off - 1), 1, 1); }
       }
     }
-    ctx.globalAlpha = a0;
   }
+  ctx.globalAlpha = a0;
 }
 
 /** Estrelas "pow" dos acertos (lista em p.pows: {x,y,t,big}). */

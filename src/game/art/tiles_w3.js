@@ -448,19 +448,21 @@ function drawTerrace(pc, x, y, n, info) {
   for (let lx = 0; lx < 16; lx++) {
     const wx = tx * 16 + lx;
     if (!n.u) { pc.px(x + lx, y, OUT); pc.px(x + lx, y + 1, BRASS.hi); pc.px(x + lx, y + 2, (wx & 7) === 3 ? '#fffbe8' : BRASS.lt); pc.px(x + lx, y + 3, BRASS.md); pc.px(x + lx, y + 4, BRASS.sh); }
+    if (n.d) continue;
     pc.px(x + lx, y + 11, OUT); pc.px(x + lx, y + 12, CREAM.md); pc.px(x + lx, y + 13, CREAM.dk); pc.px(x + lx, y + 14, OUT);
-    if ((wx & 7) < 3) pc.px(x + lx, y + 15, (wx & 7) === 0 ? OUT : CREAM.dk); // mísulas
+    if ((wx & 7) < 3) pc.px(x + lx, y + 15, (wx & 7) === 0 ? OUT : CREAM.dk); else pc.erase(x + lx, y + 15); // mísulas
   }
-  if (!n.l) for (let ly = 0; ly < 15; ly++) { pc.px(x, y + ly, OUT); pc.px(x + 1, y + ly, ly < 5 ? BRASS.hi : STONE[0].hi); }
-  if (!n.r) for (let ly = 0; ly < 15; ly++) { pc.px(x + 15, y + ly, OUT); pc.px(x + 14, y + ly, ly < 5 ? BRASS.dk : STONE[0].dk); }
+  const L = n.d ? 16 : 15;
+  if (!n.l) for (let ly = 0; ly < L; ly++) { pc.px(x, y + ly, OUT); pc.px(x + 1, y + ly, ly < 5 && !n.u ? BRASS.hi : STONE[0].hi); }
+  if (!n.r) for (let ly = 0; ly < L; ly++) { pc.px(x + 15, y + ly, OUT); pc.px(x + 14, y + ly, ly < 5 && !n.u ? BRASS.dk : STONE[0].dk); }
   if (!n.u && !n.l) { pc.erase(x, y); pc.erase(x + 1, y); pc.erase(x, y + 1); pc.px(x + 1, y + 1, OUT); }
   if (!n.u && !n.r) { pc.erase(x + 15, y); pc.erase(x + 14, y); pc.erase(x + 15, y + 1); pc.px(x + 14, y + 1, OUT); }
 }
 function drawMachine(pc, x, y, n, rng, info) {
   const { tx, ty, map } = info;
   const k = { u: altRun(map, tx, ty, 0, -1, 40), d: altRun(map, tx, ty, 0, 1, 40), l: altRun(map, tx, ty, -1, 0, 60), r: altRun(map, tx, ty, 1, 0, 60) };
-  if (k.u + k.d >= 2 && k.l + k.r >= 1) return drawAltBuilding(pc, x, y, n, rng, info, k);
-  if (k.d === 0 && map.get(tx, ty + 1) === T.BG) return drawTerrace(pc, x, y, n, info);
+  if (k.u + k.d >= 2 && (k.l + k.r >= 1 || k.u + k.d >= 3)) return drawAltBuilding(pc, x, y, n, rng, info, k);
+  if ((k.d === 0 && map.get(tx, ty + 1) === T.BG) || (k.u + k.d <= 1 && k.l + k.r >= 2)) return drawTerrace(pc, x, y, n, info);
   const v = h2(tx, ty, 30);
   if (v < 0.42) { // caixa de latão rebitada com travessas em X
     frame(pc, x, y, BRASS);
@@ -1007,6 +1009,23 @@ function clockAnim(face, x, y, mode, ph) {
     ctx.fillStyle = BRASS.hi; ctx.fillRect(Math.round(x + c - 0.5), Math.round(y + c - 0.5), 1, 1);
   };
 }
+/** Varal de bandeirinhas entre dois postes: barbante com barriga + flâmulas que balançam. */
+const FLAGS = ['#e04a6a', '#ffc84a', '#4ab0a0', '#b07ae8', '#ff8a4a', '#f2e2bc'];
+function buntingAnim(ax, ay, bx, by, seed) {
+  const n = Math.max(3, Math.floor((bx - ax) / 9)), sag = Math.min(16, (bx - ax) * 0.12), c0 = seed % FLAGS.length;
+  return (ctx, t) => {
+    const sw = Math.sin(t * 1.3 + seed) * 1.2;
+    ctx.fillStyle = '#3a2a2a';
+    const yAt = (u) => ay + (by - ay) * u + Math.sin(Math.PI * u) * (sag + sw);
+    for (let x = ax; x <= bx; x += 2) ctx.fillRect(x, Math.round(yAt((x - ax) / (bx - ax))), 2, 1);
+    for (let i = 1; i < n; i++) {
+      const u = i / n, fx = Math.round(ax + (bx - ax) * u), fy = Math.round(yAt(u)) + 1;
+      const fl = Math.round(Math.sin(t * 3 + i * 1.7 + seed) * 0.8);
+      ctx.fillStyle = FLAGS[(c0 + i) % FLAGS.length];
+      ctx.fillRect(fx - 2, fy, 5, 2); ctx.fillRect(fx - 1 + fl, fy + 2, 3, 2); ctx.fillRect(fx + fl, fy + 4, 1, 1);
+    }
+  };
+}
 /** Corrente vertical (elos alternados) de um teto até uma plataforma pendurada. */
 function chainAnim(x, y0, len) {
   return (ctx) => {
@@ -1141,7 +1160,7 @@ function decorate(map, rng, data) {
   const clockBand = new Set();
   const roofTops = [];
   for (let ty = 1; ty < map.rows; ty++) {
-    let lastBig = -99, lastPig = -99, lastWall = -99, lastHang = -99, lastPend = -99;
+    let lastBig = -99, lastPig = -99, lastWall = -99, lastHang = -99, lastPend = -99, lampRow = { tx: -99, ty };
     for (let tx = 0; tx < map.cols; tx++) {
       const t = map.get(tx, ty);
       const wx = tx * 16, wy = ty * 16;
@@ -1154,9 +1173,16 @@ function decorate(map, rng, data) {
         const wide = S(tx - 1, ty) && S(tx + 1, ty);
         const r = rng();
         let big = false;
-        if (r < 0.11 && tx - lastBig >= 6 && room(3) && !ledgeL && !ledgeR) { // poste a gás
-          lastBig = tx; big = true;
+        if (r < 0.13 && tx - lastBig >= 5 && room(3) && !ledgeL && !ledgeR) { // poste a gás
           const x = wx + 2, y = wy - 43;
+          // varal de bandeirinhas até o poste anterior (mesma rua, sem obstáculo no meio)
+          if (lampRow.ty === ty && tx - lampRow.tx >= 4 && tx - lampRow.tx <= 11) {
+            let ok = true;
+            for (let k = lampRow.tx; k <= tx && ok; k++) { if (!solidLike(map.get(k, ty))) ok = false; for (let j = 1; j <= 3; j++) if (!emptyish(k, ty - j)) ok = false; }
+            if (ok) { const ax = lampRow.tx * 16 + 8, bx = x + 6, by = y + 5; add({ x: ax - 2, y: by - 2, w: bx - ax + 4, h: 24, layer: 'mid', anim: buntingAnim(ax, by, bx, by, seed) }); }
+          }
+          lampRow = { tx, ty };
+          lastBig = tx; big = true;
           blitAt(SPR.lamp, x, y);
           add({ x: x + 4, y: y + 4, w: 5, h: 6, layer: 'back', anim: lampAnim(x + 4, y + 4, rng() * 9), light: { r: 58, color: '#ffb84f', i: 0.8, flicker: 0.35 } });
         } else if (r < 0.12 && tx - lastBig >= 5 && room(3) && !ledgeL && !ledgeR) { // relógio de pêndulo

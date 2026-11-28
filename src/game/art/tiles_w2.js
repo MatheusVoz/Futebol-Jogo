@@ -716,15 +716,38 @@ export function w2WaterInfo(map, rows) {
     }
     return alt > sol ? 2 : 1;
   };
+  // coluna aberta para o céu (nada sólido/parede acima; bolhas não contam). Sob uma
+  // saliência, só fica "coberto" quem está a 3+ tiles da borda aberta mais próxima
+  // (bordas finas continuam mostrando o fundo; cavernas/túneis/porões ganham parede).
+  const openCol = new Uint8Array(N);
   for (let x = 0; x < C; x++) {
-    let covered = false;
     for (let y = 0; y < R; y++) {
       const i = y * C + x, t = map.data[i];
-      if (solidish(t)) { covered = true; continue; }
-      if (t === T.BG) { covered = true; cover[i] = styleAt(x, y); continue; }
-      if (t === T.WATER && regions[reg[i]].bubble) { covered = false; continue; }
-      if (isThin(t) && !covered) continue;
-      if (covered && (t === T.WATER || t === T.EMPTY || isThin(t))) cover[i] = styleAt(x, y);
+      if (solidish(t) || t === T.BG) break;
+      openCol[i] = 1;
+    }
+  }
+  const INF = 255, hd = new Uint8Array(N);
+  for (let y = 0; y < R; y++) {
+    let d = INF;
+    for (let x = 0; x < C; x++) {
+      const i = y * C + x, t = map.data[i];
+      if (solidish(t) || t === T.BG) { d = INF; hd[i] = INF; continue; }
+      d = openCol[i] ? 0 : Math.min(INF, d + 1); hd[i] = d;
+    }
+    d = INF;
+    for (let x = C - 1; x >= 0; x--) {
+      const i = y * C + x, t = map.data[i];
+      if (solidish(t) || t === T.BG) { d = INF; continue; }
+      d = openCol[i] ? 0 : Math.min(INF, d + 1); if (d < hd[i]) hd[i] = d;
+    }
+  }
+  for (let i = 0; i < N; i++) {
+    const t = map.data[i];
+    if (t === T.BG) cover[i] = styleAt(i % C, (i / C) | 0);
+    else if ((t === T.WATER || t === T.EMPTY || isThin(t)) && !openCol[i] && hd[i] >= 3) {
+      if (t === T.WATER && regions[reg[i]].bubble) continue;
+      cover[i] = styleAt(i % C, (i / C) | 0);
     }
   }
   // --- linha do mar: linha de superfície mais comum entre regiões grandes não flutuantes

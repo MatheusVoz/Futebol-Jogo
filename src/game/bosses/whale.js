@@ -958,15 +958,19 @@ class WhaleBoss extends Enemy {
       fillEllipse(ctx, this.cx, AFLOOR - 2, rx, 3, shadowCol(0.3 + 0.45 * k));
       // contorno rosa piscando: legível mesmo no fundo escuro
       ctx.fillStyle = Math.floor(st * 12) % 2 ? 'rgba(255,150,175,0.9)' : 'rgba(255,220,230,0.6)';
-      for (let i = 0; i < 28; i++) { const a = (i / 28) * Math.PI * 2; ctx.fillRect(Rn(this.cx + Math.cos(a) * (rx + 2)), Rn(AFLOOR - 2 + Math.sin(a) * 4), 2, 1); }
+      for (let i = 0; i < 32; i++) { const a = (i / 32) * Math.PI * 2; ctx.fillRect(Rn(this.cx + Math.cos(a) * (rx + 2)), Rn(AFLOOR - 4 + Math.sin(a) * 5), 2, 2); }
+      if (s !== 'rise') {                    // coluna de perigo (zona da barriga)
+        ctx.fillStyle = `rgba(255,120,150,${0.05 + 0.1 * k})`;
+        ctx.fillRect(Rn(this.cx - 54), Rn(this.bottom), 108, Math.max(0, AFLOOR - Rn(this.bottom)));
+      }
       if (s === 'slamwind') {
         const blink = Math.floor(st * 12) % 2 === 0;
         ctx.fillStyle = blink ? 'rgba(255,150,175,0.8)' : 'rgba(255,150,175,0.4)';
         for (let y = Rn(this.bottom + 4); y < AFLOOR - 4; y += 6) { ctx.fillRect(Rn(this.cx - 54), y, 1, 3); ctx.fillRect(Rn(this.cx + 54), y, 1, 3); }
         // setas para baixo no chão
         for (const dx of [-30, 0, 30]) {
-          const x = Rn(this.cx + dx), y = AFLOOR - 10 - (blink ? 2 : 0);
-          ctx.fillRect(x - 2, y, 5, 1); ctx.fillRect(x - 1, y + 1, 3, 1); ctx.fillRect(x, y + 2, 1, 1);
+          const x = Rn(this.cx + dx), y = AFLOOR - 22 - (blink ? 3 : 0);
+          ctx.fillRect(x - 1, y - 4, 3, 4); ctx.fillRect(x - 4, y, 9, 1); ctx.fillRect(x - 3, y + 1, 7, 1); ctx.fillRect(x - 2, y + 2, 5, 1); ctx.fillRect(x - 1, y + 3, 3, 1); ctx.fillRect(x, y + 4, 1, 1);
         }
       }
     }

@@ -85,7 +85,8 @@ const BASE = {
   spikes: 0, wig: 0,     // espinhos eriçados / balanço dos espinhos
   glow: 0, stuff: 0, tear: 0,
   rot: 0, flip: false, rox: 0, roy: 0, // transformação do boneco inteiro
-  whip: null,            // { to:[x,y], c:[x,y]?, amp, k, ph } (coords do quadro)
+  whip: null,            // { to:[x,y], c:[x,y]?, amp, k, ph } (coords do quadro) — não usado pelos socos
+  fist: false,           // patinha fechada com luvinha de pelúcia (socos)
   fx: null,              // efeitos: [{k:'smear'|'spark'|'z'|'drop'|'orb'|'speed'|'dots'|'aura'|'ring', ...}]
 };
 const K = (o) => Object.assign({}, BASE, o);
@@ -436,7 +437,22 @@ function drawTicoPose(pc, p) {
 
   // ---- braço da frente (patinha)
   drawArm(V, pc, g.S.x, g.S.y, p.arm, TB, p.armLen);
+  if (p.fist) drawFist(V, pc, g.paw.x + Math.cos(p.arm) * 0.5, g.paw.y + Math.sin(p.arm) * 0.5, p.arm);
   return g;
+}
+
+/** Luvinha de pelúcia (rosa, punho amarelo) na ponta do braço curto. */
+function drawFist(V, pc, x, y, ang) {
+  const q = V.pt(x, y), cx = q.x, cy = q.y;
+  const ux = Math.cos(ang), uy = Math.sin(ang);
+  // punho (atrás da luva)
+  pc.circle(cx - ux * 2.2, cy - uy * 2.2, 1.6, C.goldD);
+  pc.circle(cx - ux * 2.2 - 0.4, cy - uy * 2.2 - 0.4, 1.1, C.gold);
+  pc.circle(cx, cy, 2.9, '#c23a5c');
+  pc.circle(cx - 0.4, cy - 0.4, 2.4, '#ff5c84');
+  pc.px(Math.round(cx - 1.4), Math.round(cy - 1.6), '#ffa8c0');
+  pc.px(Math.round(cx - 0.4), Math.round(cy - 1.9), '#ffa8c0');
+  pc.px(Math.round(cx - 1.8), Math.round(cy - 0.7), '#ffffff');
 }
 
 // ------------------------------------------------------------------ efeitos
@@ -560,118 +576,46 @@ function poseFor(anim, f, n) {
       return K({ sq: [1.5, 0.6, -0.15][f], hy: [2, 1, -0.5][f], tail: [-0.3, -0.1, 0.1][f], arm: [1.0, 0.8, 0.5][f],
         eye: f === 0 ? 'closed' : 'open', mouth: f === 0 ? 'line' : 'smile', spikes: f === 0 ? -0.3 : 0 });
 
-    case 'attack1': {
+    // ---- SOCOS (Soco do Tico): braço CURTO à frente com luvinha de pelúcia junto ao
+    // peito/focinho; o alcance é mostrado por um arco branco ("swoosh") e linhas de
+    // velocidade. Nada de fio/chicote longo.
+    case 'attack1': case 'attack2': case 'attack3': {
+      const big = anim === 'attack3';
+      const hi = anim === 'attack2' ? -1 : 0;              // 2º golpe um tico mais alto
+      const ang = anim === 'attack2' ? -0.4 : -0.12;
+      const last = n - 1;
       if (f === 0) {
-        const o = { bx: -1, hx: -2, tilt: -0.15, arm: -2.3, sq: 0.3, eye: 'det', mouth: 'flat', tail: 0.3 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x - 6, pw.y + 2], c: [pw.x - 6, pw.y - 5], amp: 0 } }));
+        return K({ sq: big ? 0.9 : 0.35, bx: -1.2, hx: -1.8, hy: hi, tilt: -0.12, arm: 2.5, armLen: 3.4, fist: true,
+          eye: 'det', mouth: 'flat', tail: 0.35, spikes: big ? 0.8 : 0.3, wig: big ? 1 : 0 });
       }
-      if (f === 1) {
-        const o = { bx: 1.5, hx: 2.5, tilt: 0.12, arm: -0.05, sq: -0.2, lf: [2, 0], lb: [-2, 0], eye: 'det', mouth: 'open', spikes: 0.4 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [47, pw.y - 1], c: [38, pw.y - 4], amp: 0 },
-          fx: [{ k: 'smear', x: pw.x - 4, y: pw.y + 2, r: 18, a0: -1.0, a1: -0.12, th: 3 }, { k: 'spark', x: 46, y: pw.y - 1, s: 2 }] }));
+      if (f === last) {
+        return K({ bx: 0.4, hx: 0.6, hy: hi, arm: 0.3, armLen: 3.8, fist: true, eye: 'open', mouth: 'smile', spikes: big ? 0.3 : 0 });
       }
-      if (f === 2) {
-        const o = { bx: 1, hx: 2, tilt: 0.08, arm: 0.05, lf: [2, 0], lb: [-2, 0], eye: 'det', mouth: 'smile' };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [47, pw.y + 1], amp: 1.3, k: 3, ph: 0 },
-          fx: [{ k: 'smear', x: pw.x - 4, y: pw.y + 2, r: 18, a0: -0.6, a1: -0.1, th: 2 }, { k: 'spark', x: 46, y: pw.y + 1, s: 1 }] }));
-      }
-      {
-        const o = { bx: 0, hx: 0.5, arm: 0.45, eye: 'open', mouth: 'smile' };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x + 9, pw.y + 3], c: [pw.x + 6, pw.y - 3], amp: 0.6, k: 2 } }));
-      }
-    }
-    case 'attack2': {
-      if (f === 0) {
-        const o = { bx: -0.5, hx: -1, hy: -1, tilt: -0.22, arm: -1.7, sq: -0.2, eye: 'det', mouth: 'flat', tail: 0.4 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x - 5, pw.y - 7], c: [pw.x + 2, pw.y - 8] } }));
-      }
-      if (f === 1) {
-        const o = { bx: 1.5, hx: 2.5, hy: 1, tilt: 0.2, arm: 0.5, sq: 0.25, lf: [2.5, 0], lb: [-2, 0], eye: 'det', mouth: 'open', spikes: 0.4 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [47, 37], c: [42, pw.y - 3] },
-          fx: [{ k: 'smear', x: pw.x, y: pw.y, r: 14, a0: -1.0, a1: 0.45, th: 3 }, { k: 'spark', x: 46, y: 36, s: 2 }] }));
-      }
-      if (f === 2) {
-        const o = { bx: 1, hx: 2, hy: 1, tilt: 0.12, arm: 0.45, sq: 0.15, lf: [2.5, 0], lb: [-2, 0], eye: 'det', mouth: 'smile' };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [47, 35], amp: 1.2, k: 3, ph: 1 },
-          fx: [{ k: 'smear', x: pw.x, y: pw.y, r: 14, a0: -0.9, a1: 0.4, th: 2 }, { k: 'spark', x: 46, y: 35, s: 1 }] }));
-      }
-      {
-        const o = { hx: 0.5, arm: 0.6, eye: 'open', mouth: 'smile' };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x + 8, pw.y + 4], c: [pw.x + 5, pw.y - 2], amp: 0.5, k: 2 } }));
-      }
-    }
-    case 'attack3': {
-      if (f === 0) {
-        const o = { sq: 0.9, bx: -1.5, hx: -2, hy: 1, tilt: -0.1, arm: -2.6, eye: 'det', mouth: 'flat', spikes: 0.8, tail: 0.4, wig: 1 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x - 4, pw.y + 6], c: [pw.x - 9, pw.y - 3], amp: 0.8, k: 2 } }));
-      }
-      if (f === 1) {
-        return K({ flip: true, sq: -0.2, by: -1, arm: -0.9, eye: 'det', mouth: 'open', spikes: 1, tail: 0.5, lf: [1, 1], lb: [-1, 1.5],
-          fx: [{ k: 'ring', x: 24, y: 26, r: 16, a0: -0.6, a1: 3.8 }, { k: 'ring', x: 24, y: 26, r: 12, a0: 0.2, a1: 3.6 },
-            { k: 'spark', x: 8, y: 26, s: 2 }] });
-      }
-      if (f === 2) {
-        const o = { bx: 2, hx: 3, tilt: 0.12, arm: -0.05, sq: -0.3, lf: [3, 0], lb: [-2.5, 0], eye: 'det', mouth: 'grin', spikes: 1, wig: -1 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [47, pw.y - 2], c: [40, pw.y - 6], amp: 0 },
-          fx: [{ k: 'ring', x: 24, y: 26, r: 17, a0: 1.6, a1: TAU - 0.15 }, { k: 'smear', x: pw.x - 4, y: pw.y + 2, r: 18, a0: -1.05, a1: -0.12, th: 3 },
-            { k: 'spark', x: 46, y: pw.y - 2, s: 3 }, { k: 'spark', x: 40, y: pw.y - 8, s: 1 }] }));
-      }
-      if (f === 3) {
-        const o = { bx: 1.5, hx: 2.5, tilt: 0.06, arm: 0.05, sq: -0.1, lf: [3, 0], lb: [-2.5, 0], eye: 'det', mouth: 'smile', spikes: 0.6 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [47, pw.y], amp: 1.6, k: 4, ph: 0.5 },
-          fx: [{ k: 'smear', x: pw.x - 4, y: pw.y + 2, r: 18, a0: -0.6, a1: -0.1, th: 2 }, { k: 'spark', x: 45, y: pw.y - 3, s: 2 }, { k: 'spark', x: 38, y: pw.y + 4, s: 1 }] }));
-      }
-      {
-        const o = { bx: 0.5, hx: 1, arm: 0.5, eye: 'open', mouth: 'smile', spikes: 0.2 };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x + 10, pw.y + 4], c: [pw.x + 7, pw.y - 3], amp: 0.7, k: 2 } }));
-      }
+      const strike = f === 1 || (big && f === 2);
+      const o = { sq: strike ? -0.25 : -0.1, bx: big ? 2.4 : 1.8, hx: big ? 3.2 : 2.5, hy: hi, tilt: 0.12,
+        arm: ang, armLen: big ? 5.2 : 4.8, arm2: 2.6, fist: true, lf: [big ? 3 : 2.2, 0], lb: [-2.2, 0],
+        eye: 'det', mouth: strike ? (big ? 'grin' : 'open') : 'smile', spikes: big ? 1 : 0.4, tail: 0.2 };
+      const pw = pawOf(o);
+      const fx = [{ k: 'smear', x: pw.x - 1, y: pw.y, r: strike ? 6.5 : 5, a0: -0.95, a1: 0.95, th: strike ? 3 : 2 }];
+      if (strike) fx.push({ k: 'speed' });
+      if (big && f === 2) fx.push({ k: 'spark', x: pw.x + 5, y: pw.y - 3, s: 2 });
+      return K(Object.assign(o, { fx }));
     }
     case 'attack_up': {
-      if (f === 0) {
-        const o = { sq: 0.5, hx: -2, tilt: -0.35, arm: 0.6, eye: 'det', mouth: 'flat', look: [0, -1] };
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x + 4, pw.y + 5], c: [pw.x + 4, pw.y], amp: 0 } }));
-      }
-      const o = [null,
-        { sq: -0.5, hx: -3, hy: 0, tilt: -0.5, arm: -1.45, eye: 'det', mouth: 'open', spikes: 0.5, look: [0, -1] },
-        { sq: -0.3, hx: -3, tilt: -0.45, arm: -1.4, eye: 'det', mouth: 'smile', look: [0, -1] },
-        { sq: 0, hx: -1, tilt: -0.2, arm: -0.6, eye: 'open', mouth: 'smile' }][f];
+      if (f === 0) return K({ sq: 0.55, hx: -1.5, tilt: -0.3, arm: 0.9, armLen: 3.4, fist: true, eye: 'det', mouth: 'flat', look: [0, -1] });
+      if (f === 3) return K({ sq: 0, hx: -1, tilt: -0.2, arm: -0.6, armLen: 3.8, fist: true, eye: 'open', mouth: 'smile' });
+      const o = { sq: f === 1 ? -0.55 : -0.35, by: -1, hx: -3, tilt: -0.5, arm: -1.45, armLen: 4.8, fist: true,
+        eye: 'det', mouth: f === 1 ? 'open' : 'smile', spikes: 0.5, look: [0, -1] };
       const pw = pawOf(o);
-      if (f === 1) return K(Object.assign(o, { whip: { to: [pw.x + 6, 0], c: [pw.x + 14, pw.y - 8] },
-        fx: [{ k: 'smear', x: pw.x + 2, y: pw.y, r: 15, a0: -0.2, a1: -1.5, th: 3 }, { k: 'spark', x: pw.x + 6, y: 1, s: 2 }] }));
-      if (f === 2) return K(Object.assign(o, { whip: { to: [pw.x + 4, 0], c: [pw.x + 10, pw.y - 10], amp: 1.2, k: 3 },
-        fx: [{ k: 'smear', x: pw.x + 2, y: pw.y, r: 15, a0: -0.5, a1: -1.5, th: 2 }, { k: 'spark', x: pw.x + 4, y: 1, s: 1 }] }));
-      return K(Object.assign(o, { whip: { to: [pw.x + 9, pw.y - 4], c: [pw.x + 6, pw.y - 9], amp: 0.6, k: 2 } }));
+      return K(Object.assign(o, { fx: [{ k: 'smear', x: pw.x, y: pw.y + 1, r: f === 1 ? 6.5 : 5, a0: -2.5, a1: -0.65, th: f === 1 ? 3 : 2 }] }));
     }
     case 'attack_down': {
-      const base = { by: -5, fy: -4, tilt: 0.45, look: [0, 1], lf: [2, 0.5], lb: [-1, 1], tail: 0.5, spikes: 0.4 };
-      if (f === 0) {
-        const o = Object.assign({}, base, { arm: -1.4, eye: 'det', mouth: 'flat', sq: -0.2 });
-        const pw = pawOf(o);
-        return K(Object.assign(o, { whip: { to: [pw.x - 3, pw.y - 6], c: [pw.x + 3, pw.y - 7] } }));
-      }
-      const o = Object.assign({}, base, [null,
-        { arm: 1.2, eye: 'det', mouth: 'open', sq: 0.2, hx: 1, hy: 1 },
-        { arm: 1.15, eye: 'det', mouth: 'smile', sq: 0.1, hx: 1, hy: 1 },
-        { arm: 0.6, eye: 'open', mouth: 'smile' }][f]);
+      const base = { by: -5, fy: -4, tilt: 0.45, look: [0, 1], lf: [2, 0.5], lb: [-1, 1], tail: 0.5, spikes: 0.4, fist: true };
+      if (f === 0) return K(Object.assign({}, base, { arm: -1.3, armLen: 3.4, eye: 'det', mouth: 'flat', sq: -0.2 }));
+      if (f === 3) return K(Object.assign({}, base, { arm: 0.6, armLen: 3.8, eye: 'open', mouth: 'smile' }));
+      const o = Object.assign({}, base, { arm: 1.35, armLen: 4.8, eye: 'det', mouth: f === 1 ? 'open' : 'smile', sq: 0.2, hx: 1, hy: 1 });
       const pw = pawOf(o);
-      if (f === 1) return K(Object.assign(o, { whip: { to: [pw.x + 2, 39], c: [pw.x + 9, pw.y + 5] },
-        fx: [{ k: 'smear', x: pw.x, y: pw.y, r: 11, a0: 0.1, a1: 1.45, th: 3 }, { k: 'spark', x: pw.x + 2, y: 38, s: 2 }] }));
-      if (f === 2) return K(Object.assign(o, { whip: { to: [pw.x + 1, 39], c: [pw.x + 5, pw.y + 6], amp: 1, k: 3 },
-        fx: [{ k: 'spark', x: pw.x + 1, y: 38, s: 1 }] }));
-      return K(Object.assign(o, { whip: { to: [pw.x + 7, pw.y + 6], c: [pw.x + 7, pw.y], amp: 0.5, k: 2 } }));
+      return K(Object.assign(o, { fx: [{ k: 'smear', x: pw.x, y: pw.y - 1, r: f === 1 ? 6.5 : 5, a0: 0.65, a1: 2.5, th: f === 1 ? 3 : 2 }] }));
     }
     case 'charge': {
       const sh = f % 2 ? 0.5 : -0.5;

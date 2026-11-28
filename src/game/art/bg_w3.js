@@ -523,6 +523,7 @@ const layers = [
       }
     },
     animate(ctx, cam, t, w, h, y) {
+      fallingHands(ctx, cam, t, w, h);
       const P = PAL[activeTod].near;
       if (P.winN < 0.3) return;
       ctx.fillStyle = P.win;
@@ -542,6 +543,20 @@ const layers = [
 ];
 const farFrags = fragments(10, 4401, 0.06, 20, 150, 0.55);
 const midFrags = fragments(8, 4402, 0.22, 10, 150, 1);
+
+// ponteiros de relógio soltos caindo devagar entre os prédios, girando
+function fallingHands(ctx, cam, t, w, h) {
+  const C = PAL[activeTod].ck;
+  for (let i = 0; i < 5; i++) {
+    const per = 11 + i * 2.3, k = fr(t / per + i * 0.37);
+    const x = mod(i * 113 + 37 - cam.x * 0.62 + Math.sin(t * 0.7 + i) * 10, w + 60) - 30;
+    const yy = -24 + k * (h + 48);
+    const a = t * (0.9 + i * 0.35) + i * 2, len = 8 + (i % 3) * 3;
+    hand(ctx, x, yy, a, len, 2, C.hand, C.handA * 0.85);
+    hand(ctx, x, yy, a + Math.PI, 3, 2, C.hand, C.handA * 0.85);
+  }
+  ctx.globalAlpha = 1;
+}
 
 // revoada de pássaros atravessando o céu de tempos em tempos
 function flock(ctx, cam, t, w, h, y) {

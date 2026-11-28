@@ -134,7 +134,7 @@ import { grid, hideRoom, spikePit } from './w1_a.js';
   // --- sala 3: corrente de ilhós (2 pontes) ou molas no fosso -----------------
   m.ground(91, 104, 27); m.fill(91, 26, 104, 26, '^');
   m.put(96, 26, 'J'); m.put(102, 26, 'J');
-  m.put(90, 21, '@'); m.fill(99, 20, 100, 25, '%'); m.put(99, 19, '@'); m.put(108, 21, '@');  // torre de blocos no fosso
+  m.put(90, 21, '@'); m.fill(99, 20, 100, 26, '%'); m.put(99, 19, '@'); m.put(108, 21, '@');  // torre de blocos no fosso
   m.arc(91, 19, 8, 1);
   m.ground(105, 123, 22);
   // --- sala 4: torre de molas -----------------------------------------------------

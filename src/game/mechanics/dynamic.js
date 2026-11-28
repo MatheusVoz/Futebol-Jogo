@@ -762,11 +762,29 @@ class Vehicle extends Entity {
     p.oxygen = 1;
     if (!silent) { audio.sfx('spring', { pitch: 1.2 }); L.particles.emit('sparkle', this.cx, this.cy, 12); }
   }
-  dismount(hopX = 0) {
+  dismount(hopX = 0, to = null) {
     const L = this.level, p = L.player;
     if (!this.mounted) return;
     this.mounted = false; this.leaving = true; this.leaveT = 0;
     if (L.scroller?.vehicle === this) L.scroller.vehicle = null;
+    if (p.state !== 'dead' && to) {
+      // salto guiado até terra firme (não cai na água)
+      p.cutsceneAnim = 'jump';
+      const sx = p.x, sy = p.y, tx = to.x - p.w / 2, ty = to.y - p.h;
+      audio.sfx('jump');
+      L.tasks.run(function* () {
+        for (let k = 0; k < 1; k += 1 / 40) {
+          if (p.state === 'dead') return;
+          p.state = 'frozen'; p.cutsceneAnim = k < 0.5 ? 'jump' : 'fall';
+          p.x = sx + (tx - sx) * k; p.y = sy + (ty - sy) * k - Math.sin(k * Math.PI) * 56; p.vx = 0; p.vy = 0;
+          yield 0;
+        }
+        p.x = tx; p.y = ty; p.vx = 0; p.vy = 0;
+        p.state = 'normal'; p.cutsceneAnim = null;
+        L.particles.emit('dust', p.cx, p.bottom, 6);
+      });
+      return;
+    }
     if (p.state !== 'dead') {
       p.state = 'normal'; p.cutsceneAnim = null;
       p.vy = -360; p.vx = hopX; p.jumping = true; p.grounded = false;
@@ -980,7 +998,7 @@ class Flyer extends Vehicle {
     super(l, x, y, p);
     this.skin = p.skin || 'plane';
     this.dir = p.dir || 'right';
-    if (this.skin === 'plane') { this.w = 40; this.h = 14; this.seatOX = -6; this.seatOY = 2; }
+    if (this.skin === 'plane') { this.w = 40; this.h = 14; this.seatOX = -6; this.seatOY = 8; }
     else { this.w = 38; this.h = 10; this.seatOX = 0; this.seatOY = 0; }
     this.riderAnim = this.dir === 'up' ? 'look_up' : 'idle';
     this.dodgeT = 0; this.dodgeCd = 0; this.trail = [];
@@ -1057,7 +1075,7 @@ registerEntity('dyn_dismount', class extends Entity {
   constructor(l, x, y, p = {}) { super(l, x, y, p); this.w = (p.w || 4) * TILE; this.h = (p.h || 6) * TILE; this.alwaysUpdate = true; }
   update() {
     const v = this.level.scroller?.vehicle;
-    if (v && v.mounted && rectsOverlap(v, this)) v.dismount(this.props.hopX ?? 0);
+    if (v && v.mounted && rectsOverlap(v, this)) v.dismount(this.props.hopX ?? 0, this.props.toX != null ? { x: this.props.toX * TILE + 8, y: this.props.toY * TILE } : null);
   }
 });
 
