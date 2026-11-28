@@ -299,7 +299,7 @@ function airMid(tod) {
     const cx = 90 + i * 200 + r.int(-40, 40), cy = r.int(26, 70), hw = r.int(16, 32), hh = r.int(14, 26);
     wrap(W, (o) => {
       pc.ellipse(cx + o, cy, hw, 4, A.islL);
-      for (let x = -hw; x <= hw; x++) { const d = Math.round(hh * (1 - Math.abs(x / hw) ** 1.6)); pc.vline(cx + x + o, cy, Math.max(1, d), A.isl); }
+      for (let x = -hw; x <= hw; x++) { const k = Math.sqrt(Math.max(0, 1 - (x / hw) ** 2)); const d = Math.round(hh * k * (0.55 + 0.25 * Math.sin(x * 0.7 + cx) + 0.2 * Math.sin(x * 1.9))); pc.vline(cx + x + o, cy, Math.max(1, d), A.isl); }
       for (let k = 0; k < 4; k++) { const rx = cx + o + r.int(-hw + 4, hw - 4); pc.vline(rx, cy + 4, r.int(6, 14), A.islD); }
       pc.rect(cx - hw + 3 + o, cy - 2, hw * 2 - 6, 2, A.islL);
     });

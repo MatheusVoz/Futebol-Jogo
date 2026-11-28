@@ -181,14 +181,14 @@ import { hideRoom } from './w1_a.js';
   m.ground(208, 214, 12);
   m.put(211, 11, 'o');
   wblock(m, 215, 10, 3, 3, { dy: -6, speed: 20, pause: 1.4 });
-  m.plat(218, 222, 5, '#'); m.fill(220, 6, 222, 21, '#');         // saliência no alto de um pilar
+  m.plat(218, 221, 5, '#'); m.fill(218, 6, 219, 21, '#');         // saliência no alto de um pilar
   m.put(221, 4, '*'); marujo(m, 219, 4);                          // ★3 + marujo 2/3
   // --- G: descida, barquinho no lago e saída ------------------------------------
-  m.ground(217, 222, 22); m.put(218, 21, 'K'); m.put(219, 21, 'h');
+  m.ground(217, 222, 22); m.put(220, 21, 'K'); m.put(221, 21, 'h');
   m.put(223, 29, 'p', { dx: 18, w: 3, speed: 26, pause: 0.8 });
   m.put(228, 31, 'f'); m.put(238, 31, 'f');
   m.arc(224, 26, 20, 2);
-  m.ground(247, 259, 24); shelves(244, 246, [28]);
+  m.ground(247, 259, 24); shelves(244, 246, [28, 25]);
   m.put(250, 23, 'g'); m.put(256, 23, 'E');
 
   registerLevel({

@@ -124,7 +124,7 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   spikesFloor(118, 148);
   m.put(122, 13, 'b'); m.put(129, 12, 'b', { dy: 1.5 }); m.put(136, 14, 'b'); m.put(142, 12, 'b', { dy: 1.5 });
   m.line(120, 146, 12, 'o', 3);
-  m.clear(131, 7, 135, 9); m.fill(131, 7, 135, 9, '~'); m.put(133, 8, '*');   // ★2 num bolsão no teto
+  m.fill(131, 7, 135, 10, '~'); m.put(133, 8, '*');   // ★2 num bolsão no teto
   m.put(147, 13, 'a');
   // --- D: pilares e gaivotas -------------------------------------------------------
   rock(158, 10, 3); isle(166, 8, 3); rock(174, 9, 3); isle(182, 9, 3); rock(190, 6, 2);

@@ -168,6 +168,15 @@ function hangAlgae(pc, x, y, tx, ty, s) {
 const sandTop = (wx) => clamp(4 + Math.round(1.3 * Math.sin(wx * 0.23) + 0.9 * Math.sin(wx * 0.071 + 1.7)), 3, 6);
 
 function drawSeabed(pc, x, y, n0, rng, info) {
+  // parede falsa dentro do navio: desenha casco (não denuncia o segredo com pedra azul)
+  if (info.type === T.FAKE) {
+    let alt = 0, sol = 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) for (let k = 1; k < 8; k++) {
+      const t = info.map.get(info.tx + dx * k, info.ty + dy * k);
+      if (t === T.ALT) { alt++; break; } if (t === T.SOLID) { sol++; break; }
+    }
+    if (alt > sol) return drawHull(pc, x, y, n0, rng, info);
+  }
   const { tx, ty, map } = info;
   const n = ty >= map.rows - 1 ? { ...n0, d: true, dl: true, dr: true } : n0;
   const lev = depthMap(n, info);
@@ -1515,14 +1524,22 @@ function decorate(map, rng, data) {
           const x = wx + rng.int(0, 16 - spr.w), y = wy - spr.h + (k < 0.45 ? 1 : 3);
           out.push({ x, y, w: spr.w, h: spr.h, layer, paint: (pc) => pc.blit(spr, x, y, { flipX: flip }) });
         }
+        // tufo extra de coral/esponja no leito submerso (cenário mais vivo)
+        if (wet && rm >= 2 && !isHull && rng() < 0.2) {
+          const c = SPR.corals[3 + rng.int(0, SPR.corals.length - 4)];
+          const flip = rng() < 0.5;
+          const x = wx + rng.int(-4, 12) - (c.pc.w >> 2), y = wy - c.pc.h + c.sink;
+          out.push({ x, y, w: c.pc.w, h: c.pc.h, layer: 'back', paint: (pc) => pc.blit(c.pc, x, y, { flipX: flip }) });
+        }
         // cardume que dispara
-        if (rm >= 4 && tx - lastFish > 12 && rng() < 0.14) {
+        let wrm = 0; while (wrm < 8 && map.get(tx, ty - 1 - wrm) === T.WATER) wrm++;
+        if (wet && wrm >= 4 && tx - lastFish > 8 && rng() < 0.3) {
           lastFish = tx;
-          const x0 = wx + 8, y0 = wy - 16 * rng.int(2, rm - 1);
+          const x0 = wx + 8, y0 = wy - 16 * rng.int(2, wrm - 1);
           out.push({ x: x0 - 34, y: y0 - 10, w: 70, h: 22, layer: 'back', anim: fishAnim(x0, y0, rng.int(3, 6), rng.int(0, SPR.fish.length - 1), rng() * 10, 44) });
         }
         // bolhinhas subindo do leito submerso
-        if (wet && rng() < 0.08) {
+        if (wet && rng() < 0.13) {
           const sp = room(tx, ty, 8) * 16;
           out.push({ x: wx + 4, y: wy - sp, w: 8, h: sp, layer: 'back', anim: bubbleCol(wx + rng.int(3, 11), wy - 4, sp - 8, rng()) });
         }

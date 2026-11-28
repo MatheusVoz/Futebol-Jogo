@@ -68,6 +68,11 @@ function ruleLines(pc, x0, y0, x1, y1, step, c) {
   for (let y = y0; y <= y1; y += step) for (let x = x0; x <= x1; x++) if (pc.alphaAt(x, y) > 0) pc.px(x, y, c);
 }
 const worldOf = (level) => level?.data?.world || 1;
+/** Disco em pixels inteiros (sem anti-aliasing). */
+function discPx(ctx, cx, cy, r, color) {
+  ctx.fillStyle = color;
+  for (let dy = -r; dy <= r; dy++) { const hw = Math.floor(Math.sqrt(r * r - dy * dy)); ctx.fillRect(Rn(cx - hw), Rn(cy + dy), hw * 2 + 1, 1); }
+}
 
 // =============================================================================
 // ARTE — veículos
@@ -1434,9 +1439,8 @@ registerEntity('dyn_decor', class extends Entity {
       }
       case 'clockface': {         // mostrador gigante na parede da torre
         const R = (this.props.r || 3) * TILE;
-        ctx.fillStyle = '#3a2418'; ctx.beginPath(); ctx.arc(x, y + 8, R + 4, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#c8902c'; ctx.beginPath(); ctx.arc(x, y + 8, R + 2, 0, TAU); ctx.fill();
-        ctx.fillStyle = '#f4e8cc'; ctx.beginPath(); ctx.arc(x, y + 8, R, 0, TAU); ctx.fill();
+        discPx(ctx, x, y + 8, R + 4, '#3a2418'); discPx(ctx, x, y + 8, R + 2, '#c8902c');
+        discPx(ctx, x, y + 8, R, '#e8d8b4'); discPx(ctx, x - 2, y + 6, R - 3, '#f4e8cc');
         ctx.fillStyle = '#5a3a24';
         for (let i = 0; i < 12; i++) { const an = (i / 12) * TAU; ctx.fillRect(Rn(x + Math.cos(an) * (R - 5)) - 1, Rn(y + 8 + Math.sin(an) * (R - 5)) - 1, i % 3 ? 2 : 3, i % 3 ? 2 : 3); }
         const hand = (an, len, w, c) => { ctx.fillStyle = c; for (let i = 0; i < len; i++) ctx.fillRect(Rn(x + Math.cos(an) * i) - (w >> 1), Rn(y + 8 + Math.sin(an) * i) - (w >> 1), w, w); };
@@ -1448,7 +1452,11 @@ registerEntity('dyn_decor', class extends Entity {
       }
       case 'bell': {               // sino do campanário
         const sw = Math.sin(t * 1.2) * 0.15;
-        ctx.save(); ctx.translate(x, y); ctx.rotate(sw);
+        ctx.fillStyle = '#2a1606'; ctx.fillRect(x - 40, y - 8, 80, 6);
+        ctx.fillStyle = '#7a4a24'; ctx.fillRect(x - 39, y - 7, 78, 4);
+        ctx.fillStyle = '#a8703a'; ctx.fillRect(x - 39, y - 7, 78, 1);
+        ctx.fillStyle = '#3a2008'; ctx.fillRect(x - 1, y - 3, 2, 4);
+        ctx.save(); ctx.translate(x + Rn(sw * 12), y);
         ctx.fillStyle = '#2a1606'; ctx.fillRect(-15, 2, 30, 26); ctx.fillRect(-11, -2, 22, 6);
         ctx.fillStyle = '#c8902c'; ctx.fillRect(-14, 4, 28, 22); ctx.fillRect(-10, 0, 20, 6);
         ctx.fillStyle = '#ffe08a'; ctx.fillRect(-10, 4, 4, 18);
