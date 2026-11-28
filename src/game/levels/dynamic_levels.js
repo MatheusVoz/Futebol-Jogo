@@ -263,7 +263,7 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   m.put(237, 3, '*');                                                   // ★3 no vão estreito do alto
   m.obj({ type: 'dyn_checkpoint', x: 248, y: 0, axis: 'x', h: 14 });
   m.put(252, 6, 'a'); m.put(254, 9, 'a'); m.line(256, 266, 7, 'o', 2);
-  m.obj({ type: 'dyn_boss_sock', x: 294, y: 6, hp: 70 });
+  m.obj({ type: 'dyn_boss_sock', x: 294, y: 6, hp: 90 });
   m.obj({ type: 'dyn_flyer', x: 5, y: 7, skin: 'plane', dir: 'right' });
   m.obj({ type: 'dyn_scroller', x: 0, y: 0, mode: 'right', speed: 72, delay: 2.4, zones: [{ col: 116, speed: 66 }, { col: 200, speed: 78 }] });
   m.objects.unshift(m.objects.pop());

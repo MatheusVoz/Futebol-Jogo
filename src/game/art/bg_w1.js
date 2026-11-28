@@ -152,6 +152,53 @@ function glints(n, seed, speed, yMin, yMax, big = false) {
   };
 }
 
+
+// ------------------------------------------------------------------ animação: raios de luz e passarinhos
+/** Fachos de luz diagonais entre as copas (dia/entardecer), balançando devagar. */
+function lightShafts(speed) {
+  const beams = [[0.08, 26, 0.0], [0.3, 14, 1.7], [0.52, 34, 3.1], [0.77, 18, 4.4]];
+  return (ctx, cam, t, w, h) => {
+    if (activeTod === 'night') return;
+    const span = w + 160;
+    const col = activeTod === 'dusk' ? '#ffb070' : '#fff6c8';
+    ctx.fillStyle = col;
+    for (const [u, bw, ph] of beams) {
+      let x = (u * span - cam.x * speed) % span; if (x < 0) x += span; x -= 80;
+      const a = (activeTod === 'dusk' ? 0.07 : 0.06) * (0.6 + 0.4 * Math.sin(t * 0.35 + ph));
+      const sway = Math.sin(t * 0.2 + ph) * 6;
+      ctx.globalAlpha = a;
+      ctx.beginPath();
+      ctx.moveTo(x + sway, -4); ctx.lineTo(x + bw + sway, -4);
+      ctx.lineTo(x + bw + 70, h); ctx.lineTo(x + 40, h);
+      ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = a * 0.6;
+      ctx.beginPath();
+      ctx.moveTo(x + sway + bw * 0.3, -4); ctx.lineTo(x + sway + bw * 0.6, -4);
+      ctx.lineTo(x + bw * 0.6 + 62, h); ctx.lineTo(x + bw * 0.3 + 50, h);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  };
+}
+/** Bandinho de passarinhos de papel bem longe, cruzando o céu (dia/entardecer). */
+function birds(speed) {
+  const flock = [[0, 0], [7, 3], [-6, 4], [13, 6], [-11, 7]];
+  return (ctx, cam, t, w, h, y) => {
+    if (activeTod === 'night') return;
+    ctx.fillStyle = activeTod === 'dusk' ? '#4a2a4a' : '#5a6e7e';
+    for (let g = 0; g < 2; g++) {
+      const span = w + 240;
+      let bx = ((t * (9 + g * 4) + g * 300 - cam.x * speed) % span + span) % span - 120;
+      const by = Math.round(y + 30 + g * 26 + Math.sin(t * 0.3 + g) * 6);
+      for (const [dx, dy] of flock) {
+        const x = Math.round(bx + dx), yy = by + dy;
+        const f = Math.sin(t * 6 + dx) > 0 ? 1 : 0;
+        ctx.fillRect(x - 2, yy - f, 2, 1); ctx.fillRect(x + 1, yy - f, 2, 1); ctx.fillRect(x, yy, 1, 1);
+      }
+    }
+  };
+}
+
 // ------------------------------------------------------------------ camadas
 const GLYPH_A = ['.###.', '#...#', '#####', '#...#', '#...#'];
 const GLYPH_B = ['####.', '#...#', '####.', '#...#', '####.'];
@@ -208,6 +255,7 @@ const layers = [
       // névoa no pé das colinas
       pc.ditherFn(0, h - 30, w, 30, (i, j) => [P.h2, P.hz, (j / 30) * 0.7]);
     },
+    animate: birds(0.04),
   },
   // 2) árvores gigantes de brinquedo distantes
   {
@@ -312,6 +360,8 @@ const layers = [
     },
     animate: glints(12, 17, 0.3, 110, 250),
   },
+  // 4b) fachos de luz entre as copas (só animação; nada pintado)
+  { width: 64, height: 270, speed: 0.4, speedY: 0.2, alpha: 0, paint() {}, animate: lightShafts(0.4) },
   // 5) folhagem escura próxima com pontos de luz
   {
     width: 448, height: 150, speed: 0.58, speedY: 0.28, get fillBelow() { return PAL[curTod].nDK; },
