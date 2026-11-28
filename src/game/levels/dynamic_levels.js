@@ -32,6 +32,11 @@ function tower(m, { wallTop, bgTop, bgBottom, ground, wall = '#' }) {
   m.fill(6, bgTop, 29, bgBottom, ':');
   m.fill(0, ground, 35, m.H - 1, wall);
 }
+/** Abertura no fundo (mostra o céu) com moldura desenhada (bark | window | rift). */
+function hole(m, x0, y0, x1, y1, style) {
+  m.clear(x0, y0, x1, y1);
+  m.obj({ type: 'dyn_decor', x: x0, y: y0, kind: 'hole', w: x1 - x0 + 1, h: y1 - y0 + 1, style });
+}
 /** Plataformas em lote: [linha, x0, x1, char?]. */
 function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(x0, y, x1, y, ch || def); }
 
@@ -41,16 +46,17 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
 {
   const m = grid(36, 112);
   m.id = 'w1_climb';
-  tower(m, { wallTop: 24, bgTop: 24, bgBottom: 108, ground: 109 });
+  tower(m, { wallTop: 24, bgTop: 24, bgBottom: 107, ground: 108 });
   // buracos (nós da madeira) mostrando o céu/floresta lá fora
-  m.clear(21, 46, 26, 49); m.clear(8, 70, 12, 73); m.clear(20, 94, 25, 96); m.clear(14, 30, 18, 32);
-  m.put(8, 108, 'P');
-  m.obj({ type: 'dyn_decor', x: 14, y: 106, kind: 'sign_arrow', dir: 'up' });
+  hole(m, 21, 46, 26, 49, 'bark'); hole(m, 9, 70, 13, 73, 'bark'); hole(m, 22, 93, 27, 95, 'bark'); hole(m, 13, 30, 17, 32, 'bark');
+  m.put(8, 107, 'P');
+  m.obj({ type: 'dyn_decor', x: 6, y: 24, kind: 'rim', w: 24, style: 'bark' });
+  m.obj({ type: 'dyn_decor', x: 14, y: 105, kind: 'sign_arrow', dir: 'up' });
   // --- A: primeiros galhos ------------------------------------------------------
   plats(m, [[105, 11, 15], [102, 17, 21], [99, 24, 29, '#'], [96, 17, 21], [93, 9, 13], [90, 15, 19]]);
   m.line(25, 28, 97); m.line(11, 14, 103); m.line(18, 20, 94, 'o');
   // ★1: nicho escondido na parede esquerda
-  m.clear(3, 90, 5, 92); m.put(4, 92, '*'); m.put(3, 92, 'o');
+  m.fill(3, 90, 5, 92, ':'); m.put(4, 92, '*'); m.put(3, 92, 'o');
   // --- B: poço dos balões (esquerda) x galhos (direita) ---------------------------
   plats(m, [[87, 21, 25], [84, 25, 29, '#'], [81, 20, 22], [78, 25, 29, '#'], [75, 20, 22], [72, 25, 29, '#'], [69, 20, 22]]);
   plats(m, [[87, 10, 12]]);
@@ -79,7 +85,7 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   m.fill(21, 7, 29, 8, '#'); m.put(26, 6, 'E'); m.line(22, 24, 5);
   // decoração: lanternas e brinquedos pendurados no oco da árvore
   for (const [x, y, k] of [[18, 98, 'lantern'], [10, 82, 'toys'], [24, 70, 'lantern'], [8, 56, 'toys'], [21, 52, 'lantern'], [12, 36, 'toys'], [24, 26, 'lantern'], [16, 88, 'toys']]) m.obj({ type: 'dyn_decor', x, y, kind: k, len: 2 });
-  m.obj({ type: 'dyn_scroller', x: 0, y: 0, mode: 'up', speed: 18, delay: 2.4, hazard: 'thorns', playX0: 6, playX1: 29, zones: [{ row: 82, speed: 21 }, { row: 56, speed: 24 }, { row: 26, speed: 20 }] });
+  m.obj({ type: 'dyn_scroller', x: 0, y: 0, mode: 'up', speed: 17, delay: 2.4, hazard: 'thorns', playX0: 6, playX1: 29, zones: [{ row: 82, speed: 19 }, { row: 56, speed: 21 }, { row: 26, speed: 19 }] });
   m.objects.unshift(m.objects.pop());   // o scroller atualiza antes de todos
   registerLevel({
     id: 'w1_climb', world: 1, index: 6, name: 'A Grande Árvore', subtitle: 'Mundo 1 - Fase Especial',
@@ -169,10 +175,10 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
 {
   const m = grid(36, 122);
   m.id = 'w3_tower';
-  tower(m, { wallTop: 10, bgTop: 10, bgBottom: 118, ground: 119, wall: '%' });
+  tower(m, { wallTop: 10, bgTop: 10, bgBottom: 117, ground: 118, wall: '%' });
   // janelas (céu violeta lá fora)
-  for (const [x, y] of [[9, 104], [24, 84], [9, 60], [24, 40], [15, 22]]) m.clear(x, y, x + 2, y + 3);
-  m.put(8, 118, 'P');
+  for (const [x, y] of [[9, 104], [24, 84], [9, 60], [8, 40], [15, 22]]) hole(m, x, y, x + 2, y + 3, 'window');
+  m.put(8, 117, 'P');
   // --- A: engrenagens -------------------------------------------------------------
   plats(m, [[115, 12, 15], [112, 19, 22], [109, 25, 29, '%'], [106, 18, 20], [103, 11, 14], [100, 15, 18, '%']]);
   m.put(25, 113, 'm', { size: 3, speed: 45 });
@@ -180,35 +186,33 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   m.put(16, 101, 'p', { len: 3, amp: 50, period: 2.8 });              // pêndulo sob a viga (linha 100)
   m.line(13, 15, 114); m.line(26, 28, 108); m.line(19, 20, 105);
   // --- B: degraus de latão que sobem (esquerda) x pêndulos (direita) --------------
-  plats(m, [[97, 21, 24], [94, 25, 29, '%'], [91, 19, 22], [88, 25, 29, '%'], [85, 19, 22], [80, 21, 25, '%'], [77, 26, 29], [74, 14, 18], [71, 6, 11, '%']]);
-  m.obj({ type: 'dyn_lifts', x: 7, y: 98, kind: 'cog', w: 3, speed: 42, period: 2.4, top: 70 });
-  m.put(23, 81, 'p', { len: 3, amp: 55, period: 2.4, phase: 0.25 });
-  m.put(24, 89, 'm', { hazard: true, size: 2, dx: -4, moveSpeed: 40 });
-  for (let y = 94; y >= 74; y -= 5) m.put(10, y, 'o');
+  plats(m, [[97, 21, 24], [94, 25, 29, '%'], [91, 19, 22], [88, 25, 29, '%'], [85, 19, 22], [80, 21, 27, '%'], [77, 26, 29], [76, 20, 22], [74, 14, 18], [71, 6, 11, '%']]);
+  m.obj({ type: 'dyn_lifts', x: 12, y: 98, kind: 'cog', w: 2, speed: 42, period: 2.4, top: 72 });
+  m.put(26, 81, 'p', { len: 3, amp: 50, period: 2.6, phase: 0.25 });
+  for (let y = 94; y >= 79; y -= 5) m.put(13, y, 'o');
   m.put(27, 93, 'h'); m.line(20, 22, 84);
   m.put(9, 70, 'K');
   // --- C: ponteiros e plataformas-relógio -----------------------------------------
-  plats(m, [[68, 14, 17], [65, 21, 23], [62, 15, 17], [59, 22, 24], [56, 25, 29, '%'], [53, 16, 19], [50, 8, 12, '%']]);
+  plats(m, [[68, 14, 17], [65, 21, 23], [62, 15, 17], [59, 22, 24], [56, 25, 29, '%'], [53, 18, 21], [50, 8, 14, '%']]);
   m.put(19, 61, 'l', { len: 3, speed: 30 });
   m.put(10, 64, 'j', { phase: 0 }); m.put(11, 64, 'j', { phase: 0 }); m.put(12, 64, 'j', { phase: 0 });
   m.put(6, 66, '*'); plats(m, [[67, 6, 7, '%']]);                     // ★1: degrau à esquerda (pule nas plataformas-relógio)
   m.put(27, 55, 'g');
-  m.line(15, 17, 67); m.line(26, 28, 55); m.line(17, 18, 52);
+  m.line(15, 17, 67); m.line(26, 28, 55); m.line(19, 20, 52);
   // ★2: alto, à direita, sobre uma engrenagem
   m.put(26, 51, 'm', { size: 3, speed: 40 }); m.put(26, 48, '*');
-  // --- D: esteiras e degraus que sobem --------------------------------------------
+  // --- D: pêndulo e degraus que sobem ----------------------------------------------
   plats(m, [[47, 14, 17], [44, 19, 22], [41, 13, 16], [38, 6, 10, '%'], [35, 13, 16], [32, 20, 23], [29, 25, 29, '%'], [26, 18, 21], [23, 11, 14]]);
-  m.fill(19, 44, 22, 44, 'w'); m.props['19,44'] = { dir: 'l', speed: 50, thin: true };
-  m.obj({ type: 'dyn_lifts', x: 24, y: 46, kind: 'cog', w: 3, speed: 40, period: 2.6, top: 30 });
-  m.put(14, 33, 'p', { len: 2, amp: 60, period: 2.2 });
+  m.obj({ type: 'dyn_lifts', x: 24, y: 46, kind: 'cog', w: 3, speed: 40, period: 2.6, top: 32 });
+  m.put(18, 29, 'p', { len: 2, amp: 55, period: 2.4 });
   m.put(8, 37, 'h'); m.line(14, 16, 40); m.line(21, 23, 31); m.line(12, 14, 22);
   // --- E: campanário ----------------------------------------------------------------
   plats(m, [[20, 17, 20], [17, 22, 25], [14, 11, 19]]);
-  m.put(4, 13, '*'); plats(m, [[14, 3, 5, '=']]); m.clear(3, 10, 5, 13);  // ★3: janela na parede esquerda
-  m.fill(6, 11, 29, 11, '%'); m.clear(10, 11, 13, 11);                  // piso do campanário com alçapão
+  m.put(4, 13, '*'); plats(m, [[14, 3, 5, '=']]); hole(m, 3, 10, 5, 13, 'window');  // ★3: janela na parede esquerda
+  m.clear(6, 10, 29, 10); m.fill(6, 11, 29, 11, '%'); m.fill(10, 11, 13, 11, ':');                  // piso do campanário com alçapão
   m.fill(6, 0, 7, 10, '.'); m.fill(28, 0, 29, 10, '.');
   m.put(23, 10, 'E'); m.line(16, 20, 9);
-  m.obj({ type: 'dyn_decor', x: 17, y: 2, kind: 'bell' });
+  m.obj({ type: 'dyn_decor', x: 17, y: 2, kind: 'bell', posts: 9.5 });
   for (const [x, y, r] of [[17, 95, 3], [12, 46, 2], [21, 74, 2]]) m.obj({ type: 'dyn_decor', x, y, kind: 'clockface', r, z: 1 });
   m.obj({ type: 'dyn_scroller', x: 0, y: 0, mode: 'up', speed: 20, delay: 2.4, hazard: 'gears', playX0: 6, playX1: 29, zones: [{ row: 96, speed: 24 }, { row: 68, speed: 22 }, { row: 46, speed: 26 }, { row: 18, speed: 20 }] });
   m.objects.unshift(m.objects.pop());
@@ -287,9 +291,10 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
 {
   const m = grid(36, 134);
   m.id = 'w5_rise';
-  tower(m, { wallTop: 46, bgTop: 46, bgBottom: 130, ground: 131 });
-  for (const [x, y] of [[20, 118], [8, 100], [22, 76], [10, 58]]) m.clear(x, y, x + 4, y + 4);   // rasgos para a fenda
-  m.put(8, 130, 'P');
+  tower(m, { wallTop: 46, bgTop: 46, bgBottom: 129, ground: 130 });
+  for (const [x, y] of [[21, 116], [8, 100], [8, 75], [11, 57]]) hole(m, x, y, x + 3, y + 3, 'rift');   // rasgos para a fenda
+  m.put(8, 129, 'P');
+  m.obj({ type: 'dyn_decor', x: 6, y: 46, kind: 'rim', w: 24, style: 'rift' });
   // --- A: ilhas à deriva ------------------------------------------------------------
   plats(m, [[127, 12, 15], [124, 19, 22], [121, 25, 29, '#'], [118, 18, 20], [115, 11, 14], [112, 6, 9, '#']]);
   m.put(19, 112, 's', { w: 3, ax: 2, ay: 0, period: 3.5 });
@@ -305,7 +310,7 @@ function plats(m, list, def = '=') { for (const [y, x0, x1, ch] of list) m.fill(
   m.put(7, 90, 'g');
   // --- C: lascas que sobem ------------------------------------------------------------
   plats(m, [[82, 14, 17], [79, 20, 23], [76, 26, 29, '#'], [73, 20, 22], [70, 14, 16], [67, 8, 11, '#'], [64, 14, 17], [61, 20, 23], [58, 25, 29, '#'], [55, 18, 21], [52, 12, 15]]);
-  m.obj({ type: 'dyn_lifts', x: 24, y: 74, kind: 'shard', w: 3, speed: 46, period: 2.2, top: 56 });
+  m.obj({ type: 'dyn_lifts', x: 23, y: 74, kind: 'shard', w: 2, speed: 46, period: 2.2, top: 57 });
   m.put(9, 63, 's', { w: 3, ax: 0, ay: 1.5, period: 3 });
   m.put(6, 57, '*'); plats(m, [[58, 6, 7, '#']]);                      // ★2: degrau à esquerda
   m.put(17, 69, 'f'); m.line(21, 22, 72); m.line(15, 17, 63); m.line(19, 21, 54);

@@ -437,7 +437,9 @@ class Scroller extends Entity {
     if (this.mode === 'up') {
       const lim = this.stopAt != null ? this.stopAt * TILE : 0;
       let ny = this.camY - this.speed * dt;
-      const want = focus.cy - cam.viewH * 0.42;
+      // segue o Tico só pela altura em que ele PISA (um pulo que volta ao degrau de baixo não o joga para fora da tela)
+      if (v || p.grounded || this.followY == null) this.followY = focus.cy;
+      const want = this.followY - cam.viewH * 0.32;
       if (want < ny && !paused && p.state !== 'dead') ny += (want - ny) * Math.min(1, dt * 5);
       if (this.gateY != null && !v) ny = Math.max(ny, this.gateY);
       this.camY = clamp(Math.min(this.camY, ny), Math.min(lim, this.maxY()), this.maxY());
@@ -1420,11 +1422,17 @@ registerEntity('dyn_boss_sock', SockBoss);
 // DECORAÇÃO EXTRA (desenhada atrás do Tico; use em áreas abertas)
 // =============================================================================
 registerEntity('dyn_decor', class extends Entity {
-  constructor(l, x, y, p = {}) { super(l, x, y, p); this.kind = p.kind || 'lantern'; this.w = 16; this.h = 16; this.z = p.z ?? 2; this.drawMargin = 96; this.seed = (x * 7 + y * 13) % 100; }
+  constructor(l, x, y, p = {}) {
+    super(l, x, y, p); this.kind = p.kind || 'lantern'; this.w = 16; this.h = 16; this.z = p.z ?? 2; this.drawMargin = 96; this.seed = (x * 7 + y * 13) % 100;
+    if (this.kind === 'rim') { this.w = (p.w || 24) * TILE; this.h = 16; this.y = y - 8; this.z = 1; this.drawMargin = 24; }
+    if (this.kind === 'hole') { this.w = (p.w || 3) * TILE; this.h = (p.h || 3) * TILE; this.z = 1; this.drawMargin = 24; }
+  }
   update(dt) { this.tickTimers(dt); }
   draw(ctx) {
     const x = Rn(this.x + 8), y = Rn(this.y), t = this.t + this.seed;
     switch (this.kind) {
+      case 'hole': drawHoleFrame(ctx, Rn(this.x), Rn(this.y), this.w, this.h, this.props.style || 'bark', this.t); break;
+      case 'rim': drawRim(ctx, Rn(this.x), Rn(this.y), this.w, this.props.style || 'bark'); break;
       case 'lantern': {           // lanterna de papel pendurada balançando
         const sw = Math.sin(t * 1.4) * 3, len = (this.props.len || 2) * TILE;
         ctx.fillStyle = '#3a2a1a'; for (let i = 0; i < len; i += 2) ctx.fillRect(Rn(x + (sw * i) / len), y + i, 1, 1);
@@ -1452,6 +1460,12 @@ registerEntity('dyn_decor', class extends Entity {
       }
       case 'bell': {               // sino do campanário
         const sw = Math.sin(t * 1.2) * 0.15;
+        const post = (this.props.posts || 0) * TILE;
+        if (post) for (const px of [x - 40, x + 36]) {
+          ctx.fillStyle = '#2a1606'; ctx.fillRect(px, y - 8, 5, post + 8);
+          ctx.fillStyle = '#7a4a24'; ctx.fillRect(px + 1, y - 8, 3, post + 8);
+          ctx.fillStyle = '#a8703a'; ctx.fillRect(px + 1, y - 8, 1, post + 8);
+        }
         ctx.fillStyle = '#2a1606'; ctx.fillRect(x - 40, y - 8, 80, 6);
         ctx.fillStyle = '#7a4a24'; ctx.fillRect(x - 39, y - 7, 78, 4);
         ctx.fillStyle = '#a8703a'; ctx.fillRect(x - 39, y - 7, 78, 1);
@@ -1506,3 +1520,99 @@ registerEntity('dyn_decor', class extends Entity {
     }
   }
 });
+
+// =============================================================================
+// MOLDURAS DE ABERTURAS (nós da madeira / janelas / rasgos) — cobrem a borda reta
+// do buraco no fundo para ele parecer parte do cenário.
+// =============================================================================
+const hh = (i, k = 0) => { let n = Math.imul((i | 0) + k * 7919, 2654435761) >>> 0; n ^= n >>> 15; return (n % 1000) / 1000; };
+/** Pinta (x0,y0)-(x1,y1) excluindo um retângulo arredondado interno de raio r. */
+function roundCorners(ctx, X, Y, W, H, r, c) {
+  ctx.fillStyle = c;
+  for (let j = 0; j < r; j++) {
+    const cut = r - Math.round(Math.sqrt(r * r - (r - j - 0.5) * (r - j - 0.5)));
+    if (cut <= 0) continue;
+    ctx.fillRect(X, Y + j, cut, 1); ctx.fillRect(X + W - cut, Y + j, cut, 1);
+    ctx.fillRect(X, Y + H - 1 - j, cut, 1); ctx.fillRect(X + W - cut, Y + H - 1 - j, cut, 1);
+  }
+}
+function drawHoleFrame(ctx, X, Y, W, H, style, t) {
+  if (style === 'bark') {
+    // borda de casca rasgada (nó da madeira)
+    const out = '#1a0e08', bark = '#5a3a22', hi = '#8a5a34', lip = '#2a1a10';
+    roundCorners(ctx, X, Y, W, H, 9, bark);
+    for (let i = -4; i < W + 4; i += 2) {
+      const a = 3 + Math.floor(hh(i, 1) * 4), b = 3 + Math.floor(hh(i, 2) * 4);
+      ctx.fillStyle = out; ctx.fillRect(X + i, Y - 4, 2, 2); ctx.fillRect(X + i, Y + H + 2, 2, 2);
+      ctx.fillStyle = bark; ctx.fillRect(X + i, Y - 2, 2, a + 2); ctx.fillRect(X + i, Y + H - b, 2, b + 2);
+      ctx.fillStyle = lip; ctx.fillRect(X + i, Y + a, 2, 1);
+      ctx.fillStyle = hi; ctx.fillRect(X + i, Y + H - b - 1, 2, 1);
+    }
+    for (let j = -4; j < H + 4; j += 2) {
+      const a = 3 + Math.floor(hh(j, 3) * 4), b = 3 + Math.floor(hh(j, 4) * 4);
+      ctx.fillStyle = out; ctx.fillRect(X - 4, Y + j, 2, 2); ctx.fillRect(X + W + 2, Y + j, 2, 2);
+      ctx.fillStyle = bark; ctx.fillRect(X - 2, Y + j, a + 2, 2); ctx.fillRect(X + W - b, Y + j, b + 2, 2);
+      ctx.fillStyle = lip; ctx.fillRect(X + a, Y + j, 1, 2);
+      ctx.fillStyle = hi; ctx.fillRect(X + W - b - 1, Y + j, 1, 2);
+    }
+    // anéis de crescimento e um musguinho
+    ctx.fillStyle = '#6e4a2c';
+    for (let i = 4; i < W - 4; i += 9) ctx.fillRect(X + i, Y + H + 1, 4, 1);
+    ctx.fillStyle = '#4f9c66';
+    for (let i = 2; i < W - 2; i += 7) if (hh(i, 9) > 0.4) ctx.fillRect(X + i, Y - 3, 3, 2);
+  } else if (style === 'window') {
+    // janela em arco com moldura de latão e caixilho
+    roundCorners(ctx, X, Y, W, H, Math.min(W / 2, 14) | 0, '#4a3448');
+    const arcR = Math.min(W / 2, 14) | 0;
+    ctx.fillStyle = '#c8902c';
+    for (let j = 0; j < arcR; j++) {
+      const cut = arcR - Math.round(Math.sqrt(arcR * arcR - (arcR - j - 0.5) * (arcR - j - 0.5)));
+      ctx.fillRect(X + cut - 2, Y + j, 2, 1); ctx.fillRect(X + W - cut, Y + j, 2, 1);
+    }
+    ctx.fillRect(X - 2, Y + arcR, 2, H - arcR); ctx.fillRect(X + W, Y + arcR, 2, H - arcR);
+    ctx.fillRect(X + arcR - 2, Y - 2, W - arcR * 2 + 4, 2);
+    ctx.fillStyle = '#3a2418';
+    ctx.fillRect(X - 3, Y + arcR, 1, H - arcR); ctx.fillRect(X + W + 2, Y + arcR, 1, H - arcR);
+    ctx.fillRect(X + (W >> 1) - 1, Y, 2, H);                        // caixilho vertical
+    ctx.fillRect(X, Y + Math.round(H * 0.55), W, 2);                // caixilho horizontal
+    ctx.fillStyle = '#ffffff'; ctx.globalAlpha = 0.18;
+    ctx.fillRect(X + 3, Y + arcR, 2, 8); ctx.fillRect(X + (W >> 1) + 3, Y + Math.round(H * 0.55) + 4, 2, 6); ctx.globalAlpha = 1;
+    // peitoril de pedra
+    ctx.fillStyle = '#2a1a20'; ctx.fillRect(X - 5, Y + H, W + 10, 5);
+    ctx.fillStyle = '#d8c8b0'; ctx.fillRect(X - 4, Y + H, W + 8, 3);
+    ctx.fillStyle = '#fff0d8'; ctx.fillRect(X - 4, Y + H, W + 8, 1);
+  } else {
+    // rasgo no tecido da dimensão: dentes de pano desfiado + pontos dourados
+    drawGlow(ctx, X + W / 2, Y + H / 2, Math.max(W, H) * 0.7, '#ff4f8a', 0.12 + Math.sin(t * 2) * 0.04);
+    roundCorners(ctx, X, Y, W, H, 8, '#3a0a2a');
+    const tooth = (k) => 2 + Math.floor(hh(k, 5) * 5);
+    for (let i = 0; i < W; i += 3) {
+      const a = tooth(i), b = tooth(i + 101);
+      ctx.fillStyle = '#3a0a2a'; ctx.fillRect(X + i, Y - 1, 3, a + 1); ctx.fillRect(X + i, Y + H - b, 3, b + 1);
+      ctx.fillStyle = '#8a1036'; ctx.fillRect(X + i, Y + a - 1, 2, 1); ctx.fillRect(X + i + 1, Y + H - b, 2, 1);
+    }
+    for (let j = 0; j < H; j += 3) {
+      const a = tooth(j + 211), b = tooth(j + 307);
+      ctx.fillStyle = '#3a0a2a'; ctx.fillRect(X - 1, Y + j, a + 1, 3); ctx.fillRect(X + W - b, Y + j, b + 1, 3);
+      ctx.fillStyle = '#8a1036'; ctx.fillRect(X + a - 1, Y + j, 1, 2); ctx.fillRect(X + W - b, Y + j + 1, 1, 2);
+    }
+    ctx.fillStyle = '#ffd23f';
+    for (let i = 6; i < W - 4; i += 9) { ctx.fillRect(X + i, Y - 3, 1, 7); ctx.fillRect(X + i + 2, Y + H - 4, 1, 7); }
+    for (let j = 6; j < H - 4; j += 9) { ctx.fillRect(X - 3, Y + j, 7, 1); ctx.fillRect(X + W - 4, Y + j + 2, 7, 1); }
+  }
+}
+
+/** Borda superior quebrada do fundo (topo do tronco oco / tecido rasgado). y = linha do topo. */
+function drawRim(ctx, X, Y, W, style) {
+  Y += 8;
+  const C = style === 'bark' ? { out: '#1a0e08', a: '#5a3a22', b: '#3a2414', hi: '#8a5a34' } : { out: '#12061a', a: '#5a1040', b: '#3a0a2a', hi: '#ff4f8a' };
+  for (let i = 0; i < W; i += 2) {
+    const k = Math.floor(i / 6);
+    const up = Math.floor(hh(k, 11) * 10) + (hh(i, 12) > 0.7 ? 2 : 0);
+    ctx.fillStyle = C.out; ctx.fillRect(X + i, Y - up - 1, 2, 1);
+    ctx.fillStyle = C.a; ctx.fillRect(X + i, Y - up, 2, up + 3);
+    ctx.fillStyle = C.hi; if (i % 6 === 0) ctx.fillRect(X + i, Y - up, 1, Math.max(1, up));
+    ctx.fillStyle = C.b; ctx.fillRect(X + i, Y + 3, 2, 3);
+  }
+  if (style !== 'bark') { ctx.fillStyle = '#ffd23f'; for (let i = 5; i < W; i += 11) ctx.fillRect(X + i, Y - 2, 1, 6); }
+}
