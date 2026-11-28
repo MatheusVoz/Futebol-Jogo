@@ -697,6 +697,7 @@ export function w2WaterInfo(map, rows) {
       if (t === T.WATER) { d++; yy--; } else if (isThin(t)) yy--; else break;
     }
     depth[i] = d;
+    if (d < 7 && !(map.get(x, yy) === T.EMPTY || map.get(x, yy) === T.BG)) depth[i] = -1; // sob teto: resolvido depois pela linha do mar
     const above = map.get(x, y - 1);
     if (above === T.EMPTY || above === T.BG) surf[i] = isEntCell(x, y - 1) && map.get(x, y - 2) === T.WATER ? 0 : 1;
     else if (d === 0 && !isThin(above) && above !== T.WATER) ceil[i] = 1;
@@ -758,6 +759,7 @@ export function w2WaterInfo(map, rows) {
   }
   let seaRow = null, best = 0;
   for (const [y, n] of cnt) if (n > best) { best = n; seaRow = y; }
+  for (let i = 0; i < N; i++) if (depth[i] === 255) { const y = (i / C) | 0; depth[i] = clamp(seaRow !== null ? y - seaRow : 2, 1, 7); }
   for (const Rg of regions) {
     Rg.kind = Rg.bubble ? 'bubble' : 'pool';
     if (!Rg.bubble && seaRow !== null) for (const k of Rg.cells) if (surf[k] && !cover[k] && ((k / C) | 0) === seaRow) { Rg.kind = 'sea'; break; }
