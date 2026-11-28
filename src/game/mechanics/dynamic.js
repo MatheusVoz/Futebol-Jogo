@@ -1273,13 +1273,13 @@ class SockBoss extends Enemy {
     this.drops = { buttons: 0 };
   }
   get cam() { return this.level.camera; }
-  homeX() { return this.cam.x + this.cam.viewW - 84; }
-  homeY() { return this.cam.y + this.cam.viewH * 0.5 - this.h / 2; }
+  arenaX() { return this.cam.x + this.cam.viewW - 84; }
+  arenaY() { return this.cam.y + this.cam.viewH * 0.5 - this.h / 2; }
   engage() {
     const L = this.level;
     this.engaged = true; this.boss = true; this.bossName = 'O Bicho-Papão de Meia';
     L.boss = this;
-    this.x = this.cam.x + this.cam.viewW + 40; this.y = this.homeY();
+    this.x = this.cam.x + this.cam.viewW + 40; this.y = this.arenaY();
     this.set('enter');
     audio.playMusic('w4_chase', { fade: 0.6 });
     audio.sfx('boss_roar');
@@ -1296,7 +1296,7 @@ class SockBoss extends Enemy {
     }
     if (this.dyingBoss) { this.updateDeath(dt); return; }
     this.st += dt;
-    const p = L.player, hx = this.homeX(), hy = this.homeY();
+    const p = L.player, hx = this.arenaX(), hy = this.arenaY();
     const rage = this.hp < this.maxHp * 0.5;
     const spd = rage ? 1.25 : 1;
     switch (this.state) {

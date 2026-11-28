@@ -55,21 +55,21 @@ export function marujo(m, x, y) {
   m.sign(31, 17, 'w2_sign_unstitch');
   m.put(34, 17, 'Q', { ability: 'unstitch' });
   m.put(36, 17, 'e');
-  m.fill(39, 6, 47, 17, '#'); m.clear(39, 14, 47, 17);        // arco
-  m.fill(39, 14, 40, 17, 'S');                                  // rede costurada
-  m.line(42, 46, 17, 'o', 2);
+  m.fill(39, 6, 47, 17, '#'); m.clear(39, 14, 47, 16);        // rochedo com túnel (piso de rocha na 17)
+  m.fill(39, 14, 40, 16, 'S');                                  // rede costurada
+  m.line(42, 46, 16, 'o', 2);
   m.put(41, 5, '*'); m.line(44, 46, 5);                        // ★1 no topo do arco
   m.plat(49, 51, 14); m.put(50, 13, 'o');
   m.plat(52, 54, 10); m.put(53, 9, 'o');
   m.sign(49, 17, 'w2_sign_armor');
   m.put(53, 17, 'd');                                           // polvo blindado
   m.put(57, 17, 'K');
-  m.sign(59, 17, 'w2_sign_swim');
+  m.sign(55, 17, 'w2_sign_swim');
   // --- C: primeiro mergulho + Capitã Bolha ------------------------------------
   m.fill(61, 18, 205, 29, '~');
   m.ground(61, 76, 23);
   m.ground(77, 205, 28);
-  m.put(62, 18, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_1' });
+  m.put(60, 17, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_1' });   // na areia, à beira d'água
   m.line(65, 68, 20);
   m.fill(70, 22, 71, 22, '^');
   m.put(72, 20, 'a');
@@ -100,12 +100,14 @@ export function marujo(m, x, y) {
   m.plat(142, 154, 16);
   m.put(146, 15, 'g'); m.put(151, 15, 'K'); m.put(154, 15, 'e');
   // --- E: rochedo — túnel submerso com rede costurada --------------------------
-  m.fill(158, 3, 174, 21, '#');
-  m.line(159, 163, 25, 'o', 2);
-  m.fill(166, 22, 166, 27, 'S');                                // rede (1 coluna, dentro d'água)
-  m.put(171, 23, 'a');
-  m.line(168, 173, 25, 'o', 2);
-  m.put(172, 27, 'c', { contents: 'buttons:8' });
+  m.fill(158, 14, 174, 27, '#');                                // rochedo apoiado no fundo
+  m.fill(160, 22, 172, 27, '~'); m.fill(158, 24, 159, 27, '~');  // gruta submersa (entrada à esquerda)
+  m.fill(161, 22, 161, 27, 'S');                                // rede costurada na boca da gruta
+  m.line(156, 157, 25, 'o', 1);
+  m.put(167, 24, 'a');
+  m.line(163, 170, 25, 'o', 2);
+  m.put(171, 27, 'c', { contents: 'buttons:8' });
+  m.line(160, 172, 13, 'o', 4);
   // --- F: mar aberto, subida para a praia final --------------------------------
   m.put(180, 22, 'b');
   m.line(177, 183, 19, 'o', 3);
@@ -154,7 +156,7 @@ export function marujo(m, x, y) {
   m.sign(33, 7, 'w2_sign_current'); m.line(35, 36, 7);
   // --- B: canal da correnteza sob o paredão de ouriços --------------------------
   m.ground(37, 76, 25);
-  m.fill(40, 5, 70, 15, '#'); m.fill(40, 4, 70, 4, '^');
+  m.fill(40, 0, 70, 15, '#');                                   // penhasco (continua acima da tela)
   current(m, 41, 17, 29, 5, 'r', 300);
   m.fill(46, 24, 49, 24, '^'); m.fill(56, 24, 59, 24, '^'); m.fill(64, 24, 66, 24, '^');
   m.fill(51, 16, 53, 16, '^'); m.fill(61, 16, 62, 16, '^');
@@ -177,7 +179,7 @@ export function marujo(m, x, y) {
   m.fill(115, 22, 124, 27, '~');                                // túnel 1
   m.put(120, 27, 'l'); m.line(116, 123, 24, 'o', 2);
   m.fill(125, 13, 134, 17, ':'); m.fill(125, 18, 134, 27, '~'); // câmara 1 (bolsão de ar)
-  m.plat(127, 132, 15);
+  m.plat(125, 132, 15);
   m.put(130, 14, 'L', { signal: 'w22_lever', latch: true });
   m.put(127, 14, 'o'); m.put(128, 14, 'o');
   m.put(129, 25, 'a');
@@ -186,7 +188,7 @@ export function marujo(m, x, y) {
   m.line(136, 143, 25, 'o', 2);
   m.fill(145, 6, 150, 9, ':'); m.fill(145, 10, 150, 27, '~');  // câmara 2 (poço + bolsão)
   m.fill(151, 10, 152, 14, '~');
-  m.plat(146, 149, 8); m.put(148, 7, '*');                     // ★2 no bolsão de cima
+  m.plat(145, 150, 8); m.put(148, 7, '*');                     // ★2 no bolsão de cima
   m.put(147, 7, 'o'); m.put(149, 7, 'o');
   m.put(147, 19, 'b'); m.put(150, 26, 'l');
   // --- E: labirinto de corais + gruta secreta ---------------------------------
@@ -203,7 +205,7 @@ export function marujo(m, x, y) {
   m.put(183, 25, 'o'); m.put(184, 26, 'o');
   m.put(189, 26, 'X'); m.line(190, 193, 24); m.put(195, 26, 'r'); m.put(196, 23, 'h');
   m.put(190, 18, 'b');
-  m.fill(201, 8, 205, 27, '#'); m.put(203, 7, 'K');
+  m.fill(201, 8, 205, 33, '#'); m.put(203, 7, 'K');
   // --- F: cascatas para baixo sobre ouriços e a praia final --------------------
   m.ground(206, 259, 28);
   current(m, 210, 10, 4, 15, 'd', 250);

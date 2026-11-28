@@ -11,6 +11,7 @@
 // =============================================================================
 import { registerLevel } from '../registry.js';
 import { grid, wblock, marujo } from './w2_a.js';
+import { hideRoom } from './w1_a.js';
 
 // =============================================================================
 // w2_3 — Navio Afundado. Mar a partir da linha 18. Casco: topo 10–11, corredores
@@ -24,14 +25,14 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.ground(0, 12, 15);
   m.put(3, 14, 'P');
   m.sign(6, 14, 'w2_sign_ship');
-  m.put(9, 14, 'o'); m.put(11, 14, 'o');
-  m.put(16, 18, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_2', quest: 'bolha_crew' });
+  m.put(8, 14, 'o'); m.put(12, 14, 'o');
+  m.put(10, 14, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_2', quest: 'bolha_crew' });   // no rochedo
   m.put(21, 18, 'u', { dialog: 'w2_bottle_2' });
   m.put(19, 28, 'a');
   m.put(18, 22, 'o'); m.put(20, 24, 'o'); m.put(22, 25, 'o'); m.put(24, 25, 'o');
   // --- casco ------------------------------------------------------------------
   m.fill(26, 10, 226, 37, '%');
-  m.fill(151, 2, 226, 9, '%');                                 // castelo de popa
+  m.fill(151, 0, 226, 9, '%');                                 // castelo de popa (vai até o topo: sem andar no teto)
   m.clear(26, 10, 28, 11); m.clear(26, 12, 26, 15);            // proa inclinada
   // --- B: rombo costurado → porão da proa (L1) ---------------------------------
   m.fill(26, 23, 26, 26, '~'); m.fill(27, 23, 27, 26, 'S');
@@ -119,6 +120,7 @@ import { grid, wblock, marujo } from './w2_a.js';
 // =============================================================================
 {
   const m = grid(260, 36);
+  m.id = 'w2_4';
   m.ground(0, 259, 34);
   m.fill(0, 30, 259, 33, '~');
   /** Prateleiras na face de uma ilha (rota de volta saindo do lago). */
@@ -143,7 +145,7 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.fill(66, 4, 67, 6, '~'); m.put(66, 5, '*');
   m.fill(74, 12, 78, 16, '~'); m.put(75, 15, 'o'); m.put(77, 15, 'o'); m.put(76, 13, 'h');
   m.put(70, 31, 'f');
-  m.ground(84, 92, 18); shelves(81, 83, [28, 24, 21]);
+  m.ground(84, 93, 18); shelves(81, 83, [28, 24, 21]);
   m.line(86, 90, 17, 'o', 2);
   // --- D: lagoa elevada com barquinho e espreitadores ----------------------------
   m.ground(94, 128, 22);
@@ -172,13 +174,14 @@ import { grid, wblock, marujo } from './w2_a.js';
   m.put(178, 31, 'f');
   m.ground(188, 198, 10); shelves(185, 187, [28, 24, 20, 16, 13]);
   m.line(189, 196, 9, 'o', 2);
-  m.fill(192, 13, 197, 16, ':'); m.fill(198, 13, 198, 16, 'H');   // segredo
+  hideRoom(m, 192, 13, 198, 16);                                  // segredo (sala escondida na torre)
   m.put(196, 16, 'X'); m.put(193, 16, 'r'); m.line(193, 195, 14); m.put(194, 16, 'h');
   m.fill(199, 12, 203, 16, '~'); m.put(201, 14, 'a');
   m.ground(208, 214, 12);
   m.put(211, 11, 'o');
   wblock(m, 215, 10, 3, 3, { dy: -6, speed: 20, pause: 1.4 });
-  m.plat(218, 222, 5, '#'); m.put(221, 4, '*'); marujo(m, 219, 4);  // ★3 + marujo 2/3
+  m.plat(218, 222, 5, '#'); m.fill(222, 6, 222, 21, '#');         // saliência presa num pilar fino
+  m.put(221, 4, '*'); marujo(m, 219, 4);                          // ★3 + marujo 2/3
   // --- G: descida, barquinho no lago e saída ------------------------------------
   m.ground(217, 222, 22); m.put(219, 21, 'K'); m.put(221, 21, 'h');
   m.put(223, 29, 'p', { dx: 18, w: 3, speed: 26, pause: 0.8 });

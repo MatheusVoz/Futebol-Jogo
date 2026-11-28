@@ -11,12 +11,14 @@
 // =============================================================================
 import { registerLevel } from '../registry.js';
 import { grid, current, marujo } from './w2_a.js';
+import { hideRoom } from './w1_a.js';
 
 // =============================================================================
 // w2_5 — Fossa Escura. Água nas linhas 7–33; cavernas com ar nas linhas 10–21.
 // =============================================================================
 {
   const m = grid(240, 40);
+  m.id = 'w2_5';
   m.ground(0, 239, 34);
   m.fill(11, 7, 239, 33, '~');
   /** Caverna com bolsão de ar: teto de rocha 0–9, ar 10–21, água 22–33. */
@@ -39,7 +41,7 @@ import { grid, current, marujo } from './w2_a.js';
   // --- C: caverna 1 — loja, checkpoint e lagoa dos espreitadores ---------------
   cavern(61, 100);
   m.plat(61, 63, 20);
-  m.fill(64, 18, 72, 21, '#');
+  m.fill(64, 18, 72, 21, '#'); m.fill(65, 22, 71, 33, '#');    // patamar apoiado numa coluna de rocha
   m.put(65, 17, 'K'); m.put(68, 17, 'U'); m.put(71, 17, 'h');
   m.sign(73, 17, 'w2_sign_lurker');
   for (const x of [76, 82, 88]) { m.plat(x, x + 2, 17); m.put(x + 1, 15, 'o'); }
@@ -59,22 +61,23 @@ import { grid, current, marujo } from './w2_a.js';
   m.fill(126, 10, 130, 11, '#'); marujo(m, 128, 12);            // marujo 3/3 sob a saliência
   m.line(106, 114, 16, 'o', 4); m.line(132, 146, 19, 'o', 2);
   m.put(135, 30, 'q', { r: 3, fling: 'u', power: 380 });
-  m.fill(138, 34, 139, 34, 'H');                                // "chão" falso — segredo
-  m.put(136, 33, 'o'); m.put(137, 33, 'o');
-  m.fill(134, 35, 146, 38, '~');
-  m.put(135, 38, 'l'); m.put(140, 37, 'X'); m.line(141, 143, 36); m.put(142, 37, 'r');
+  m.put(136, 33, 'o'); m.put(137, 33, 'o');                     // pista: botões sobre o "chão" falso
+  hideRoom(m, 134, 34, 146, 37);                                // sala seca escondida sob o leito (mem_3)
+  m.fill(134, 34, 137, 34, '#'); m.fill(140, 34, 146, 34, '#'); // teto da sala; 138–139 = chão falso
+  m.put(140, 37, 'X'); m.line(141, 143, 36); m.put(142, 37, 'r');
   m.put(145, 37, 'M', { memory: 'mem_3' });
   m.fill(151, 0, 153, 26, '#');
   // --- E: caverna 2 — plataformas penduradas, ★2 no teto ------------------------
   cavern(154, 195);
   m.plat(155, 157, 20);
-  m.fill(158, 18, 164, 21, '#'); m.put(160, 17, 'K'); m.put(163, 17, 'h');
+  m.fill(158, 18, 164, 21, '#'); m.fill(159, 22, 163, 33, '#'); // patamar sobre coluna de rocha
+  m.put(160, 17, 'K'); m.put(163, 17, 'h');
   for (const x of [167, 173, 179, 185]) { m.plat(x, x + 2, 17); m.put(x + 1, 16, 'o'); }
   m.plat(176, 178, 13); m.put(177, 12, '*');
   m.put(170, 23, 'f'); m.put(182, 23, 'f');
   m.fill(191, 18, 195, 21, '#'); m.put(193, 17, 'e');
   m.line(166, 190, 30, 'o', 6);
-  m.put(160, 28, 'a');
+  m.put(176, 29, 'a');
   m.fill(196, 0, 198, 26, '#');
   // --- F: último mergulho, ★3 entre ouriços, caverna da saída -------------------
   m.fill(199, 0, 215, 9, '#');
@@ -84,10 +87,10 @@ import { grid, current, marujo } from './w2_a.js';
   m.line(200, 212, 13, 'o', 3);
   m.fill(213, 10, 215, 26, '#');
   cavern(216, 239);
-  m.put(218, 22, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_3', quest: 'bolha_crew', dialogDone: 'w2_bolha_3_done', reward: 30 });
   m.plat(219, 221, 20);
   m.ground(222, 239, 18);
-  m.put(224, 17, 'K'); m.line(227, 233, 16, 'o', 2);
+  m.put(224, 17, 'K'); m.line(229, 233, 16, 'o', 2);
+  m.put(227, 17, 'n', { npc: 'capita_bolha', dialog: 'w2_bolha_3', quest: 'bolha_crew', dialogDone: 'w2_bolha_3_done', reward: 30 }); // em terra firme
   m.put(236, 17, 'E');
 
   registerLevel({
@@ -109,8 +112,8 @@ import { grid, current, marujo } from './w2_a.js';
   m.put(2, 5, 'P'); m.sign(5, 5, 'w2_sign_bonus');
   // --- A: pista da correnteza com rochas espinhosas -----------------------------
   current(m, 10, 8, 30, 18, 'r', 300);
-  m.fill(18, 14, 20, 20, '#'); m.fill(17, 14, 17, 20, '^'); m.fill(21, 14, 21, 20, '^');
-  m.fill(28, 6, 30, 13, '#'); m.fill(28, 14, 30, 14, '^');
+  m.fill(18, 18, 20, 27, '#'); m.fill(18, 17, 20, 17, '^'); m.fill(17, 21, 17, 27, '^'); m.fill(21, 21, 21, 27, '^'); // rocha baixa (passe por cima)
+  m.fill(28, 13, 30, 27, '#'); m.fill(28, 12, 30, 12, '^');   // rocha alta (passe rente à superfície)
   m.fill(34, 21, 36, 27, '#'); m.fill(34, 20, 36, 20, '^');
   m.line(12, 16, 10, 'o', 2); m.line(22, 27, 22, 'o', 2); m.line(31, 38, 12, 'o', 2);
   m.put(24, 27, 'l');
@@ -145,7 +148,7 @@ import { grid, current, marujo } from './w2_a.js';
   m.put(171, 9, '*');                                           // ★3 entre os redemoinhos
   m.put(158, 10, 'b'); m.put(184, 22, 'b'); m.put(160, 25, 'a');
   m.line(148, 190, 12, 'o', 3);
-  m.fill(168, 20, 170, 26, '#'); m.put(169, 19, 'l');
+  m.fill(168, 20, 170, 27, '#'); m.put(169, 19, 'l');
   // --- F: subida final, fio antigo e saída --------------------------------------
   current(m, 192, 8, 4, 19, 'u', 300);
   m.ground(197, 219, 6);

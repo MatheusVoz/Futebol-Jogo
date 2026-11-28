@@ -63,7 +63,7 @@ import { grid, hideRoom, spikePit } from './w1_a.js';
   m.line(137, 139, 9); m.put(138, 10, 'O'); m.put(139, 10, '*');  // ★2 (galho do outro lado)
   m.put(131, 7, 'g');
   m.sign(144, 21, 'w1_sign_gate2');
-  m.ground(150, 161, 8);                                        // morro alto (não dá p/ pular)
+  m.ground(152, 159, 15); m.ground(151, 160, 16); m.ground(150, 161, 17); // morro (6 de altura)
   m.clear(147, 22, 164, 23);                                    // vala + túnel sob o morro
   m.fill(150, 22, 161, 23, ':');
   m.put(150, 23, 'G', { signal: 'nevoa1' });

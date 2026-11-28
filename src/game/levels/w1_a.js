@@ -262,7 +262,7 @@ export function creek(m, x0, x1, top, depth = 3) {
   m.fill(131, 16, 135, 16, '^');
   m.put(130, 16, '@', { group: 'p1' });
   m.put(136, 16, '@', { group: 'p1', signal: 'portao1', latch: true });
-  m.ground(140, 152, 9);                                      // morro maciço (alto demais p/ pular)
+  m.ground(142, 150, 11); m.ground(141, 151, 12); m.ground(140, 152, 13); // morro (6 de altura: não dá p/ pular)
   m.clear(138, 17, 154, 18);                                  // vala + túnel por baixo do morro
   m.fill(140, 17, 152, 18, ':');
   m.put(140, 18, 'G', { signal: 'portao1' });                 // portão do teto do túnel ao chão

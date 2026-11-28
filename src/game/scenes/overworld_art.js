@@ -677,6 +677,7 @@ export function nodeImage(kind, state, f = 0) {
         const col = state === 'locked' || state === 'soon' ? '#3a3448' : '#ffffff';
         pc.px(R0(c), R0(c) - 2, col); pc.hline(R0(c) - 1, R0(c) - 1, 3, col); pc.hline(R0(c) - 2, R0(c), 5, col); pc.vline(R0(c), R0(c) + 1, 2, col);
       }
+      if (state === 'locked' && !big) { pc.rect(R0(c) - 1, R0(c) - 1, 3, 3, '#2a2438'); pc.px(R0(c) - 1, R0(c) - 1, '#4a4460'); }
       if (state === 'soon') { pc.px(R0(c), R0(c) - 1, '#d8d0f0'); pc.px(R0(c) + 1, R0(c) - 2, '#d8d0f0'); pc.px(R0(c), R0(c) + 2, '#d8d0f0'); }
     }
     pc.outline(INK);
